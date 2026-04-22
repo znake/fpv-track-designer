@@ -25,7 +25,6 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
   const currentTrack = useAppStore((state) => state.currentTrack)
   const setTrack = useAppStore((state) => state.setTrack)
   const [tracks, setTracks] = useState<SavedTrackInfo[]>(() => listTracks())
-
   const refreshTracks = () => setTracks(listTracks())
 
   const handleLoad = (id: string) => {
