@@ -5,24 +5,47 @@ interface GridProps {
 }
 
 export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
+  const halfW = fieldSize.width / 2
+  const halfH = fieldSize.height / 2
+
   return (
     <group>
-      {/* Ground plane */}
+      {/* Ground plane - grass */}
       <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[fieldSize.width, fieldSize.height]} />
-        <meshStandardMaterial color="#1a1a2e" />
+        <meshStandardMaterial color="#3d5c28" />
       </mesh>
+
+      {/* Field boundary - white line */}
+      <lineSegments position={[0, 0.02, 0]}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[new Float32Array([
+              -halfW, 0, -halfH,
+              halfW, 0, -halfH,
+              halfW, 0, -halfH,
+              halfW, 0, halfH,
+              halfW, 0, halfH,
+              -halfW, 0, halfH,
+              -halfW, 0, halfH,
+              -halfW, 0, -halfH,
+            ]), 3]}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#ffffff" linewidth={2} />
+      </lineSegments>
 
       {/* Grid lines using drei Grid helper */}
       <DreiGrid
         position={[0, 0.01, 0]}
         args={[fieldSize.width, fieldSize.height]}
-        cellSize={5}
+        cellSize={3}
         cellThickness={0.5}
-        cellColor="#4a4a6a"
-        sectionSize={25}
+        cellColor="#5a7a4a"
+        sectionSize={15}
         sectionThickness={1}
-        sectionColor="#6a6a8a"
+        sectionColor="#7a9a6a"
         fadeDistance={200}
         fadeStrength={1}
       />

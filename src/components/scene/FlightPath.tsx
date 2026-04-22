@@ -1,44 +1,68 @@
 import { useMemo } from 'react'
+import * as THREE from 'three'
 import type { Gate } from '../../types'
 import { calculateFlightPath } from '../../utils/flightPath'
+import { Line } from '@react-three/drei'
 
 interface FlightPathProps {
   gates: Gate[]
+  gateSequence?: string[]
 }
 
-export function FlightPath({ gates }: FlightPathProps) {
-  const path = useMemo(() => calculateFlightPath(gates), [gates])
+export function FlightPath({ gates, gateSequence }: FlightPathProps) {
+  const path = useMemo(() => calculateFlightPath(gates, gateSequence), [gates, gateSequence])
+
+  // Build native THREE.Line for smooth bezier rendering
+  const lineObj = useMemo(() => {
+    const geometry = new THREE.BufferGeometry()
+    const positions = new Float32Array(path.sampledPoints.length * 3)
+    for (let i = 0; i < path.sampledPoints.length; i++) {
+      const p = path.sampledPoints[i]
+      positions[i * 3] = p.x
+      positions[i * 3 + 1] = p.y
+      positions[i * 3 + 2] = p.z
+    }
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    const material = new THREE.LineBasicMaterial({ color: '#ffff00', linewidth: 2 })
+    return new THREE.Line(geometry, material)
+  }, [path.sampledPoints])
 
   if (path.segments.length === 0) return null
 
-  // Create line points (including closing segment)
-  const uniquePoints = [path.segments[0].from, ...path.segments.map((s) => s.to)]
-
   return (
     <group>
-      {/* Flight path line */}
-      <line>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[new Float32Array(uniquePoints.flatMap((p) => [p.x, p.y, p.z])), 3]}
-            count={uniquePoints.length}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial color="#00ffff" linewidth={2} />
-      </line>
+      {/* Flight path curve — native THREE.Line for accurate bezier rendering */}
+      <primitive object={lineObj} />
 
-      {/* Direction arrows */}
+      {/* Direction arrows — simple 2-line chevrons */}
       {path.arrows.map((arrow, i) => (
-        <mesh
+        <group
           key={i}
           position={[arrow.position.x, arrow.position.y, arrow.position.z]}
-          rotation={[0, Math.atan2(arrow.direction.x, arrow.direction.z), 0]}
+          quaternion={[
+            arrow.quaternion.x,
+            arrow.quaternion.y,
+            arrow.quaternion.z,
+            arrow.quaternion.w,
+          ]}
         >
-          <coneGeometry args={[0.3, 0.8, 8]} />
-          <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={0.5} />
-        </mesh>
+          <Line
+            points={[
+              [-0.12, 0, 0.12],
+              [0, 0, -0.2],
+            ]}
+            color="#ffff00"
+            lineWidth={2}
+          />
+          <Line
+            points={[
+              [0.12, 0, 0.12],
+              [0, 0, -0.2],
+            ]}
+            color="#ffff00"
+            lineWidth={2}
+          />
+        </group>
       ))}
     </group>
   )
