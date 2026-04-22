@@ -1,14 +1,17 @@
+import type { ThreeEvent } from '@react-three/fiber'
 import { useAppStore } from '../store'
 
 export function useGateSelection(gateId: string) {
-  const selectedGateId = useAppStore((state) => state.selectedGateId)
+  const selectedGateIds = useAppStore((state) => state.selectedGateIds)
   const selectGate = useAppStore((state) => state.selectGate)
 
-  const isSelected = selectedGateId === gateId
+  const isSelected = selectedGateIds.includes(gateId)
 
-  const handleClick = (e: { stopPropagation: () => void }) => {
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
-    selectGate(gateId)
+
+    const isAdditiveSelection = e.shiftKey || e.metaKey || e.ctrlKey
+    selectGate(gateId, isAdditiveSelection)
   }
 
   return { isSelected, handleClick }

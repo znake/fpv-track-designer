@@ -12,18 +12,18 @@ export interface ConfigSlice {
 export const defaultConfig: Config = {
   gateQuantities: {
     'standard': 5,
-    'h-gate': 2,
+    'h-gate': 3,
     'huerdel': 1,
     'doppelgate': 1,
-    'ladder': 0,
+    'ladder': 1,
     'start-finish': 1,
     'flag': 2,
   },
-  fieldSize: { width: 100, height: 100 },
+  fieldSize: { width: 40, height: 30 },
   gateSize: 1,
 }
 
-export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> = (set, _get, _store) => ({
+export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> = (set) => ({
   config: defaultConfig,
   setGateQuantity: (type, quantity) => set((state) => ({
     config: {
