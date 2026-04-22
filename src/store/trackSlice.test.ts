@@ -7,6 +7,7 @@ const createTestTrack = (gates: Gate[] = []): Track => ({
   id: 'test-track',
   name: 'Test Track',
   gates,
+  gateSequence: gates.map((gate) => gate.id),
   fieldSize: { width: 100, height: 100 },
   gateSize: 1,
   createdAt: new Date().toISOString(),
@@ -35,6 +36,7 @@ describe('TrackSlice - Undo/Redo', () => {
 
     expect(store.getState().currentTrack).toEqual(track)
     expect(store.getState().selectedGateId).toBeNull()
+    expect(store.getState().selectedGateIds).toEqual([])
   })
 
   it('should move gate and record history', () => {
@@ -127,9 +129,47 @@ describe('TrackSlice - Undo/Redo', () => {
   it('should select gate', () => {
     store.getState().selectGate('gate-1')
     expect(store.getState().selectedGateId).toBe('gate-1')
+    expect(store.getState().selectedGateIds).toEqual(['gate-1'])
+
+    store.getState().selectGate('gate-2', true)
+    expect(store.getState().selectedGateIds).toEqual(['gate-1', 'gate-2'])
 
     store.getState().selectGate(null)
     expect(store.getState().selectedGateId).toBeNull()
+    expect(store.getState().selectedGateIds).toEqual([])
+  })
+
+  it('should move all selected gates', () => {
+    const track = createTestTrack([
+      { id: 'gate-1', type: 'standard', position: { x: 0, y: 0, z: 0 }, rotation: 0, size: 1 },
+      { id: 'gate-2', type: 'standard', position: { x: 10, y: 0, z: 0 }, rotation: 0, size: 1 },
+    ])
+    store.getState().setTrack(track)
+    store.getState().setSelectedGates(['gate-1', 'gate-2'])
+
+    store.getState().moveSelectedGates('N', 1)
+
+    const movedTrack = store.getState().currentTrack
+    const gate1 = movedTrack?.gates.find((g) => g.id === 'gate-1')
+    const gate2 = movedTrack?.gates.find((g) => g.id === 'gate-2')
+
+    expect(gate1?.position.y).toBe(1)
+    expect(gate2?.position.y).toBe(1)
+  })
+
+  it('should delete all selected gates', () => {
+    const track = createTestTrack([
+      { id: 'gate-1', type: 'standard', position: { x: 0, y: 0, z: 0 }, rotation: 0, size: 1 },
+      { id: 'gate-2', type: 'standard', position: { x: 10, y: 0, z: 0 }, rotation: 0, size: 1 },
+    ])
+    store.getState().setTrack(track)
+    store.getState().setSelectedGates(['gate-1', 'gate-2'])
+
+    store.getState().deleteSelectedGates()
+
+    expect(store.getState().currentTrack?.gates).toEqual([])
+    expect(store.getState().currentTrack?.gateSequence).toEqual([])
+    expect(store.getState().selectedGateIds).toEqual([])
   })
 
   it('should limit history to 50 changes', () => {

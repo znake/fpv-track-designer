@@ -1,187 +1,244 @@
-import type { Gate, GateType } from '../types/gate';
-import type { Track } from '../types/track';
-import type { Config } from '../types/config';
+import type { Gate, GateType } from '../types/gate'
+import type { Track } from '../types/track'
+import type { Config } from '../types/config'
 
 // Schema version for future compatibility
-export const SCHEMA_VERSION = '1.0.0';
+export const SCHEMA_VERSION = '1.0.0'
 
 // JSON Schema definition for track export/import
 export interface TrackExportSchema {
-  version: string;
+  version: string
   track: {
-    id: string;
-    name: string;
-    gates: Gate[];
-    fieldSize: { width: number; height: number };
-    gateSize: 0.75 | 1 | 1.5;
-    createdAt: string;
-    updatedAt: string;
-  };
+    id: string
+    name: string
+    gates: Gate[]
+    gateSequence?: string[] // optional for backward compatibility with older exports
+    fieldSize: { width: number; height: number }
+    gateSize: 0.75 | 1 | 1.5
+    createdAt: string
+    updatedAt: string
+  }
   config: {
-    gateQuantities: Record<GateType, number>;
-    fieldSize: { width: number; height: number };
-    gateSize: 0.75 | 1 | 1.5;
-  };
+    gateQuantities: Record<GateType, number>
+    fieldSize: { width: number; height: number }
+    gateSize: 0.75 | 1 | 1.5
+  }
 }
 
 // Validation error type
 export interface ValidationError {
-  field: string;
-  message: string;
+  field: string
+  message: string
 }
 
 // Valid gate types
-const VALID_GATE_TYPES: GateType[] = ['standard', 'h-gate', 'huerdel', 'doppelgate', 'ladder', 'start-finish', 'flag'];
+const VALID_GATE_TYPES: GateType[] = ['standard', 'h-gate', 'huerdel', 'doppelgate', 'ladder', 'start-finish', 'flag']
 
 // Valid gate sizes
-const VALID_GATE_SIZES = [0.75, 1, 1.5] as const;
+const VALID_GATE_SIZES = [0.75, 1, 1.5] as const
+
+function buildFallbackGateSequence(gates: Gate[]): string[] {
+  return gates.map((g) => g.id)
+}
+
+function sanitizeGateSequence(sequence: string[], gateIds: Set<string>): string[] {
+  const normalized: string[] = []
+
+  for (const id of sequence) {
+    if (!gateIds.has(id)) continue
+    if (normalized.length > 0 && normalized[normalized.length - 1] === id) continue
+    normalized.push(id)
+  }
+
+  if (normalized.length > 1 && normalized[0] === normalized[normalized.length - 1]) {
+    normalized.pop()
+  }
+
+  return normalized
+}
 
 // Validate a single gate
 function validateGate(gate: unknown, index: number): ValidationError[] {
-  const errors: ValidationError[] = [];
-  const g = gate as Record<string, unknown>;
+  const errors: ValidationError[] = []
+  const g = gate as Record<string, unknown>
 
   if (!g.id || typeof g.id !== 'string') {
-    errors.push({ field: `gates[${index}].id`, message: 'Gate id must be a string' });
+    errors.push({ field: `gates[${index}].id`, message: 'Gate id must be a string' })
   }
 
   if (!g.type || !VALID_GATE_TYPES.includes(g.type as GateType)) {
-    errors.push({ field: `gates[${index}].type`, message: `Gate type must be one of: ${VALID_GATE_TYPES.join(', ')}` });
+    errors.push({ field: `gates[${index}].type`, message: `Gate type must be one of: ${VALID_GATE_TYPES.join(', ')}` })
   }
 
   if (!g.position || typeof g.position !== 'object') {
-    errors.push({ field: `gates[${index}].position`, message: 'Gate position must be an object' });
+    errors.push({ field: `gates[${index}].position`, message: 'Gate position must be an object' })
   } else {
-    const pos = g.position as Record<string, unknown>;
+    const pos = g.position as Record<string, unknown>
     if (typeof pos.x !== 'number') {
-      errors.push({ field: `gates[${index}].position.x`, message: 'Position x must be a number' });
+      errors.push({ field: `gates[${index}].position.x`, message: 'Position x must be a number' })
     }
     if (typeof pos.y !== 'number') {
-      errors.push({ field: `gates[${index}].position.y`, message: 'Position y must be a number' });
+      errors.push({ field: `gates[${index}].position.y`, message: 'Position y must be a number' })
     }
     if (typeof pos.z !== 'number') {
-      errors.push({ field: `gates[${index}].position.z`, message: 'Position z must be a number' });
+      errors.push({ field: `gates[${index}].position.z`, message: 'Position z must be a number' })
     }
   }
 
   if (typeof g.rotation !== 'number' || g.rotation < 0 || g.rotation > 330 || g.rotation % 30 !== 0) {
-    errors.push({ field: `gates[${index}].rotation`, message: 'Rotation must be a number between 0-330 in 30deg steps' });
+    errors.push({ field: `gates[${index}].rotation`, message: 'Rotation must be a number between 0-330 in 30deg steps' })
   }
 
   if (!VALID_GATE_SIZES.includes(g.size as typeof VALID_GATE_SIZES[number])) {
-    errors.push({ field: `gates[${index}].size`, message: `Gate size must be one of: ${VALID_GATE_SIZES.join(', ')}` });
+    errors.push({ field: `gates[${index}].size`, message: `Gate size must be one of: ${VALID_GATE_SIZES.join(', ')}` })
   }
 
-  return errors;
+  return errors
 }
 
 // Validate field size
 function validateFieldSize(fieldSize: unknown, prefix: string): ValidationError[] {
-  const errors: ValidationError[] = [];
-  const fs = fieldSize as Record<string, unknown>;
+  const errors: ValidationError[] = []
+  const fs = fieldSize as Record<string, unknown>
 
   if (!fs || typeof fs !== 'object') {
-    errors.push({ field: prefix, message: 'Field size must be an object' });
-    return errors;
+    errors.push({ field: prefix, message: 'Field size must be an object' })
+    return errors
   }
 
   if (typeof fs.width !== 'number' || fs.width <= 0) {
-    errors.push({ field: `${prefix}.width`, message: 'Width must be a positive number' });
+    errors.push({ field: `${prefix}.width`, message: 'Width must be a positive number' })
   }
 
   if (typeof fs.height !== 'number' || fs.height <= 0) {
-    errors.push({ field: `${prefix}.height`, message: 'Height must be a positive number' });
+    errors.push({ field: `${prefix}.height`, message: 'Height must be a positive number' })
   }
 
-  return errors;
+  return errors
 }
 
 // Validate gate quantities
 function validateGateQuantities(quantities: unknown): ValidationError[] {
-  const errors: ValidationError[] = [];
-  const q = quantities as Record<string, unknown>;
+  const errors: ValidationError[] = []
+  const q = quantities as Record<string, unknown>
 
   if (!q || typeof q !== 'object') {
-    errors.push({ field: 'config.gateQuantities', message: 'Gate quantities must be an object' });
-    return errors;
+    errors.push({ field: 'config.gateQuantities', message: 'Gate quantities must be an object' })
+    return errors
   }
 
   for (const gateType of VALID_GATE_TYPES) {
     if (typeof q[gateType] !== 'number' || q[gateType] < 0 || !Number.isInteger(q[gateType])) {
-      errors.push({ field: `config.gateQuantities.${gateType}`, message: `Gate quantity for ${gateType} must be a non-negative integer` });
+      errors.push({ field: `config.gateQuantities.${gateType}`, message: `Gate quantity for ${gateType} must be a non-negative integer` })
     }
   }
 
-  return errors;
+  return errors
 }
 
 // Main validation function
 export function validateTrack(data: unknown): { valid: boolean; errors: ValidationError[] } {
-  const errors: ValidationError[] = [];
+  const errors: ValidationError[] = []
 
   if (!data || typeof data !== 'object') {
-    return { valid: false, errors: [{ field: 'root', message: 'Data must be an object' }] };
+    return { valid: false, errors: [{ field: 'root', message: 'Data must be an object' }] }
   }
 
-  const d = data as Record<string, unknown>;
+  const d = data as Record<string, unknown>
 
   // Validate version
   if (!d.version || typeof d.version !== 'string') {
-    errors.push({ field: 'version', message: 'Version must be a string' });
+    errors.push({ field: 'version', message: 'Version must be a string' })
   }
 
   // Validate track
   if (!d.track || typeof d.track !== 'object') {
-    errors.push({ field: 'track', message: 'Track must be an object' });
+    errors.push({ field: 'track', message: 'Track must be an object' })
   } else {
-    const track = d.track as Record<string, unknown>;
+    const track = d.track as Record<string, unknown>
 
     if (!track.id || typeof track.id !== 'string') {
-      errors.push({ field: 'track.id', message: 'Track id must be a string' });
+      errors.push({ field: 'track.id', message: 'Track id must be a string' })
     }
 
     if (!track.name || typeof track.name !== 'string') {
-      errors.push({ field: 'track.name', message: 'Track name must be a string' });
+      errors.push({ field: 'track.name', message: 'Track name must be a string' })
     }
+
+    const gateIds = new Set<string>()
 
     if (!Array.isArray(track.gates)) {
-      errors.push({ field: 'track.gates', message: 'Track gates must be an array' });
+      errors.push({ field: 'track.gates', message: 'Track gates must be an array' })
     } else {
       track.gates.forEach((gate, index) => {
-        errors.push(...validateGate(gate, index));
-      });
+        errors.push(...validateGate(gate, index))
+        if (typeof gate === 'object' && gate !== null && typeof (gate as Record<string, unknown>).id === 'string') {
+          gateIds.add((gate as Record<string, string>).id)
+        }
+      })
     }
 
-    errors.push(...validateFieldSize(track.fieldSize, 'track.fieldSize'));
+    // Validate gateSequence (optional for backward compatibility)
+    if (track.gateSequence !== undefined) {
+      if (!Array.isArray(track.gateSequence)) {
+        errors.push({ field: 'track.gateSequence', message: 'gateSequence must be an array when provided' })
+      } else {
+        for (let i = 0; i < track.gateSequence.length; i++) {
+          const seqId = track.gateSequence[i]
+          if (typeof seqId !== 'string') {
+            errors.push({ field: `track.gateSequence[${i}]`, message: 'gateSequence entry must be a string' })
+            continue
+          }
+
+          if (gateIds.size > 0 && !gateIds.has(seqId)) {
+            errors.push({ field: `track.gateSequence[${i}]`, message: `gateSequence entry '${seqId}' does not match any gate id` })
+          }
+
+          if (i > 0 && seqId === track.gateSequence[i - 1]) {
+            errors.push({ field: `track.gateSequence[${i}]`, message: 'Consecutive gateSequence entries must not have the same id' })
+          }
+        }
+
+        if (track.gateSequence.length > 1) {
+          const first = track.gateSequence[0]
+          const last = track.gateSequence[track.gateSequence.length - 1]
+          if (first === last) {
+            errors.push({ field: 'track.gateSequence', message: 'First and last gateSequence entry must not be identical in looped tracks' })
+          }
+        }
+      }
+    }
+
+    errors.push(...validateFieldSize(track.fieldSize, 'track.fieldSize'))
 
     if (!VALID_GATE_SIZES.includes(track.gateSize as typeof VALID_GATE_SIZES[number])) {
-      errors.push({ field: 'track.gateSize', message: `Track gate size must be one of: ${VALID_GATE_SIZES.join(', ')}` });
+      errors.push({ field: 'track.gateSize', message: `Track gate size must be one of: ${VALID_GATE_SIZES.join(', ')}` })
     }
 
     if (!track.createdAt || typeof track.createdAt !== 'string') {
-      errors.push({ field: 'track.createdAt', message: 'CreatedAt must be an ISO date string' });
+      errors.push({ field: 'track.createdAt', message: 'CreatedAt must be an ISO date string' })
     }
 
     if (!track.updatedAt || typeof track.updatedAt !== 'string') {
-      errors.push({ field: 'track.updatedAt', message: 'UpdatedAt must be an ISO date string' });
+      errors.push({ field: 'track.updatedAt', message: 'UpdatedAt must be an ISO date string' })
     }
   }
 
   // Validate config
   if (!d.config || typeof d.config !== 'object') {
-    errors.push({ field: 'config', message: 'Config must be an object' });
+    errors.push({ field: 'config', message: 'Config must be an object' })
   } else {
-    const config = d.config as Record<string, unknown>;
+    const config = d.config as Record<string, unknown>
 
-    errors.push(...validateGateQuantities(config.gateQuantities));
-    errors.push(...validateFieldSize(config.fieldSize, 'config.fieldSize'));
+    errors.push(...validateGateQuantities(config.gateQuantities))
+    errors.push(...validateFieldSize(config.fieldSize, 'config.fieldSize'))
 
     if (!VALID_GATE_SIZES.includes(config.gateSize as typeof VALID_GATE_SIZES[number])) {
-      errors.push({ field: 'config.gateSize', message: `Config gate size must be one of: ${VALID_GATE_SIZES.join(', ')}` });
+      errors.push({ field: 'config.gateSize', message: `Config gate size must be one of: ${VALID_GATE_SIZES.join(', ')}` })
     }
   }
 
-  return { valid: errors.length === 0, errors };
+  return { valid: errors.length === 0, errors }
 }
 
 // Serialize track and config to JSON string
@@ -192,6 +249,7 @@ export function serializeTrack(track: Track, config: Config): string {
       id: track.id,
       name: track.name,
       gates: track.gates,
+      gateSequence: track.gateSequence,
       fieldSize: track.fieldSize,
       gateSize: track.gateSize,
       createdAt: track.createdAt,
@@ -202,34 +260,42 @@ export function serializeTrack(track: Track, config: Config): string {
       fieldSize: config.fieldSize,
       gateSize: config.gateSize,
     },
-  };
+  }
 
-  return JSON.stringify(exportData, null, 2);
+  return JSON.stringify(exportData, null, 2)
 }
 
 // Deserialize and validate JSON string to track and config
 export function deserializeTrack(jsonString: string): { track: Track; config: Config } | { error: string; errors: ValidationError[] } {
-  let parsed: unknown;
+  let parsed: unknown
 
   try {
-    parsed = JSON.parse(jsonString);
-  } catch (e) {
-    return { error: 'Invalid JSON', errors: [{ field: 'root', message: 'Failed to parse JSON' }] };
+    parsed = JSON.parse(jsonString)
+  } catch {
+    return { error: 'Invalid JSON', errors: [{ field: 'root', message: 'Failed to parse JSON' }] }
   }
 
-  const validation = validateTrack(parsed);
+  const validation = validateTrack(parsed)
 
   if (!validation.valid) {
-    return { error: 'Validation failed', errors: validation.errors };
+    return { error: 'Validation failed', errors: validation.errors }
   }
 
-  const data = parsed as TrackExportSchema;
+  const data = parsed as TrackExportSchema
+  const gateIds = new Set(data.track.gates.map((g) => g.id))
+  const sequenceSource = Array.isArray(data.track.gateSequence)
+    ? data.track.gateSequence
+    : buildFallbackGateSequence(data.track.gates)
+
+  const sequence = sanitizeGateSequence(sequenceSource, gateIds)
+  const finalSequence = sequence.length > 0 ? sequence : buildFallbackGateSequence(data.track.gates)
 
   return {
     track: {
       id: data.track.id,
       name: data.track.name,
       gates: data.track.gates,
+      gateSequence: finalSequence,
       fieldSize: data.track.fieldSize,
       gateSize: data.track.gateSize,
       createdAt: data.track.createdAt,
@@ -240,10 +306,10 @@ export function deserializeTrack(jsonString: string): { track: Track; config: Co
       fieldSize: data.config.fieldSize,
       gateSize: data.config.gateSize,
     },
-  };
+  }
 }
 
 // Quick validation check - returns boolean only
 export function isValidTrack(data: unknown): boolean {
-  return validateTrack(data).valid;
+  return validateTrack(data).valid
 }

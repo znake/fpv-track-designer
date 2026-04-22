@@ -4,6 +4,29 @@ import { serializeTrack, deserializeTrack } from '../schemas/track.schema'
 const STORAGE_KEY_PREFIX = 'fpv-track-'
 const TRACK_LIST_KEY = 'fpv-track-list'
 
+function normalizeTrackSequence(track: Track): Track {
+  const gateIds = new Set(track.gates.map((g) => g.id))
+  const source = Array.isArray(track.gateSequence) && track.gateSequence.length > 0
+    ? track.gateSequence
+    : track.gates.map((g) => g.id)
+
+  const normalized: string[] = []
+  for (const id of source) {
+    if (!gateIds.has(id)) continue
+    if (normalized.length > 0 && normalized[normalized.length - 1] === id) continue
+    normalized.push(id)
+  }
+
+  if (normalized.length > 1 && normalized[0] === normalized[normalized.length - 1]) {
+    normalized.pop()
+  }
+
+  return {
+    ...track,
+    gateSequence: normalized.length > 0 ? normalized : track.gates.map((g) => g.id),
+  }
+}
+
 export interface SavedTrackInfo {
   id: string
   name: string
@@ -12,13 +35,14 @@ export interface SavedTrackInfo {
 
 export function saveTrack(track: Track, config: Config): void {
   try {
-    const json = serializeTrack(track, config)
-    localStorage.setItem(STORAGE_KEY_PREFIX + track.id, json)
+    const normalizedTrack = normalizeTrackSequence(track)
+    const json = serializeTrack(normalizedTrack, config)
+    localStorage.setItem(STORAGE_KEY_PREFIX + normalizedTrack.id, json)
 
     // Update track list
     const list = listTracks()
-    const existing = list.findIndex(t => t.id === track.id)
-    const info: SavedTrackInfo = { id: track.id, name: track.name, updatedAt: track.updatedAt }
+    const existing = list.findIndex(t => t.id === normalizedTrack.id)
+    const info: SavedTrackInfo = { id: normalizedTrack.id, name: normalizedTrack.name, updatedAt: normalizedTrack.updatedAt }
     if (existing >= 0) {
       list[existing] = info
     } else {
@@ -39,7 +63,10 @@ export function loadTrack(id: string): { track: Track; config: Config } | null {
 
   const result = deserializeTrack(json)
   if ('error' in result) return null
-  return result
+  return {
+    ...result,
+    track: normalizeTrackSequence(result.track),
+  }
 }
 
 export function listTracks(): SavedTrackInfo[] {

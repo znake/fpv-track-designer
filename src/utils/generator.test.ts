@@ -37,7 +37,7 @@ describe('generateTrack', () => {
     const config = createTestConfig()
     const track = generateTrack(config)
 
-    expect(track.gates[0].position).toEqual({ x: 0, y: 2, z: 0 })
+    expect(track.gates[0].position).toEqual({ x: 0, y: 0, z: 0 })
   })
 
   it('enforces minimum 3m distance between all gates', () => {
@@ -68,8 +68,8 @@ describe('generateTrack', () => {
       expect(gate.position.x).toBeLessThanOrEqual(halfW)
       expect(gate.position.z).toBeGreaterThanOrEqual(-halfH)
       expect(gate.position.z).toBeLessThanOrEqual(halfH)
-      expect(gate.position.y).toBeGreaterThanOrEqual(1)
-      expect(gate.position.y).toBeLessThanOrEqual(6)
+      expect(gate.position.y).toBeGreaterThanOrEqual(0)
+      expect(gate.position.y).toBeLessThanOrEqual(0)
     }
   })
 
@@ -169,5 +169,28 @@ describe('generateTrack', () => {
     expect(track.createdAt).toBeTruthy()
     expect(track.updatedAt).toBeTruthy()
     expect(track.createdAt).toBe(track.updatedAt)
+  })
+
+  it('aligns gate rotations to face the next gate in the flight path', () => {
+    const config = createTestConfig()
+    const track = generateTrack(config)
+
+    const n = track.gates.length
+    for (let i = 0; i < n; i++) {
+      const curr = track.gates[i]
+      const next = track.gates[(i + 1) % n]
+
+      const dx = next.position.x - curr.position.x
+      const dz = next.position.z - curr.position.z
+
+      // atan2(dx, dz) gives angle from +Z axis (Three.js Y-rotation)
+      const expectedAngle = Math.atan2(dx, dz) * (180 / Math.PI)
+      const normalizedExpected = ((expectedAngle % 360) + 360) % 360
+
+      // Rotation should be within 15° of the true direction (30° step rounding)
+      const diff = Math.abs(curr.rotation - normalizedExpected)
+      const minDiff = Math.min(diff, 360 - diff)
+      expect(minDiff).toBeLessThanOrEqual(15)
+    }
   })
 })

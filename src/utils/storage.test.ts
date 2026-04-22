@@ -29,6 +29,7 @@ const createTestTrack = (overrides?: Partial<Track>): Track => ({
   gates: [
     { id: 'gate-1', type: 'standard', position: { x: 0, y: 0, z: 0 }, rotation: 0, size: 1 },
   ],
+  gateSequence: ['gate-1'],
   fieldSize: { width: 100, height: 100 },
   gateSize: 1,
   createdAt: '2024-01-01T00:00:00.000Z',
