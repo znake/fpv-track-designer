@@ -1,5 +1,23 @@
-import { useAppStore } from '../../store'
-import type { GateType } from '../../types'
+import { useState } from 'react'
+import { useAppStore } from '@/store'
+import type { GateType } from '@/types'
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import { Separator } from '@/components/ui/separator'
+import { RotateCcw, ChevronDown } from 'lucide-react'
 
 const GATE_TYPES: { type: GateType; label: string }[] = [
   { type: 'start-finish', label: 'Start/Ziel Gate' },
@@ -18,80 +36,142 @@ export function GateConfigPanel() {
   const setGateSize = useAppStore((state) => state.setGateSize)
   const resetToDefault = useAppStore((state) => state.resetToDefault)
 
+  const [quantitiesOpen, setQuantitiesOpen] = useState(true)
+  const [fieldOpen, setFieldOpen] = useState(true)
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-white">Gate Configuration</h2>
-      
-      {/* Gate Quantities */}
-      <div className="space-y-2">
-        {GATE_TYPES.map(({ type, label }) => (
-          <div key={type} className="flex items-center justify-between">
-            <label className="text-sm text-gray-300">{label}</label>
-            <input
-              type="number"
-              min="0"
-              value={config.gateQuantities[type]}
-              onChange={(e) => setGateQuantity(type, Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-center transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+    <Card>
+      <CardHeader>
+        <CardTitle>Gate Configuration</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Gate Quantities */}
+        <Collapsible open={quantitiesOpen} onOpenChange={setQuantitiesOpen}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-foreground">
+            Gate Quantities
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${quantitiesOpen ? 'rotate-180' : ''}`}
             />
-          </div>
-        ))}
-      </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 pt-3">
+            {GATE_TYPES.map(({ type, label }) => (
+              <div
+                key={type}
+                className="flex items-center justify-between gap-2"
+              >
+                <Label className="text-sm text-muted-foreground">
+                  {label}
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={config.gateQuantities[type]}
+                  onChange={(e) =>
+                    setGateQuantity(
+                      type,
+                      Math.max(0, parseInt(e.target.value) || 0)
+                    )
+                  }
+                  className="w-16 text-center"
+                />
+              </div>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
 
-      {/* Field Size */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-300">Field Size (m)</h3>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label className="text-xs text-gray-400">Width</label>
-            <input
-              type="number"
-              min="10"
-              value={config.fieldSize.width}
-              onChange={(e) => setFieldSize(Math.max(10, parseInt(e.target.value) || 10), config.fieldSize.height)}
-              className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="text-xs text-gray-400">Height</label>
-            <input
-              type="number"
-              min="10"
-              value={config.fieldSize.height}
-              onChange={(e) => setFieldSize(config.fieldSize.width, Math.max(10, parseInt(e.target.value) || 10))}
-              className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-      </div>
+        <Separator />
 
-      {/* Gate Size */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-300">Gate Size</h3>
-        <div className="flex gap-1">
-          {([0.75, 1, 1.5] as const).map((size) => (
-            <button
-              key={size}
-              onClick={() => setGateSize(size)}
-              className={`flex-1 px-2 py-1 rounded text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-gray-900 ${
-                config.gateSize === size
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
+        {/* Field Settings */}
+        <Collapsible open={fieldOpen} onOpenChange={setFieldOpen}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-foreground">
+            Field Settings
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${fieldOpen ? 'rotate-180' : ''}`}
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-4 pt-3">
+            {/* Field Size */}
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">
+                Field Size (m)
+              </Label>
+              <div className="flex gap-2">
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="field-width" className="text-xs">
+                    Width
+                  </Label>
+                  <Input
+                    id="field-width"
+                    type="number"
+                    min={10}
+                    value={config.fieldSize.width}
+                    onChange={(e) =>
+                      setFieldSize(
+                        Math.max(10, parseInt(e.target.value) || 10),
+                        config.fieldSize.height
+                      )
+                    }
+                  />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="field-height" className="text-xs">
+                    Height
+                  </Label>
+                  <Input
+                    id="field-height"
+                    type="number"
+                    min={10}
+                    value={config.fieldSize.height}
+                    onChange={(e) =>
+                      setFieldSize(
+                        config.fieldSize.width,
+                        Math.max(10, parseInt(e.target.value) || 10)
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Gate Size */}
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">
+                Gate Size
+              </Label>
+              <ToggleGroup
+                type="single"
+                value={String(config.gateSize)}
+                onValueChange={(value) => {
+                  if (value) {
+                    setGateSize(Number(value) as 0.75 | 1 | 1.5)
+                  }
+                }}
+                className="w-full"
+              >
+                <ToggleGroupItem value="0.75" className="flex-1">
+                  75cm
+                </ToggleGroupItem>
+                <ToggleGroupItem value="1" className="flex-1">
+                  1m
+                </ToggleGroupItem>
+                <ToggleGroupItem value="1.5" className="flex-1">
+                  1.5m
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+
+            {/* Reset Button */}
+            <Button
+              variant="outline"
+              onClick={resetToDefault}
+              className="w-full"
             >
-              {size === 0.75 ? '75cm' : size === 1 ? '1m' : '1.5m'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Reset Button */}
-      <button
-        onClick={resetToDefault}
-        className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-gray-900"
-      >
-        Reset to Default
-      </button>
-    </div>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset to Default
+            </Button>
+          </CollapsibleContent>
+        </Collapsible>
+      </CardContent>
+    </Card>
   )
 }

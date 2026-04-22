@@ -1,19 +1,31 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from './store'
 import { generateTrack } from './utils/generator'
 import { defaultConfig } from './store/configSlice'
-import { Scene } from './components/scene/Scene'
-import { GateConfigPanel } from './components/ui/GateConfigPanel'
-import { UndoRedo } from './components/ui/UndoRedo'
-import { TrackControls } from './components/ui/TrackControls'
-import { GateAdjustment } from './components/ui/GateAdjustment'
-import { JsonImportExport } from './components/ui/JsonImportExport'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import { SaveTrackDialog } from './components/ui/SaveTrackDialog'
 import { TrackGallery } from './components/ui/TrackGallery'
+import { KeyboardShortcutsDialog } from './components/ui/KeyboardShortcutsDialog'
+import { Scene } from './components/scene/Scene'
+import { TopBar } from './components/layout/TopBar'
+import { LeftToolPanel } from './components/layout/LeftToolPanel'
+import { PropertiesPanel } from './components/layout/PropertiesPanel'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 function App() {
   const currentTrack = useAppStore((state) => state.currentTrack)
   const setTrack = useAppStore((state) => state.setTrack)
+  const config = useAppStore((state) => state.config)
 
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [galleryOpen, setGalleryOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  useKeyboardShortcuts({
+    onSave: () => setSaveDialogOpen(true),
+    onShuffle: () => setTrack(generateTrack(config)),
+    onOpenGallery: () => setGalleryOpen(true),
+  })
   // Auto-generate track on first load
   useEffect(() => {
     if (!currentTrack) {
@@ -23,26 +35,26 @@ function App() {
   }, [currentTrack, setTrack])
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-gray-900">
-      {/* Sidebar */}
-      <aside className="w-80 min-w-80 bg-gray-800 border-r border-gray-700 flex flex-col overflow-y-auto">
-        <div className="p-4 space-y-6">
-          <h1 className="text-xl font-bold text-white">FPV Track Designer</h1>
-          <GateConfigPanel />
-          <TrackControls />
-          <GateAdjustment />
-          <TrackGallery />
-          <JsonImportExport />
-          <UndoRedo />
+    <TooltipProvider>
+      <div className="flex h-screen w-screen flex-col overflow-hidden">
+        <TopBar
+          onSaveClick={() => setSaveDialogOpen(true)}
+          onGalleryClick={() => setGalleryOpen(true)}
+          onShortcutsClick={() => setShortcutsOpen(true)}
+        />
+        <div className="flex flex-1 overflow-hidden">
+          <LeftToolPanel onSaveClick={() => setSaveDialogOpen(true)} onGalleryClick={() => setGalleryOpen(true)} />
+          <main className="relative flex-1">
+            <Scene />
+          </main>
+          <PropertiesPanel />
         </div>
-      </aside>
-
-      {/* Main Canvas Area */}
-      <main className="flex-1 relative">
-        <Scene />
-      </main>
-    </div>
-  )
+      </div>
+      <SaveTrackDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen} />
+      <TrackGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
+      <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+    </TooltipProvider>
+)
 }
 
 export default App

@@ -21,8 +21,8 @@ export function Doppelgate({ position, rotation, size, isSelected, onClick }: Ga
   const width = BASE_WIDTH * scale
   const height = BASE_HEIGHT * scale
   const color = isSelected ? '#4ade80' : '#22c55e'
-  const emissiveColor = isSelected ? '#22c55e' : '#000000'
-  const emissiveIntensity = isSelected ? 0.4 : 0
+  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const emissiveIntensity = isSelected ? 0.8 : 0
   const stackOffset = STACK_DISTANCE * scale
 
   return (

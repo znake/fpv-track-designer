@@ -20,8 +20,8 @@ export function StandardGate({ position, rotation, size, isSelected, onClick }: 
   const width = BASE_WIDTH * scale
   const height = BASE_HEIGHT * scale
   const color = isSelected ? '#60a5fa' : '#3b82f6'
-  const emissiveColor = isSelected ? '#3b82f6' : '#000000'
-  const emissiveIntensity = isSelected ? 0.4 : 0
+  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const emissiveIntensity = isSelected ? 0.8 : 0
 
   return (
     <group

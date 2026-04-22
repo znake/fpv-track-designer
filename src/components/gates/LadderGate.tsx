@@ -46,8 +46,8 @@ export function LadderGate({ position, rotation, size, isSelected, onClick }: Ga
   const width = BASE_WIDTH * scale
   const height = BASE_HEIGHT * scale
   const color = isSelected ? '#fb923c' : '#f97316'
-  const emissiveColor = isSelected ? '#f97316' : '#000000'
-  const emissiveIntensity = isSelected ? 0.4 : 0
+  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const emissiveIntensity = isSelected ? 0.8 : 0
   const stackOffset = STACK_DISTANCE * scale
 
   return (

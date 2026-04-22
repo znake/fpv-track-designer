@@ -18,8 +18,8 @@ export function Flag({ position, rotation, size, isSelected, onClick }: GateComp
   const scale = size
   const height = BASE_HEIGHT * scale
   const color = isSelected ? '#f87171' : '#ef4444'
-  const emissiveColor = isSelected ? '#ef4444' : '#000000'
-  const emissiveIntensity = isSelected ? 0.4 : 0
+  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const emissiveIntensity = isSelected ? 0.8 : 0
 
   return (
     <group

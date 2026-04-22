@@ -20,8 +20,8 @@ export function HuerdelGate({ position, rotation, size, isSelected, onClick }: G
   const width = BASE_WIDTH * scale
   const height = BASE_HEIGHT * scale
   const color = isSelected ? '#fbbf24' : '#f59e0b'
-  const emissiveColor = isSelected ? '#f59e0b' : '#000000'
-  const emissiveIntensity = isSelected ? 0.4 : 0
+  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const emissiveIntensity = isSelected ? 0.8 : 0
 
   return (
     <group

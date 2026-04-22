@@ -1,67 +1,132 @@
-import { useState, useEffect } from 'react'
-import { useAppStore } from '../../store'
-import { loadTrack, listTracks, deleteTrack, type SavedTrackInfo } from '../../utils/storage'
+import { useState } from 'react'
+import { Trash2, Play, RefreshCw, Ghost } from 'lucide-react'
 
-export function TrackGallery() {
+import { useAppStore } from '@/store'
+import { loadTrack, listTracks, deleteTrack, type SavedTrackInfo } from '@/utils/storage'
+
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
+
+interface TrackGalleryProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
   const currentTrack = useAppStore((state) => state.currentTrack)
   const setTrack = useAppStore((state) => state.setTrack)
-  const [tracks, setTracks] = useState<SavedTrackInfo[]>([])
+  const [tracks, setTracks] = useState<SavedTrackInfo[]>(() => listTracks())
 
-  useEffect(() => {
-    setTracks(listTracks())
-  }, [])
+  const refreshTracks = () => setTracks(listTracks())
 
   const handleLoad = (id: string) => {
     const result = loadTrack(id)
-    if (result) setTrack(result.track)
+    if (result) {
+      setTrack(result.track)
+    }
+    refreshTracks()
   }
 
   const handleDelete = (id: string) => {
     deleteTrack(id)
-    setTracks(listTracks())
+    refreshTracks()
   }
 
-  const refresh = () => setTracks(listTracks())
+  const refresh = refreshTracks
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Track Gallery</h2>
-        <button onClick={refresh} className="text-xs text-purple-400 hover:text-purple-300 transition-colors focus:outline-none focus:underline">
-          Refresh
-        </button>
-      </div>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-96 sm:max-w-md">
+        <SheetHeader className="flex-row items-center justify-between">
+          <SheetTitle>Track Gallery</SheetTitle>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={refresh}
+            title="Refresh"
+          >
+            <RefreshCw />
+          </Button>
+        </SheetHeader>
 
-      {tracks.length === 0 ? (
-        <div className="text-sm text-gray-500 text-center py-4">No saved tracks yet</div>
-      ) : (
-        <div className="space-y-1 max-h-64 overflow-y-auto">
-          {tracks.map((t) => (
-            <div
-              key={t.id}
-              className={`flex items-center justify-between p-2 rounded ${
-                currentTrack?.id === t.id ? 'bg-purple-900/50 border border-purple-500' : 'bg-gray-700'
-              }`}
-            >
-              <button
-                onClick={() => handleLoad(t.id)}
-                className="flex-1 text-left text-sm text-gray-300 hover:text-white truncate transition-colors focus:outline-none focus:text-white"
-              >
-                {t.name}
-                {currentTrack?.id === t.id && (
-                  <span className="ml-2 text-xs text-purple-400">(current)</span>
-                )}
-              </button>
-              <button
-                onClick={() => handleDelete(t.id)}
-                className="ml-2 px-2 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-gray-700"
-              >
-                Delete
-              </button>
+        <Separator />
+
+        <ScrollArea className="flex-1 pr-4">
+          {tracks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Ghost className="mb-3 size-10 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No saved tracks yet</p>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+          ) : (
+            <div className="flex flex-col gap-3 py-4">
+              {tracks.map((t) => {
+                const isCurrent = currentTrack?.id === t.id
+                return (
+                  <Card
+                    key={t.id}
+                    className={
+                      isCurrent
+                        ? 'border-primary ring-1 ring-primary'
+                        : 'border-border/50'
+                    }
+                  >
+                    <CardContent className="flex flex-col gap-3 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-semibold text-foreground">
+                            {t.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(t.updatedAt).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                        {isCurrent && (
+                          <Badge variant="default" className="text-[10px]">
+                            Current
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleLoad(t.id)}
+                          className="flex-1"
+                        >
+                          <Play />
+                          Load
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(t.id)}
+                        >
+                          <Trash2 />
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
   )
 }
