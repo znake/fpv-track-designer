@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
+import { DirectionIndicator } from './DirectionIndicator'
 
 interface GateComponentProps {
   position: { x: number; y: number; z: number }
@@ -14,7 +15,6 @@ const POST_THICKNESS = 0.06
 const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
 const STACK_DISTANCE = 1.5
-
 function GateFrame({ y, width, height, color, emissiveColor, emissiveIntensity, onClick }: {
   y: number; width: number; height: number; color: string; emissiveColor: string; emissiveIntensity: number; onClick?: (e: ThreeEvent<MouseEvent>) => void
 }) {
@@ -59,6 +59,9 @@ export function LadderGate({ position, rotation, size, isSelected, onClick }: Ga
       <GateFrame y={0} width={width} height={height} color={color} emissiveColor={emissiveColor} emissiveIntensity={emissiveIntensity} onClick={onClick} />
       <GateFrame y={stackOffset} width={width} height={height} color={color} emissiveColor={emissiveColor} emissiveIntensity={emissiveIntensity} onClick={onClick} />
       <GateFrame y={stackOffset * 2} width={width} height={height} color={color} emissiveColor={emissiveColor} emissiveIntensity={emissiveIntensity} onClick={onClick} />
+
+      {/* Direction indicator — arrow on entry side */}
+      <DirectionIndicator size={size} yPosition={height / 2} onClick={onClick} />
     </group>
   )
 }

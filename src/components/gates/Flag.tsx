@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
+import { DirectionIndicator } from './DirectionIndicator'
 
 interface GateComponentProps {
   position: { x: number; y: number; z: number }
@@ -38,6 +39,9 @@ export function Flag({ position, rotation, size, isSelected, onClick }: GateComp
         <boxGeometry args={[0.3 * scale, 0.2 * scale, 0.02]} />
         <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
+
+      {/* Direction indicator — arrow on entry side */}
+      <DirectionIndicator size={size} yPosition={0.6} onClick={onClick} />
     </group>
   )
 }

@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
+import { DirectionIndicator } from './DirectionIndicator'
 
 interface GateComponentProps {
   position: { x: number; y: number; z: number }
@@ -14,7 +15,6 @@ const POST_THICKNESS = 0.06
 const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
 const STACK_DISTANCE = 2
-
 export function Doppelgate({ position, rotation, size, isSelected, onClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
@@ -70,6 +70,9 @@ export function Doppelgate({ position, rotation, size, isSelected, onClick }: Ga
           <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
       </group>
+
+      {/* Direction indicator — arrow on entry side */}
+      <DirectionIndicator size={size} yPosition={height / 2} onClick={onClick} />
     </group>
   )
 }
