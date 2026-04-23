@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import type { Mesh } from 'three'
+import { GateEntryIndicator } from './GateEntryIndicator'
 import type { ThreeEvent } from '@react-three/fiber'
-import { DirectionIndicator } from './DirectionIndicator'
 
 interface GateComponentProps {
   position: { x: number; y: number; z: number }
@@ -14,16 +14,21 @@ interface GateComponentProps {
 const POST_THICKNESS = 0.06
 const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
-const STACK_DISTANCE = 2
-export function Doppelgate({ position, rotation, size, isSelected, onClick }: GateComponentProps) {
+const STACK_DISTANCE = BASE_HEIGHT
+
+export function AsymmetricGate({ position, rotation, size, isSelected, onClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const width = BASE_WIDTH * scale
   const height = BASE_HEIGHT * scale
-  const color = isSelected ? '#4ade80' : '#22c55e'
+  const color = isSelected ? '#a78bfa' : '#8b5cf6'
   const emissiveColor = isSelected ? '#22d3ee' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
   const stackOffset = STACK_DISTANCE * scale
+
+  // The top H-gate is offset to the right by half the gate width,
+  // so its left post sits on the top crossbar of the bottom gate.
+  const hGateOffsetX = 0
 
   return (
     <group
@@ -31,7 +36,7 @@ export function Doppelgate({ position, rotation, size, isSelected, onClick }: Ga
       position={[position.x, position.y, position.z]}
       rotation-y={(rotation * Math.PI) / 180}
     >
-      {/* Bottom gate */}
+      {/* Bottom standard gate */}
       <group position={[0, 0, 0]}>
         <mesh position={[-width / 2, height / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
@@ -45,34 +50,30 @@ export function Doppelgate({ position, rotation, size, isSelected, onClick }: Ga
           <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
           <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
-        <mesh position={[0, 0, 0]} onClick={onClick}>
-          <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
-        </mesh>
       </group>
 
-      {/* Top gate */}
-      <group position={[0, stackOffset, 0]}>
-        <mesh position={[-width / 2, height / 2, 0]} onClick={onClick}>
-          <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
+      {/* Top H-gate — offset to the right so left post sits on bottom gate's top bar */}
+      <group position={[hGateOffsetX, stackOffset, 0]}>
+        {/* Left post — tall stroke of the 'h' */}
+        <mesh position={[-width / 2, height, 0]} onClick={onClick}>
+          <boxGeometry args={[POST_THICKNESS, height * 2, POST_THICKNESS]} />
           <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
+        {/* Right post — normal height */}
         <mesh position={[width / 2, height / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
           <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
+        {/* Top crossbar at normal gate height */}
         <mesh position={[0, height, 0]} onClick={onClick}>
           <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
           <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
-        <mesh position={[0, 0, 0]} onClick={onClick}>
-          <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
-        </mesh>
+        {/* Bottom crossbar */}
       </group>
 
-      {/* Direction indicator — arrow on entry side */}
-      <DirectionIndicator size={size} yPosition={height / 2} onClick={onClick} />
+      {/* Entry/exit indicator — green entry side, red exit side */}
+      <GateEntryIndicator width={width} height={height} onClick={onClick} />
     </group>
   )
 }

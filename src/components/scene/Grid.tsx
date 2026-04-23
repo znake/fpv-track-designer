@@ -1,4 +1,6 @@
+import type { ThreeEvent } from '@react-three/fiber'
 import { Grid as DreiGrid } from '@react-three/drei'
+import { useAppStore } from '../../store'
 
 interface GridProps {
   fieldSize?: { width: number; height: number }
@@ -7,11 +9,22 @@ interface GridProps {
 export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
   const halfW = fieldSize.width / 2
   const halfH = fieldSize.height / 2
+  const selectGate = useAppStore((state) => state.selectGate)
+
+  const handleGroundClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation()
+    selectGate(null)
+  }
 
   return (
     <group>
       {/* Ground plane - grass */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
+      <mesh
+        rotation-x={-Math.PI / 2}
+        position={[0, 0, 0]}
+        receiveShadow
+        onClick={handleGroundClick}
+      >
         <planeGeometry args={[fieldSize.width, fieldSize.height]} />
         <meshStandardMaterial color="#3d5c28" />
       </mesh>
@@ -50,17 +63,6 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
         fadeStrength={1}
       />
 
-      {/* Axis indicators */}
-      {/* X axis - red */}
-      <mesh position={[fieldSize.width / 2, 0.05, 0]}>
-        <sphereGeometry args={[0.3, 8, 8]} />
-        <meshStandardMaterial color="#ff4444" />
-      </mesh>
-      {/* Z axis - blue */}
-      <mesh position={[0, 0.05, fieldSize.height / 2]}>
-        <sphereGeometry args={[0.3, 8, 8]} />
-        <meshStandardMaterial color="#4444ff" />
-      </mesh>
     </group>
   )
 }

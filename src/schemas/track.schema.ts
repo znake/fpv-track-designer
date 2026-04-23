@@ -32,7 +32,7 @@ export interface ValidationError {
 }
 
 // Valid gate types
-const VALID_GATE_TYPES: GateType[] = ['standard', 'h-gate', 'huerdel', 'doppelgate', 'ladder', 'start-finish', 'flag']
+const VALID_GATE_TYPES: GateType[] = ['standard', 'h-gate', 'asymmetric', 'dive', 'double', 'ladder', 'start-finish', 'flag']
 
 // Valid gate sizes
 const VALID_GATE_SIZES = [0.75, 1, 1.5] as const

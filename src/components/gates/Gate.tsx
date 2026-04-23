@@ -2,11 +2,13 @@ import type { Gate as GateType } from '../../types'
 import { useGateSelection } from '../../hooks/useGateSelection'
 import { StandardGate } from './StandardGate'
 import { HGate } from './HGate'
-import { HuerdelGate } from './HuerdelGate'
-import { Doppelgate } from './Doppelgate'
+import { AsymmetricGate } from './AsymmetricGate'
+import { DiveGate } from './DiveGate'
+import { DoubleGate } from './DoubleGate'
 import { LadderGate } from './LadderGate'
 import { StartFinishGate } from './StartFinishGate'
 import { Flag } from './Flag'
+import { GateHandles } from './GateHandles'
 
 interface GateProps {
   gate: GateType
@@ -23,21 +25,45 @@ export function Gate({ gate }: GateProps) {
     onClick: handleClick,
   }
 
+  let gateComponent: React.ReactNode
   switch (gate.type) {
     case 'h-gate':
-      return <HGate {...commonProps} />
-    case 'huerdel':
-      return <HuerdelGate {...commonProps} />
-    case 'doppelgate':
-      return <Doppelgate {...commonProps} />
+      gateComponent = <HGate {...commonProps} />
+      break
+    case 'asymmetric':
+      gateComponent = <AsymmetricGate {...commonProps} />
+      break
+    case 'dive':
+      gateComponent = <DiveGate {...commonProps} />
+      break
+    case 'double':
+      gateComponent = <DoubleGate {...commonProps} />
+      break
     case 'ladder':
-      return <LadderGate {...commonProps} />
+      gateComponent = <LadderGate {...commonProps} />
+      break
     case 'start-finish':
-      return <StartFinishGate {...commonProps} />
+      gateComponent = <StartFinishGate {...commonProps} />
+      break
     case 'flag':
-      return <Flag {...commonProps} />
+      gateComponent = <Flag {...commonProps} />
+      break
     case 'standard':
     default:
-      return <StandardGate {...commonProps} />
+      gateComponent = <StandardGate {...commonProps} />
+      break
   }
+
+  return (
+    <group>
+      {gateComponent}
+      {isSelected && (
+        <GateHandles
+          gateId={gate.id}
+          position={gate.position}
+          rotation={gate.rotation}
+        />
+      )}
+    </group>
+  )
 }

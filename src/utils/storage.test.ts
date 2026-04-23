@@ -41,8 +41,9 @@ const createTestConfig = (): Config => ({
   gateQuantities: {
     standard: 6,
     'h-gate': 2,
-    huerdel: 1,
-    doppelgate: 1,
+    asymmetric: 1,
+    dive: 1,
+    double: 1,
     ladder: 1,
     'start-finish': 1,
     flag: 1,

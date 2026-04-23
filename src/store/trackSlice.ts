@@ -11,6 +11,9 @@ export interface TrackSlice {
   future: Track[]
   setTrack: (track: Track | null) => void
   updateGate: (gateId: string, updates: Partial<Gate>) => void
+  setGatePosition: (gateId: string, position: { x: number; y: number; z: number }) => void
+  commitGateDrag: () => void
+  setGateRotation: (gateId: string, rotation: number) => void
   moveGate: (gateId: string, direction: 'N' | 'S' | 'E' | 'W', distance?: number) => void
   moveSelectedGates: (direction: 'N' | 'S' | 'E' | 'W', distance?: number) => void
   rotateGate: (gateId: string, clockwise: boolean) => void
@@ -19,6 +22,8 @@ export interface TrackSlice {
   deleteSelectedGates: () => void
   undo: () => void
   redo: () => void
+  setDraggingGate: (isDragging: boolean) => void
+  isDraggingGate: boolean
 }
 
 function normalizeGateSequence(track: Track): string[] {
@@ -62,6 +67,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
   currentTrack: null,
   selectedGateId: null,
   selectedGateIds: [],
+  isDraggingGate: false,
   past: [],
   future: [],
   setTrack: (track) => set((state) => ({
@@ -82,6 +88,33 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
         updatedAt: new Date().toISOString(),
       }),
       ...history,
+    }
+  }),
+  setGatePosition: (gateId, position) => set((state) => {
+    if (!state.currentTrack) return state
+    return {
+      currentTrack: {
+        ...state.currentTrack,
+        gates: state.currentTrack.gates.map((g) =>
+          g.id === gateId ? { ...g, position } : g,
+        ),
+      },
+    }
+  }),
+  commitGateDrag: () => set((state) => {
+    if (!state.currentTrack) return state
+    const newPast = [...state.past, state.currentTrack].slice(-MAX_HISTORY)
+    return { past: newPast, future: [] }
+  }),
+  setGateRotation: (gateId, rotation) => set((state) => {
+    if (!state.currentTrack) return state
+    return {
+      currentTrack: {
+        ...state.currentTrack,
+        gates: state.currentTrack.gates.map((g) =>
+          g.id === gateId ? { ...g, rotation: ((rotation % 360) + 360) % 360 } : g,
+        ),
+      },
     }
   }),
   moveGate: (gateId, direction, distance = 1) => set((state) => {
@@ -203,4 +236,5 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       future: newFuture,
     }
   }),
+  setDraggingGate: (isDragging) => set({ isDraggingGate: isDragging }),
 })
