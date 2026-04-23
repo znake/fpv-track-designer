@@ -40,7 +40,10 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
     }
 
     const handlePointerDown = (e: PointerEvent) => {
-      if (!isSpaceHeld.current || e.button !== 0) return
+      if (e.button === 2) {
+        e.preventDefault()
+      }
+      if ((!isSpaceHeld.current && e.button !== 2) || (e.button !== 0 && e.button !== 2)) return
 
       isPanning.current = true
       canvas.dataset.cameraPanning = 'true'
@@ -116,11 +119,16 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
       canvas.style.cursor = ''
     }
 
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+    }
+
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
     canvas.addEventListener('pointerdown', handlePointerDown)
     canvas.addEventListener('pointermove', handlePointerMove)
     canvas.addEventListener('pointerup', handlePointerUp)
+    canvas.addEventListener('contextmenu', handleContextMenu)
     window.addEventListener('blur', handleBlur)
 
     return () => {
@@ -130,6 +138,7 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
       canvas.removeEventListener('pointerdown', handlePointerDown)
       canvas.removeEventListener('pointermove', handlePointerMove)
       canvas.removeEventListener('pointerup', handlePointerUp)
+      canvas.removeEventListener('contextmenu', handleContextMenu)
       window.removeEventListener('blur', handleBlur)
     }
   }, [camera, gl, controlsRef])

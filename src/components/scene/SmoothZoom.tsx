@@ -50,18 +50,54 @@ export function SmoothZoom({
       const clampedDelta = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 150)
 
       // Proportional zoom – percentage-based so it feels consistent at any distance
-      const factor = currentDist * (1 + clampedDelta * 0.001)
+      const factor = currentDist * (1 + clampedDelta * 0.005)
 
       targetDistRef.current = MathUtils.clamp(factor, minDistance, maxDistance)
     }
 
+    let isMiddleZooming = false
+    let lastY = 0
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.button !== 1) return
+      isMiddleZooming = true
+      lastY = e.clientY
+      canvas.style.cursor = 'ns-resize'
+    }
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!isMiddleZooming) return
+
+      const controls = controlsRef.current
+      if (!controls) return
+
+      const currentDist = camera.position.distanceTo(controls.target)
+      const deltaY = lastY - e.clientY
+      lastY = e.clientY
+
+      // Scale factor: much faster than wheel for quick zooming
+      const factor = currentDist * (1 + deltaY * 0.2)
+      targetDistRef.current = MathUtils.clamp(factor, minDistance, maxDistance)
+    }
+
+    const handlePointerUp = () => {
+      if (!isMiddleZooming) return
+      isMiddleZooming = false
+      canvas.style.cursor = ''
+    }
+
     canvas.addEventListener('wheel', handleWheel, { passive: false })
+    canvas.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
 
     return () => {
       canvas.removeEventListener('wheel', handleWheel)
+      canvas.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
     }
   }, [camera, gl, controlsRef, minDistance, maxDistance])
-
   // Smoothly interpolate camera distance every frame
   useFrame((_, delta) => {
     const controls = controlsRef.current

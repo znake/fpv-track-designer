@@ -10,7 +10,6 @@ import { Grid } from '../scene/Grid'
 import { CameraPan } from '../scene/CameraPan'
 import { CameraVerticalPan } from '../scene/CameraVerticalPan'
 import { SmoothZoom } from '../scene/SmoothZoom'
-import { GateMarqueeSelection } from '../scene/GateMarqueeSelection'
 
 export function Scene() {
   const controlsRef = useRef<OrbitControlsImpl>(null)
@@ -43,16 +42,14 @@ export function Scene() {
         enableZoom={false}
         enablePan={false}
         mouseButtons={{
-          LEFT: MOUSE.PAN,
-          MIDDLE: MOUSE.ROTATE,
-          RIGHT: MOUSE.PAN,
+          LEFT: MOUSE.ROTATE,
+          MIDDLE: MOUSE.DOLLY,
         }}
         maxPolarAngle={Math.PI / 2.1}
       />
       <CameraPan controlsRef={controlsRef} />
       <CameraVerticalPan controlsRef={controlsRef} />
       <SmoothZoom controlsRef={controlsRef} />
-      <GateMarqueeSelection />
     </Canvas>
   )
 }
