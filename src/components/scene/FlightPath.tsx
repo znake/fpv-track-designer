@@ -12,29 +12,33 @@ interface FlightPathProps {
 export function FlightPath({ gates, gateSequence }: FlightPathProps) {
   const path = useMemo(() => calculateFlightPath(gates, gateSequence), [gates, gateSequence])
 
-  // Build native THREE.Line for smooth bezier rendering
-  const lineObj = useMemo(() => {
+  // Build one native THREE.Line per sampled curve to avoid implicit connections between disjoint segments.
+  const lineObjects = useMemo(() => path.sampledSegments.map((segment) => {
     const geometry = new THREE.BufferGeometry()
-    const positions = new Float32Array(path.sampledPoints.length * 3)
-    for (let i = 0; i < path.sampledPoints.length; i++) {
-      const p = path.sampledPoints[i]
+    const positions = new Float32Array(segment.length * 3)
+
+    for (let i = 0; i < segment.length; i++) {
+      const p = segment[i]
       positions[i * 3] = p.x
       positions[i * 3 + 1] = p.y
       positions[i * 3 + 2] = p.z
     }
+
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     const material = new THREE.LineBasicMaterial({ color: '#ffff00', linewidth: 2 })
     return new THREE.Line(geometry, material)
-  }, [path.sampledPoints])
+  }), [path.sampledSegments])
 
   if (path.segments.length === 0) return null
 
   return (
     <group>
-      {/* Flight path curve — native THREE.Line for accurate bezier rendering */}
-      <primitive object={lineObj} />
+      {/* Flight path curves — rendered separately to preserve gate entry/exit discontinuities */}
+      {lineObjects.map((lineObject, index) => (
+        <primitive key={index} object={lineObject} />
+      ))}
 
-      {/* Direction arrows — simple 2-line chevrons */}
+      {/* Direction arrows — two-line chevrons every 1.5m */}
       {path.arrows.map((arrow, i) => (
         <group
           key={i}
@@ -48,19 +52,19 @@ export function FlightPath({ gates, gateSequence }: FlightPathProps) {
         >
           <Line
             points={[
-              [-0.12, 0, 0.12],
-              [0, 0, -0.2],
+              [-0.04, 0, 0.04],
+              [0, 0, -0.06],
             ]}
             color="#ffff00"
-            lineWidth={2}
+            lineWidth={1.5}
           />
           <Line
             points={[
-              [0.12, 0, 0.12],
-              [0, 0, -0.2],
+              [0.04, 0, 0.04],
+              [0, 0, -0.06],
             ]}
             color="#ffff00"
-            lineWidth={2}
+            lineWidth={1.5}
           />
         </group>
       ))}

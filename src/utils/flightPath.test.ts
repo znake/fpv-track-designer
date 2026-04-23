@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { calculateFlightPath, FLIGHT_PATH_HEIGHT } from './flightPath'
+import { calculateFlightPath, GATE_BASE_HEIGHT } from './flightPath'
 import type { Gate } from '../types'
 
-const createGate = (id: string, x: number, y: number, z: number): Gate => ({
+const createGate = (id: string, x: number, y: number, z: number, size: Gate['size'] = 1): Gate => ({
   id,
   type: 'standard',
   position: { x, y, z },
   rotation: 0,
-  size: 1,
+  size,
 })
 
 describe('calculateFlightPath', () => {
@@ -18,6 +18,7 @@ describe('calculateFlightPath', () => {
       totalLength: 0,
       points: [],
       sampledPoints: [],
+      sampledSegments: [],
     })
     expect(calculateFlightPath([createGate('g1', 0, 0, 0)])).toEqual({
       segments: [],
@@ -25,6 +26,7 @@ describe('calculateFlightPath', () => {
       totalLength: 0,
       points: [],
       sampledPoints: [],
+      sampledSegments: [],
     })
   })
 
@@ -52,9 +54,13 @@ describe('calculateFlightPath', () => {
 
     // Verify sampledPoints exist and are non-empty
     expect(path.sampledPoints.length).toBeGreaterThan(0)
+    expect(path.sampledSegments.length).toBeGreaterThan(0)
+    expect(path.sampledSegments.every(segment => segment.length >= 2)).toBe(true)
 
-    // points includes 4 control points per segment, but 'to' of segment i equals 'from' of segment i+1
-    expect(path.points.length).toBe(gates.length * 3)
+    // points includes 3 control points per segment (from, cp1, cp2).
+    // When avoidance is triggered, a segment gets 6 control points (2 curves × 3).
+    // So length >= gates.length * 3.
+    expect(path.points.length).toBeGreaterThanOrEqual(gates.length * 3)
   })
 
   it('path closes (last gate connects to first)', () => {
@@ -97,9 +103,9 @@ describe('calculateFlightPath', () => {
 
     const path = calculateFlightPath(gates)
 
-    // With rotation=0 gates, the first tangent starts near +z (exit direction)
-    expect(path.segments[0].direction.z).toBeGreaterThan(0.9)
-    expect(Math.abs(path.segments[0].direction.x)).toBeLessThan(0.1)
+    // Ideal line now follows the direct line between gate centers
+    expect(path.segments[0].direction.x).toBeGreaterThan(0.9)
+    expect(Math.abs(path.segments[0].direction.z)).toBeLessThan(0.1)
     expect(Math.abs(path.segments[0].direction.y)).toBeLessThan(0.1)
 
     // All direction vectors should be normalized
@@ -139,10 +145,11 @@ describe('calculateFlightPath', () => {
     const path = calculateFlightPath(gates)
 
     // All arrow positions should stay near the gate corridor
+    // Avoidance paths may extend slightly beyond the straight corridor
     for (const arrow of path.arrows) {
-      expect(arrow.position.x).toBeGreaterThanOrEqual(-1)
-      expect(arrow.position.x).toBeLessThanOrEqual(11)
-      expect(arrow.position.y).toBeCloseTo(FLIGHT_PATH_HEIGHT, 1)
+      expect(arrow.position.x).toBeGreaterThanOrEqual(-3)
+      expect(arrow.position.x).toBeLessThanOrEqual(13)
+      expect(arrow.position.y).toBeCloseTo(GATE_BASE_HEIGHT / 2, 1)
       expect(Number.isFinite(arrow.position.z)).toBe(true)
     }
   })
@@ -200,8 +207,91 @@ describe('calculateFlightPath', () => {
     expect(path.totalLength).toBeGreaterThan(0)
     expect(path.arrows.length).toBeGreaterThan(0)
     expect(path.sampledPoints.length).toBeGreaterThan(0)
-    // points includes 3 unique control points per segment (from, cp1, cp2), 'to' is shared with next segment
-    expect(path.points.length).toBe(gates.length * 3)
+    // points includes 3 control points per segment (from, cp1, cp2).
+    // Avoidance paths add extra control points, so length >= gates.length * 3.
+    expect(path.points.length).toBeGreaterThanOrEqual(gates.length * 3)
+  })
+
+  it('passes straight through a gate opening', () => {
+    const gates = [
+      createGate('g1', 0, 0, 0),
+      createGate('g2', 10, 0, 0),
+    ]
+
+    const path = calculateFlightPath(gates)
+    const firstSegment = path.sampledSegments[0]
+
+    expect(firstSegment[0].x).toBeCloseTo(0, 5)
+    expect(firstSegment[0].z).toBeCloseTo(-0.45, 5)
+    expect(firstSegment[firstSegment.length - 1].x).toBeCloseTo(0, 5)
+    expect(firstSegment[firstSegment.length - 1].z).toBeCloseTo(0.45, 5)
+
+    expect(firstSegment.every(point => Math.abs(point.x) < 0.00001)).toBe(true)
+  })
+
+  it('reaches the next gate at its green entry anchor', () => {
+    const gates = [
+      createGate('g1', 0, 0, 0),
+      { ...createGate('g2', 10, 0, 10), rotation: 180 },
+    ]
+
+    const path = calculateFlightPath(gates)
+    const entryAnchor = { x: 10, z: 10.45 }
+    const entrySegmentIndex = path.sampledSegments.findIndex((segment) => {
+      const end = segment[segment.length - 1]
+      return Math.abs(end.x - entryAnchor.x) < 0.01 && Math.abs(end.z - entryAnchor.z) < 0.01
+    })
+    const transitionSegments = path.sampledSegments.slice(1, entrySegmentIndex + 1)
+    const firstTransitionSegment = transitionSegments[0]
+    const lastTransitionSegment = transitionSegments[transitionSegments.length - 1]
+
+    expect(entrySegmentIndex).toBeGreaterThan(0)
+    expect(firstTransitionSegment[0].x).toBeCloseTo(0, 5)
+    expect(firstTransitionSegment[0].z).toBeCloseTo(0.45, 5)
+    expect(lastTransitionSegment[lastTransitionSegment.length - 1].x).toBeCloseTo(entryAnchor.x, 5)
+    expect(lastTransitionSegment[lastTransitionSegment.length - 1].z).toBeCloseTo(entryAnchor.z, 5)
+  })
+
+  it('routes around a gate instead of approaching from the red side', () => {
+    const gates = [
+      createGate('g1', 0, 0, 20),
+      createGate('g2', 0, 0, 10),
+    ]
+
+    const path = calculateFlightPath(gates)
+    const entryAnchor = { x: 0, z: 9.55 }
+    const entrySegmentIndex = path.sampledSegments.findIndex((segment) => {
+      const end = segment[segment.length - 1]
+      return Math.abs(end.x - entryAnchor.x) < 0.01 && Math.abs(end.z - entryAnchor.z) < 0.01
+    })
+    const transitionSegmentsToSecondGate = path.sampledSegments.slice(1, entrySegmentIndex + 1)
+    const lastTransitionSegment = transitionSegmentsToSecondGate[transitionSegmentsToSecondGate.length - 1]
+
+    expect(entrySegmentIndex).toBeGreaterThan(1)
+    expect(lastTransitionSegment[lastTransitionSegment.length - 1].x).toBeCloseTo(0, 5)
+    expect(lastTransitionSegment[lastTransitionSegment.length - 1].z).toBeCloseTo(entryAnchor.z, 5)
+
+    const maxLateralOffset = Math.max(...transitionSegmentsToSecondGate.flat().map(point => Math.abs(point.x)))
+    expect(maxLateralOffset).toBeGreaterThan(0.5)
+  })
+
+  it('does not route around a gate when the green side is already ahead', () => {
+    const gates = [
+      createGate('g1', 0, 0, 0),
+      createGate('g2', 0, 0, 10),
+    ]
+
+    const path = calculateFlightPath(gates)
+    const entryAnchor = { x: 0, z: 9.55 }
+    const entrySegmentIndex = path.sampledSegments.findIndex((segment) => {
+      const end = segment[segment.length - 1]
+      return Math.abs(end.x - entryAnchor.x) < 0.01 && Math.abs(end.z - entryAnchor.z) < 0.01
+    })
+    const transitionSegmentsToSecondGate = path.sampledSegments.slice(1, entrySegmentIndex + 1)
+    const maxLateralOffset = Math.max(...transitionSegmentsToSecondGate.flat().map(point => Math.abs(point.x)))
+
+    expect(entrySegmentIndex).toBe(1)
+    expect(maxLateralOffset).toBeLessThan(0.01)
   })
 
   it('arrows follow curved path (not collinear for L-shape)', () => {
@@ -241,16 +331,38 @@ describe('calculateFlightPath', () => {
 
     const path = calculateFlightPath(gates)
 
-    // points includes 3 unique control points per segment (from, cp1, cp2), 'to' is shared with next segment
-    expect(path.points.length).toBe(gates.length * 3)
-    // Verify gate exit points are included (rotation=0 => +z offset for exits)
-    const gatePoints = gates.map(g => ({ x: g.position.x, y: g.position.y + FLIGHT_PATH_HEIGHT, z: g.position.z + 0.4 }))
-    for (let i = 0; i < gatePoints.length; i++) {
-      const gp = gatePoints[i]
-      const p = path.points[i * 3]
-      expect(Math.abs(p.x - gp.x)).toBeLessThan(0.01)
-      expect(Math.abs(p.y - gp.y)).toBeLessThan(0.01)
-      expect(Math.abs(p.z - gp.z)).toBeLessThan(0.01)
+    // points includes 3 control points per segment (from, cp1, cp2).
+    // When avoidance is triggered, a segment gets 6 control points (2 curves × 3).
+    // So length >= gates.length * 3.
+    expect(path.points.length).toBeGreaterThanOrEqual(gates.length * 3)
+
+    // Verify first point starts at the first gate's green-side entry anchor
+    const firstGateEntry = {
+      x: gates[0].position.x,
+      y: gates[0].position.y + GATE_BASE_HEIGHT / 2,
+      z: gates[0].position.z - 0.45,
     }
+    const p0 = path.points[0]
+    expect(Math.abs(p0.x - firstGateEntry.x)).toBeLessThan(0.01)
+    expect(Math.abs(p0.y - firstGateEntry.y)).toBeLessThan(0.01)
+    expect(Math.abs(p0.z - firstGateEntry.z)).toBeLessThan(0.01)
+  })
+
+  it('scales gate opening height with gate size', () => {
+    const gates = [
+      createGate('g1', 0, 0, 0, 0.75),
+      createGate('g2', 10, 0, 0, 1.5),
+    ]
+
+    const path = calculateFlightPath(gates)
+
+    const hasPointNearGateCenter = (gate: Gate) => path.sampledPoints.some((point) => (
+      Math.abs(point.x - gate.position.x) < 0.01
+      && Math.abs(point.z - gate.position.z) < 0.01
+      && Math.abs(point.y - (gate.position.y + (GATE_BASE_HEIGHT * gate.size) / 2)) < 0.01
+    ))
+
+    expect(hasPointNearGateCenter(gates[0])).toBe(true)
+    expect(hasPointNearGateCenter(gates[1])).toBe(true)
   })
 })
