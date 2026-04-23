@@ -2,6 +2,7 @@ import type { Gate, GateType, Track, Config } from '../types'
 
 const MIN_DISTANCE = 3 // meters
 const MAX_ATTEMPTS = 100
+const EDGE_MARGIN = 3 // meters from field edge
 
 function distance(
   a: { x: number; y: number; z: number },
@@ -18,10 +19,12 @@ function generateRandomPosition(fieldSize: {
   width: number
   height: number
 }): { x: number; y: number; z: number } {
+  const usableWidth = fieldSize.width - EDGE_MARGIN * 2
+  const usableHeight = fieldSize.height - EDGE_MARGIN * 2
   return {
-    x: (Math.random() - 0.5) * fieldSize.width,
+    x: -fieldSize.width / 2 + EDGE_MARGIN + Math.random() * usableWidth,
     y: 0, // On the ground
-    z: (Math.random() - 0.5) * fieldSize.height,
+    z: -fieldSize.height / 2 + EDGE_MARGIN + Math.random() * usableHeight,
   }
 }
 
@@ -78,44 +81,11 @@ function alignGateRotations(gates: Gate[]): void {
 }
 
 /**
- * Creates an ordered fly-through sequence from unique gates.
- * Same gate may appear multiple times, but never consecutively
- * (including the wrap-around from last -> first).
+ * Creates a simple sequential fly-through order.
+ * Gates are visited in the order they appear in the array.
  */
 function buildGateSequence(gates: Gate[]): string[] {
-  const base = gates.map((g) => g.id)
-
-  if (base.length < 2) return base
-
-  const sequence = [...base]
-
-  // Optional extra passes through existing gates
-  if (base.length >= 3) {
-    const maxExtras = Math.max(1, Math.floor(base.length / 2))
-    const extraCount = Math.floor(Math.random() * (maxExtras + 1))
-
-    for (let i = 0; i < extraCount; i++) {
-      const gateId = base[Math.floor(Math.random() * base.length)]
-      let inserted = false
-
-      for (let attempt = 0; attempt < 30 && !inserted; attempt++) {
-        const insertIdx = Math.floor(Math.random() * (sequence.length + 1))
-        const prev = sequence[(insertIdx - 1 + sequence.length) % sequence.length]
-        const next = sequence[insertIdx % sequence.length]
-
-        if (prev !== gateId && next !== gateId) {
-          sequence.splice(insertIdx, 0, gateId)
-          inserted = true
-        }
-      }
-    }
-  }
-
-  if (sequence.length > 1 && sequence[0] === sequence[sequence.length - 1]) {
-    sequence.pop()
-  }
-
-  return sequence
+  return gates.map((g) => g.id)
 }
 
 export function generateTrack(config: Config): Track {
@@ -123,14 +93,41 @@ export function generateTrack(config: Config): Track {
   const gateTypes = Object.entries(config.gateQuantities)
     .flatMap(([type, count]) => Array(count).fill(type as GateType))
 
-  // Place start-finish gate first at origin
+  // Place start-finish gate first at a random position on the field edge
   const startFinishIndex = gateTypes.indexOf('start-finish')
   if (startFinishIndex >= 0) {
     const [sf] = gateTypes.splice(startFinishIndex, 1)
+    const edge = Math.floor(Math.random() * 4) // 0=north, 1=south, 2=east, 3=west
+    const halfW = config.fieldSize.width / 2
+    const halfH = config.fieldSize.height / 2
+    let startX: number, startZ: number
+
+    switch (edge) {
+      case 0: // north edge
+        startX = -halfW + EDGE_MARGIN + Math.random() * (config.fieldSize.width - EDGE_MARGIN * 2)
+        startZ = -halfH + EDGE_MARGIN
+        break
+      case 1: // south edge
+        startX = -halfW + EDGE_MARGIN + Math.random() * (config.fieldSize.width - EDGE_MARGIN * 2)
+        startZ = halfH - EDGE_MARGIN
+        break
+      case 2: // east edge
+        startX = halfW - EDGE_MARGIN
+        startZ = -halfH + EDGE_MARGIN + Math.random() * (config.fieldSize.height - EDGE_MARGIN * 2)
+        break
+      case 3: // west edge
+        startX = -halfW + EDGE_MARGIN
+        startZ = -halfH + EDGE_MARGIN + Math.random() * (config.fieldSize.height - EDGE_MARGIN * 2)
+        break
+      default:
+        startX = 0
+        startZ = 0
+    }
+
     gates.push({
       id: crypto.randomUUID(),
       type: sf as GateType,
-      position: { x: 0, y: 0, z: 0 },
+      position: { x: startX, y: 0, z: startZ },
       rotation: 0,
       size: config.gateSize,
     })

@@ -7,8 +7,9 @@ const createTestConfig = (overrides: Partial<Config> = {}): Config => ({
     'start-finish': 1,
     standard: 4,
     'h-gate': 2,
-    huerdel: 1,
-    doppelgate: 1,
+    asymmetric: 1,
+    dive: 1,
+    double: 1,
     ladder: 1,
     flag: 0,
   },
@@ -33,11 +34,21 @@ describe('generateTrack', () => {
     expect(track.gates[0].type).toBe('start-finish')
   })
 
-  it('places start-finish gate at origin', () => {
+  it('places start-finish gate near the field edge (within 3m margin)', () => {
     const config = createTestConfig()
     const track = generateTrack(config)
 
-    expect(track.gates[0].position).toEqual({ x: 0, y: 0, z: 0 })
+    const halfW = config.fieldSize.width / 2
+    const halfH = config.fieldSize.height / 2
+    const pos = track.gates[0].position
+
+    // Start gate must be within 3m of one edge and within bounds on the other axis
+    const nearNorthEdge = Math.abs(pos.z - (-halfH)) <= 3 && Math.abs(pos.x) <= halfW - 3
+    const nearSouthEdge = Math.abs(pos.z - halfH) <= 3 && Math.abs(pos.x) <= halfW - 3
+    const nearEastEdge = Math.abs(pos.x - halfW) <= 3 && Math.abs(pos.z) <= halfH - 3
+    const nearWestEdge = Math.abs(pos.x - (-halfW)) <= 3 && Math.abs(pos.z) <= halfH - 3
+
+    expect(nearNorthEdge || nearSouthEdge || nearEastEdge || nearWestEdge).toBe(true)
   })
 
   it('enforces minimum 3m distance between all gates', () => {
@@ -56,7 +67,7 @@ describe('generateTrack', () => {
     }
   })
 
-  it('places all gates within field bounds', () => {
+  it('places all gates at least 3m from field edges', () => {
     const config = createTestConfig()
     const track = generateTrack(config)
 
@@ -64,12 +75,11 @@ describe('generateTrack', () => {
     const halfH = config.fieldSize.height / 2
 
     for (const gate of track.gates) {
-      expect(gate.position.x).toBeGreaterThanOrEqual(-halfW)
-      expect(gate.position.x).toBeLessThanOrEqual(halfW)
-      expect(gate.position.z).toBeGreaterThanOrEqual(-halfH)
-      expect(gate.position.z).toBeLessThanOrEqual(halfH)
-      expect(gate.position.y).toBeGreaterThanOrEqual(0)
-      expect(gate.position.y).toBeLessThanOrEqual(0)
+      expect(gate.position.x).toBeGreaterThanOrEqual(-halfW + 3)
+      expect(gate.position.x).toBeLessThanOrEqual(halfW - 3)
+      expect(gate.position.z).toBeGreaterThanOrEqual(-halfH + 3)
+      expect(gate.position.z).toBeLessThanOrEqual(halfH - 3)
+      expect(gate.position.y).toBe(0)
     }
   })
 
@@ -146,8 +156,9 @@ describe('generateTrack', () => {
         'start-finish': 0,
         standard: 3,
         'h-gate': 0,
-        huerdel: 0,
-        doppelgate: 0,
+        asymmetric: 0,
+        dive: 0,
+        double: 0,
         ladder: 0,
         flag: 0,
       },
