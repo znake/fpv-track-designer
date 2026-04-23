@@ -40,8 +40,8 @@ const shortcuts: ShortcutGroup[] = [
   {
     category: 'Gate Editing',
     shortcuts: [
-      { description: 'Move Selected Gate', keys: ['↑', '↓', '←', '→'] },
-      { description: 'Rotation', keys: ['Slider in Properties Panel'] },
+      { description: 'Nudge Selected Gate', keys: ['↑', '↓', '←', '→'] },
+      { description: 'Drag / Rotate Gate', keys: ['In-canvas handles'] },
     ],
   },
   {

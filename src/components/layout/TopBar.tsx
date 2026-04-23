@@ -3,15 +3,11 @@ import {
   Drone,
   Undo2,
   Redo2,
-  Shuffle,
-  Save,
-  GalleryVertical,
   Upload,
   Download,
   CircleHelp,
 } from 'lucide-react'
 import { useAppStore } from '@/store'
-import { generateTrack } from '@/utils/generator'
 import { serializeTrack, deserializeTrack } from '@/schemas/track.schema'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -23,12 +19,10 @@ import {
 import { Badge } from '@/components/ui/badge'
 
 interface TopBarProps {
-  onSaveClick: () => void
-  onGalleryClick: () => void
   onShortcutsClick: () => void
 }
 
-export const TopBar: FC<TopBarProps> = ({ onSaveClick, onGalleryClick, onShortcutsClick }) => {
+export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
   const past = useAppStore((state) => state.past)
   const future = useAppStore((state) => state.future)
   const undo = useAppStore((state) => state.undo)
@@ -36,11 +30,6 @@ export const TopBar: FC<TopBarProps> = ({ onSaveClick, onGalleryClick, onShortcu
   const currentTrack = useAppStore((state) => state.currentTrack)
   const config = useAppStore((state) => state.config)
   const setTrack = useAppStore((state) => state.setTrack)
-
-  const handleShuffle = () => {
-    const track = generateTrack(config)
-    setTrack(track)
-  }
 
   const handleExport = () => {
     if (!currentTrack) return
@@ -136,38 +125,6 @@ export const TopBar: FC<TopBarProps> = ({ onSaveClick, onGalleryClick, onShortcu
         )}
 
         <Separator orientation="vertical" className="h-6" />
-
-        {/* Shuffle */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="default" size="icon" onClick={handleShuffle}>
-              <Shuffle className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Shuffle (R)</TooltipContent>
-        </Tooltip>
-
-        <Separator orientation="vertical" className="h-6" />
-
-        {/* Save */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={onSaveClick}>
-              <Save className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Save (Ctrl+S)</TooltipContent>
-        </Tooltip>
-
-        {/* Gallery */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={onGalleryClick}>
-              <GalleryVertical className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Gallery (G)</TooltipContent>
-        </Tooltip>
 
         {/* Import */}
         <Tooltip>

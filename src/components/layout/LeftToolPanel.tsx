@@ -3,7 +3,6 @@ import { useState, useCallback } from 'react'
 import { Dice5, Save, FilePlus, Settings2, GalleryVertical } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { generateTrack } from '@/utils/generator'
-import type { Track } from '@/types/track'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -15,9 +14,16 @@ import { SaveTrackDialog } from '@/components/ui/SaveTrackDialog'
 interface LeftToolPanelProps {
   onSaveClick?: () => void
   onGalleryClick?: () => void
+  onSettingsClick?: () => void
+  onNewTrackClick?: () => void
 }
 
-export const LeftToolPanel: FC<LeftToolPanelProps> = ({ onSaveClick, onGalleryClick }) => {
+export const LeftToolPanel: FC<LeftToolPanelProps> = ({
+  onSaveClick,
+  onGalleryClick,
+  onSettingsClick,
+  onNewTrackClick,
+}) => {
   const config = useAppStore((state) => state.config)
   const setTrack = useAppStore((state) => state.setTrack)
 
@@ -29,8 +35,13 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({ onSaveClick, onGalleryCl
   }, [config, setTrack])
 
   const handleNew = useCallback(() => {
-    setTrack(null as unknown as Track)
-  }, [setTrack])
+    if (onNewTrackClick) {
+      onNewTrackClick()
+      return
+    }
+
+    setTrack(generateTrack(config))
+  }, [config, onNewTrackClick, setTrack])
 
   const handleSaveClick = useCallback(() => {
     if (onSaveClick) {
@@ -43,6 +54,10 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({ onSaveClick, onGalleryCl
   const handleGalleryClick = useCallback(() => {
     onGalleryClick?.()
   }, [onGalleryClick])
+
+  const handleSettingsClick = useCallback(() => {
+    onSettingsClick?.()
+  }, [onSettingsClick])
 
   const tools = [
     {
@@ -67,7 +82,7 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({ onSaveClick, onGalleryCl
       icon: Settings2,
       label: 'Settings',
       shortcut: '',
-      action: () => {},
+      action: handleSettingsClick,
     },
     {
       icon: GalleryVertical,

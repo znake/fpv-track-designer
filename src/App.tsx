@@ -6,10 +6,19 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { SaveTrackDialog } from './components/ui/SaveTrackDialog'
 import { TrackGallery } from './components/ui/TrackGallery'
 import { KeyboardShortcutsDialog } from './components/ui/KeyboardShortcutsDialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from './components/ui/sheet'
+import { ScrollArea } from './components/ui/scroll-area'
+import { Separator } from './components/ui/separator'
+import { GateConfigPanel } from './components/ui/GateConfigPanel'
 import { Scene } from './components/scene/Scene'
 import { TopBar } from './components/layout/TopBar'
 import { LeftToolPanel } from './components/layout/LeftToolPanel'
-import { PropertiesPanel } from './components/layout/PropertiesPanel'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 function App() {
@@ -20,12 +29,18 @@ function App() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   useKeyboardShortcuts({
     onSave: () => setSaveDialogOpen(true),
+    onNewTrack: () => setTrack(generateTrack(config)),
     onShuffle: () => setTrack(generateTrack(config)),
-    onOpenGallery: () => setGalleryOpen(true),
+    onOpenGallery: () => {
+      setSettingsOpen(false)
+      setGalleryOpen(true)
+    },
   })
+
   // Auto-generate track on first load
   useEffect(() => {
     if (!currentTrack) {
@@ -38,23 +53,47 @@ function App() {
     <TooltipProvider>
       <div className="flex h-screen w-screen flex-col overflow-hidden">
         <TopBar
-          onSaveClick={() => setSaveDialogOpen(true)}
-          onGalleryClick={() => setGalleryOpen(true)}
           onShortcutsClick={() => setShortcutsOpen(true)}
         />
         <div className="flex flex-1 overflow-hidden">
-          <LeftToolPanel onSaveClick={() => setSaveDialogOpen(true)} onGalleryClick={() => setGalleryOpen(true)} />
+          <LeftToolPanel
+            onNewTrackClick={() => setTrack(generateTrack(config))}
+            onSaveClick={() => setSaveDialogOpen(true)}
+            onGalleryClick={() => {
+              setSettingsOpen(false)
+              setGalleryOpen(true)
+            }}
+            onSettingsClick={() => {
+              setGalleryOpen(false)
+              setSettingsOpen(true)
+            }}
+          />
           <main className="relative flex-1">
             <Scene />
           </main>
-          <PropertiesPanel />
         </div>
       </div>
+      <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <SheetContent side="left" className="gap-0 p-0 sm:max-w-md">
+          <SheetHeader className="pr-12">
+            <SheetTitle>Track Settings</SheetTitle>
+            <SheetDescription>
+              Adjust gate quantities, field dimensions, gate size, and reset defaults.
+            </SheetDescription>
+          </SheetHeader>
+          <Separator />
+          <ScrollArea className="flex-1">
+            <div className="p-4">
+              <GateConfigPanel />
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
       <SaveTrackDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen} />
       <TrackGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </TooltipProvider>
-)
+  )
 }
 
 export default App

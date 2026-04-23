@@ -3,8 +3,9 @@ import { useAppStore } from '@/store'
 import type { GateType } from '@/types'
 import {
   Card,
-  CardHeader,
   CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -23,10 +24,17 @@ const GATE_TYPES: { type: GateType; label: string }[] = [
   { type: 'start-finish', label: 'Start/Ziel Gate' },
   { type: 'standard', label: 'Standard Gate' },
   { type: 'h-gate', label: 'H-Gate' },
-  { type: 'huerdel', label: 'Hürdel' },
-  { type: 'doppelgate', label: 'Doppelgate' },
+  { type: 'asymmetric', label: 'Asymmetrisch' },
+  { type: 'dive', label: 'Dive' },
+  { type: 'double', label: 'Double Gate' },
   { type: 'ladder', label: 'Ladder' },
   { type: 'flag', label: 'Flag' },
+]
+
+const GATE_SIZE_OPTIONS: ReadonlyArray<{ value: 0.75 | 1 | 1.5; label: string }> = [
+  { value: 0.75, label: '75cm' },
+  { value: 1, label: '1m' },
+  { value: 1.5, label: '1.5m' },
 ]
 
 export function GateConfigPanel() {
@@ -39,10 +47,21 @@ export function GateConfigPanel() {
   const [quantitiesOpen, setQuantitiesOpen] = useState(true)
   const [fieldOpen, setFieldOpen] = useState(true)
 
+  const handleGateSizeChange = (value: string) => {
+    const selectedSize = Number(value)
+
+    if (selectedSize === 0.75 || selectedSize === 1 || selectedSize === 1.5) {
+      setGateSize(selectedSize)
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Gate Configuration</CardTitle>
+        <CardTitle>Course Setup</CardTitle>
+        <CardDescription>
+          Manage gate inventory and the field dimensions used for new layouts.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Gate Quantities */}
@@ -141,22 +160,14 @@ export function GateConfigPanel() {
               <ToggleGroup
                 type="single"
                 value={String(config.gateSize)}
-                onValueChange={(value) => {
-                  if (value) {
-                    setGateSize(Number(value) as 0.75 | 1 | 1.5)
-                  }
-                }}
+                onValueChange={handleGateSizeChange}
                 className="w-full"
               >
-                <ToggleGroupItem value="0.75" className="flex-1">
-                  75cm
-                </ToggleGroupItem>
-                <ToggleGroupItem value="1" className="flex-1">
-                  1m
-                </ToggleGroupItem>
-                <ToggleGroupItem value="1.5" className="flex-1">
-                  1.5m
-                </ToggleGroupItem>
+                {GATE_SIZE_OPTIONS.map((option) => (
+                  <ToggleGroupItem key={option.value} value={String(option.value)} className="flex-1">
+                    {option.label}
+                  </ToggleGroupItem>
+                ))}
               </ToggleGroup>
             </div>
 

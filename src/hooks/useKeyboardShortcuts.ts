@@ -1,15 +1,15 @@
 import { useEffect } from 'react'
 import { useAppStore } from '@/store'
-import type { Track } from '@/types/track'
 
 interface KeyboardShortcutsOptions {
   onSave?: () => void
+  onNewTrack?: () => void
   onShuffle?: () => void
   onOpenGallery?: () => void
 }
 
 export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
-  const { onSave, onShuffle, onOpenGallery } = options
+  const { onSave, onNewTrack, onShuffle, onOpenGallery } = options
   const undo = useAppStore((s) => s.undo)
   const redo = useAppStore((s) => s.redo)
   const selectGate = useAppStore((s) => s.selectGate)
@@ -42,7 +42,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
 
       if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
         e.preventDefault()
-        setTrack(null as unknown as Track)
+        onNewTrack?.()
         return
       }
 
@@ -80,5 +80,5 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo, onSave, onShuffle, onOpenGallery, selectGate, setTrack, moveGate, selectedGateId])
+  }, [undo, redo, onSave, onNewTrack, onShuffle, onOpenGallery, selectGate, moveGate, selectedGateId])
 }

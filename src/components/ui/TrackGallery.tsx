@@ -44,7 +44,7 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-96 sm:max-w-md">
+      <SheetContent side="left" className="w-96 sm:max-w-md">
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle>Track Gallery</SheetTitle>
           <Button
