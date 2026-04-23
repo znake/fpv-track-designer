@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local QA / browser automation artifacts
+.playwright-mcp/
+qa-*.png
+flight-path-*.png
