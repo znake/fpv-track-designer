@@ -12,15 +12,17 @@ import { GateHandles } from './GateHandles'
 
 interface GateProps {
   gate: GateType
+  label?: string
 }
 
-export function Gate({ gate }: GateProps) {
+export function Gate({ gate, label }: GateProps) {
   const { isSelected, handleClick } = useGateSelection(gate.id)
 
   const commonProps = {
     position: gate.position,
     rotation: gate.rotation,
     size: gate.size,
+    gateLabel: label,
     isSelected,
     onClick: handleClick,
   }

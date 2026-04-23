@@ -7,6 +7,7 @@ interface GateComponentProps {
   position: { x: number; y: number; z: number }
   rotation: number
   size: 0.75 | 1 | 1.5
+  gateLabel?: string
   isSelected?: boolean
   onClick?: (e: ThreeEvent<MouseEvent>) => void
 }
@@ -16,7 +17,7 @@ const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
 const STACK_DISTANCE = BASE_HEIGHT
 
-export function AsymmetricGate({ position, rotation, size, isSelected, onClick }: GateComponentProps) {
+export function AsymmetricGate({ position, rotation, size, gateLabel, isSelected, onClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const width = BASE_WIDTH * scale
@@ -73,7 +74,8 @@ export function AsymmetricGate({ position, rotation, size, isSelected, onClick }
       </group>
 
       {/* Entry/exit indicator — green entry side, red exit side */}
-      <GateEntryIndicator width={width} height={height} onClick={onClick} />
+      <GateEntryIndicator width={width} height={height} label={gateLabel} onClick={onClick} />
+      <GateEntryIndicator width={width} height={height} baseY={stackOffset} label={gateLabel} onClick={onClick} />
     </group>
   )
 }

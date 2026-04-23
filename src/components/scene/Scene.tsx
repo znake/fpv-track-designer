@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { MOUSE } from 'three'
@@ -16,6 +16,31 @@ export function Scene() {
   const currentTrack = useAppStore((state) => state.currentTrack)
   const config = useAppStore((state) => state.config)
 
+  const gateLabels = useMemo(() => {
+    if (!currentTrack) return new Map<string, string>()
+
+    const labels = new Map<string, number[]>()
+    const sequence = currentTrack.gateSequence.length > 0
+      ? currentTrack.gateSequence
+      : currentTrack.gates.map((gate) => gate.id)
+
+    sequence.forEach((gateId, index) => {
+      const numbers = labels.get(gateId) ?? []
+      numbers.push(index + 1)
+      labels.set(gateId, numbers)
+    })
+
+    currentTrack.gates.forEach((gate, index) => {
+      if (!labels.has(gate.id)) {
+        labels.set(gate.id, [index + 1])
+      }
+    })
+
+    return new Map(
+      [...labels.entries()].map(([gateId, numbers]) => [gateId, numbers.join('\n')]),
+    )
+  }, [currentTrack])
+
   return (
     <Canvas
       camera={{ position: [0, 30, 30], fov: 50, near: 0.1, far: 1000 }}
@@ -29,7 +54,7 @@ export function Scene() {
       {currentTrack && (
         <>
           {currentTrack.gates.map((gate) => (
-            <Gate key={gate.id} gate={gate} />
+            <Gate key={gate.id} gate={gate} label={gateLabels.get(gate.id)} />
           ))}
           <FlightPath gates={currentTrack.gates} gateSequence={currentTrack.gateSequence} />
         </>

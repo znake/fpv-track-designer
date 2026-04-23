@@ -7,6 +7,7 @@ interface GateComponentProps {
   position: { x: number; y: number; z: number }
   rotation: number
   size: 0.75 | 1 | 1.5
+  gateLabel?: string
   isSelected?: boolean
   onClick?: (e: ThreeEvent<MouseEvent>) => void
 }
@@ -36,7 +37,7 @@ function GateFrame({ y, width, height, color, emissiveColor, emissiveIntensity, 
   )
 }
 
-export function LadderGate({ position, rotation, size, isSelected, onClick }: GateComponentProps) {
+export function LadderGate({ position, rotation, size, gateLabel, isSelected, onClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const width = BASE_WIDTH * scale
@@ -57,7 +58,9 @@ export function LadderGate({ position, rotation, size, isSelected, onClick }: Ga
       <GateFrame y={stackOffset * 2} width={width} height={height} color={color} emissiveColor={emissiveColor} emissiveIntensity={emissiveIntensity} onClick={onClick} />
 
       {/* Entry/exit indicator — green entry side, red exit side */}
-      <GateEntryIndicator width={width} height={height} onClick={onClick} />
+      <GateEntryIndicator width={width} height={height} label={gateLabel} onClick={onClick} />
+      <GateEntryIndicator width={width} height={height} baseY={stackOffset} label={gateLabel} onClick={onClick} />
+      <GateEntryIndicator width={width} height={height} baseY={stackOffset * 2} label={gateLabel} onClick={onClick} />
     </group>
   )
 }
