@@ -17,11 +17,6 @@ export function GateOpeningIndicators({ openings, openingLabels, label, isSelect
     const openingLabel = openingLabels?.[opening.id] ?? label
     const sequenceNumber = openingLabel ? Number.parseInt(openingLabel, 10) : Number.NaN
     const handleSurfaceClick = (e: ThreeEvent<MouseEvent>) => {
-      if (onOpeningClick) {
-        onOpeningClick(opening.id, e)
-        return
-      }
-
       onClick?.(e)
     }
 
