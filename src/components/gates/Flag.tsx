@@ -13,12 +13,13 @@ interface GateComponentProps {
   isSelected?: boolean
   onClick?: (e: ThreeEvent<MouseEvent>) => void
   onOpeningClick?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
+  onOpeningLabelClick?: (openingId: string, sequenceNumber: number, e: ThreeEvent<MouseEvent>) => void
 }
 
 const POLE_THICKNESS = 0.06
 const BASE_HEIGHT = 2
 
-export function Flag({ position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick }: GateComponentProps) {
+export function Flag({ position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const height = BASE_HEIGHT * scale
@@ -44,7 +45,7 @@ export function Flag({ position, rotation, size, openings, openingLabels, isSele
         <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
 
-      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} onOpeningClick={onOpeningClick} />
+      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} />
 
     </group>
   )
