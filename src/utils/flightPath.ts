@@ -36,6 +36,7 @@ export interface FlightPath {
   points: { x: number; y: number; z: number }[]
   sampledPoints: { x: number; y: number; z: number }[]
   sampledSegments: { x: number; y: number; z: number }[][]
+  sampledLegs: { x: number; y: number; z: number }[][]
 }
 
 interface GateVisit {
@@ -362,10 +363,11 @@ function resolveVisits(gates: Gate[], gateSequence?: GateSequenceItem[]): GateVi
 export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceItem[]): FlightPath {
   const orderedVisits = resolveVisits(gates, gateSequence)
   if (orderedVisits.length < 2) {
-    return { segments: [], arrows: [], totalLength: 0, points: [], sampledPoints: [], sampledSegments: [] }
+    return { segments: [], arrows: [], totalLength: 0, points: [], sampledPoints: [], sampledSegments: [], sampledLegs: [] }
   }
 
   const curves: { curve: CubicBezierCurve3; length: number }[] = []
+  const legCurveGroups: { curve: CubicBezierCurve3; length: number }[][] = []
   const allPoints: Vector3[] = []
   const segments: PathSegment[] = []
   let totalLength = 0
@@ -376,7 +378,9 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceIt
 
     const throughGateCurve = createStraightCurve(getGateEntryPoint(fromVisit), getGateExitPoint(fromVisit))
     const throughGateLength = throughGateCurve.getLength()
-    curves.push({ curve: throughGateCurve, length: throughGateLength })
+    const throughGate = { curve: throughGateCurve, length: throughGateLength }
+    const legCurves = [throughGate]
+    curves.push(throughGate)
     totalLength += throughGateLength
     allPoints.push(throughGateCurve.v0, throughGateCurve.v1, throughGateCurve.v2)
 
@@ -440,10 +444,14 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceIt
     }
 
     for (const { curve, length } of transitionCurves) {
-      curves.push({ curve, length })
+      const transitionCurve = { curve, length }
+      curves.push(transitionCurve)
+      legCurves.push(transitionCurve)
       totalLength += length
       allPoints.push(curve.v0, curve.v1, curve.v2)
     }
+
+    legCurveGroups.push(legCurves)
 
     segments.push({
       from: fromVisit.gate.position,
@@ -455,6 +463,23 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceIt
 
   const sampledPoints: { x: number; y: number; z: number }[] = []
   const sampledSegments: { x: number; y: number; z: number }[][] = []
+  const sampledLegs = legCurveGroups.map((legCurves) => {
+    const legPoints: { x: number; y: number; z: number }[] = []
+
+    for (const { curve, length } of legCurves) {
+      const samples = getCurveSamples(length)
+
+      for (let i = 0; i < samples; i++) {
+        const point = curve.getPoint(i / samples)
+        legPoints.push({ x: point.x, y: point.y, z: point.z })
+      }
+
+      const endPoint = curve.getPoint(1)
+      legPoints.push({ x: endPoint.x, y: endPoint.y, z: endPoint.z })
+    }
+
+    return legPoints
+  })
 
   for (const { curve, length } of curves) {
     const samples = getCurveSamples(length)
@@ -511,5 +536,6 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceIt
     points: allPoints.map((point) => ({ x: point.x, y: point.y, z: point.z })),
     sampledPoints,
     sampledSegments,
+    sampledLegs,
   }
 }

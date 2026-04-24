@@ -21,6 +21,7 @@ describe('calculateFlightPath', () => {
       points: [],
       sampledPoints: [],
       sampledSegments: [],
+      sampledLegs: [],
     })
     expect(calculateFlightPath([createGate('g1', 0, 0, 0)])).toEqual({
       segments: [],
@@ -29,6 +30,7 @@ describe('calculateFlightPath', () => {
       points: [],
       sampledPoints: [],
       sampledSegments: [],
+      sampledLegs: [],
     })
   })
 
@@ -57,6 +59,8 @@ describe('calculateFlightPath', () => {
     // Verify sampledPoints exist and are non-empty
     expect(path.sampledPoints.length).toBeGreaterThan(0)
     expect(path.sampledSegments.length).toBeGreaterThan(0)
+    expect(path.sampledLegs).toHaveLength(gates.length)
+    expect(path.sampledLegs.every(leg => leg.length >= 2)).toBe(true)
     expect(path.sampledSegments.every(segment => segment.length >= 2)).toBe(true)
 
     // points includes 3 control points per segment (from, cp1, cp2).
