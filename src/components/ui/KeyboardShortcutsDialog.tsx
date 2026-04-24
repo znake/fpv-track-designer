@@ -56,7 +56,6 @@ const shortcuts: ShortcutGroup[] = [
     shortcuts: [
       { description: 'Strecke mischen', keys: ['R'] },
       { description: 'Strecke speichern', keys: [ctrl, 'S'] },
-      { description: 'Neue Strecke', keys: [ctrl, 'N'] },
     ],
   },
   {

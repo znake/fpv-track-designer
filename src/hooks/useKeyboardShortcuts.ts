@@ -3,13 +3,12 @@ import { useAppStore } from '@/store'
 
 interface KeyboardShortcutsOptions {
   onSave?: () => void
-  onNewTrack?: () => void
   onShuffle?: () => void
   onOpenGallery?: () => void
 }
 
 export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
-  const { onSave, onNewTrack, onShuffle, onOpenGallery } = options
+  const { onSave, onShuffle, onOpenGallery } = options
   const undo = useAppStore((s) => s.undo)
   const redo = useAppStore((s) => s.redo)
   const selectGate = useAppStore((s) => s.selectGate)
@@ -40,12 +39,6 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault()
         onSave?.()
-        return
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-        e.preventDefault()
-        onNewTrack?.()
         return
       }
 
@@ -90,7 +83,6 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
     undo,
     redo,
     onSave,
-    onNewTrack,
     onShuffle,
     onOpenGallery,
     selectGate,
