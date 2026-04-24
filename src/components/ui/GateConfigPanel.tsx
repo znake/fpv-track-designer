@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { FocusEvent, KeyboardEvent } from 'react'
 import { useAppStore } from '@/store'
 import type { GateType } from '@/types'
 import {
@@ -21,14 +22,14 @@ import { Separator } from '@/components/ui/separator'
 import { RotateCcw, ChevronDown } from 'lucide-react'
 
 const GATE_TYPES: { type: GateType; label: string }[] = [
-  { type: 'start-finish', label: 'Start/Ziel Gate' },
-  { type: 'standard', label: 'Standard Gate' },
-  { type: 'h-gate', label: 'H-Gate' },
-  { type: 'double-h', label: 'Doppel-H-Gate' },
-  { type: 'dive', label: 'Dive' },
-  { type: 'double', label: 'Double Gate' },
-  { type: 'ladder', label: 'Ladder' },
-  { type: 'flag', label: 'Flag' },
+  { type: 'start-finish', label: 'Start/Ziel-Tor' },
+  { type: 'standard', label: 'Standard-Tor' },
+  { type: 'h-gate', label: 'H-Tor' },
+  { type: 'double-h', label: 'Doppel-H-Tor' },
+  { type: 'dive', label: 'Dive-Tor' },
+  { type: 'double', label: 'Doppeltor' },
+  { type: 'ladder', label: 'Leitertor' },
+  { type: 'flag', label: 'Flaggen-Tor' },
 ]
 
 const GATE_SIZE_OPTIONS: ReadonlyArray<{ value: 0.75 | 1 | 1.5; label: string }> = [
@@ -55,19 +56,55 @@ export function GateConfigPanel() {
     }
   }
 
+  const normalizeFieldSizeValue = (value: string): string | null => {
+    const parsedValue = parseInt(value, 10)
+
+    return Number.isNaN(parsedValue) || parsedValue <= 0 ? null : String(parsedValue)
+  }
+
+  const commitFieldWidth = (event: FocusEvent<HTMLInputElement>) => {
+    const normalized = normalizeFieldSizeValue(event.currentTarget.value)
+
+    if (!normalized) {
+      event.currentTarget.value = String(config.fieldSize.width)
+      return
+    }
+
+    setFieldSize(parseInt(normalized, 10), config.fieldSize.height)
+    event.currentTarget.value = normalized
+  }
+
+  const commitFieldHeight = (event: FocusEvent<HTMLInputElement>) => {
+    const normalized = normalizeFieldSizeValue(event.currentTarget.value)
+
+    if (!normalized) {
+      event.currentTarget.value = String(config.fieldSize.height)
+      return
+    }
+
+    setFieldSize(config.fieldSize.width, parseInt(normalized, 10))
+    event.currentTarget.value = normalized
+  }
+
+  const commitFieldSizeOnSubmit = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.currentTarget.blur()
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Course Setup</CardTitle>
+        <CardTitle>Kurskonfiguration</CardTitle>
         <CardDescription>
-          Manage gate inventory and the field dimensions used for new layouts.
+          Verwalten Sie die Toranzahl und die Feldabmessungen für neue Layouts.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Gate Quantities */}
         <Collapsible open={quantitiesOpen} onOpenChange={setQuantitiesOpen}>
           <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-foreground">
-            Gate Quantities
+            Toranzahl
             <ChevronDown
               className={`h-4 w-4 transition-transform ${quantitiesOpen ? 'rotate-180' : ''}`}
             />
@@ -103,7 +140,7 @@ export function GateConfigPanel() {
         {/* Field Settings */}
         <Collapsible open={fieldOpen} onOpenChange={setFieldOpen}>
           <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-foreground">
-            Field Settings
+            Feldeinstellungen
             <ChevronDown
               className={`h-4 w-4 transition-transform ${fieldOpen ? 'rotate-180' : ''}`}
             />
@@ -112,41 +149,33 @@ export function GateConfigPanel() {
             {/* Field Size */}
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">
-                Field Size (m)
+                Feldgröße (m)
               </Label>
               <div className="flex gap-2">
                 <div className="flex-1 space-y-1">
                   <Label htmlFor="field-width" className="text-xs">
-                    Width
+                    Breite
                   </Label>
                   <Input
                     id="field-width"
                     type="number"
-                    min={10}
-                    value={config.fieldSize.width}
-                    onChange={(e) =>
-                      setFieldSize(
-                        Math.max(10, parseInt(e.target.value) || 10),
-                        config.fieldSize.height
-                      )
-                    }
+                    defaultValue={config.fieldSize.width}
+                    key={`field-width-${config.fieldSize.width}`}
+                    onBlur={commitFieldWidth}
+                    onKeyDown={commitFieldSizeOnSubmit}
                   />
                 </div>
                 <div className="flex-1 space-y-1">
                   <Label htmlFor="field-height" className="text-xs">
-                    Height
+                    Länge
                   </Label>
                   <Input
                     id="field-height"
                     type="number"
-                    min={10}
-                    value={config.fieldSize.height}
-                    onChange={(e) =>
-                      setFieldSize(
-                        config.fieldSize.width,
-                        Math.max(10, parseInt(e.target.value) || 10)
-                      )
-                    }
+                    defaultValue={config.fieldSize.height}
+                    key={`field-height-${config.fieldSize.height}`}
+                    onBlur={commitFieldHeight}
+                    onKeyDown={commitFieldSizeOnSubmit}
                   />
                 </div>
               </div>
@@ -155,7 +184,7 @@ export function GateConfigPanel() {
             {/* Gate Size */}
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">
-                Gate Size
+                Torgröße
               </Label>
               <ToggleGroup
                 type="single"
@@ -178,7 +207,7 @@ export function GateConfigPanel() {
               className="w-full"
             >
               <RotateCcw className="mr-2 h-4 w-4" />
-              Reset to Default
+              Auf Standard zurücksetzen
             </Button>
           </CollapsibleContent>
         </Collapsible>
