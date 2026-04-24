@@ -5,6 +5,28 @@ import { buildDefaultGateSequenceEntries, normalizeGateSequence } from '../utils
 
 const MAX_HISTORY = 50
 
+function isSingletonGateType(type: Gate['type']): boolean {
+  return type === 'start-finish' || type === 'flag'
+}
+
+function hasSingletonGateConflict(gates: Gate[], type: Gate['type'], ignoredGateId?: string): boolean {
+  if (!isSingletonGateType(type)) return false
+
+  return gates.some((gate) => gate.id !== ignoredGateId && gate.type === type)
+}
+
+function enforceSingletonGates(gates: Gate[]): Gate[] {
+  const seenSingletonTypes = new Set<Gate['type']>()
+
+  return gates.filter((gate) => {
+    if (!isSingletonGateType(gate.type)) return true
+    if (seenSingletonTypes.has(gate.type)) return false
+
+    seenSingletonTypes.add(gate.type)
+    return true
+  })
+}
+
 interface TrackHistoryEntry {
   track: Track
   selectedGateId: string | null
@@ -15,9 +37,12 @@ export interface TrackSlice {
   currentTrack: Track | null
   selectedGateId: string | null
   selectedGateIds: string[]
+  isDeleteDialogOpen: boolean
   past: TrackHistoryEntry[]
   future: TrackHistoryEntry[]
   setTrack: (track: Track | null) => void
+  replaceTrack: (track: Track | null) => void
+  syncCurrentTrack: (track: Track) => void
   updateGate: (gateId: string, updates: Partial<Gate>) => void
   setGatePosition: (gateId: string, position: { x: number; y: number; z: number }) => void
   commitGateDrag: () => void
@@ -30,6 +55,9 @@ export interface TrackSlice {
   insertGateAtIndex: (gate: Gate, gateIndex: number, sequenceIndex: number) => void
   deleteSelectedGates: () => void
   toggleGateDirection: (gateId: string, openingId: string) => void
+  openDeleteDialog: () => void
+  closeDeleteDialog: () => void
+  moveGateSequenceEntry: (gateId: string, openingId: string, fromSequenceNumber: number, toSequenceNumber: number) => void
   undo: () => void
   redo: () => void
   setDraggingGate: (isDragging: boolean) => void
@@ -37,7 +65,7 @@ export interface TrackSlice {
 }
 
 function normalizeTrack(track: Track): Track {
-  const gates = normalizeGates(track.gates)
+  const gates = enforceSingletonGates(normalizeGates(track.gates))
 
   return {
     ...track,
@@ -89,6 +117,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
   currentTrack: null,
   selectedGateId: null,
   selectedGateIds: [],
+  isDeleteDialogOpen: false,
   isDraggingGate: false,
   past: [],
   future: [],
@@ -96,10 +125,27 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
     currentTrack: track ? normalizeTrack(track) : null,
     selectedGateId: null,
     selectedGateIds: [],
+    isDeleteDialogOpen: false,
     ...pushHistory({ ...state, currentTrack: state.currentTrack }),
   })),
+  replaceTrack: (track) => set({
+    currentTrack: track ? normalizeTrack(track) : null,
+    selectedGateId: null,
+    selectedGateIds: [],
+    isDeleteDialogOpen: false,
+    past: [],
+    future: [],
+  }),
+  syncCurrentTrack: (track) => set({
+    currentTrack: normalizeTrack(track),
+  }),
   updateGate: (gateId, updates) => set((state) => {
     if (!state.currentTrack) return state
+
+    if (updates.type && hasSingletonGateConflict(state.currentTrack.gates, updates.type, gateId)) {
+      return state
+    }
+
     const history = pushHistory(state)
 
     return {
@@ -206,11 +252,11 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
   }),
   selectGate: (gateId, additive = false) => set((state) => {
     if (!gateId) {
-      return { selectedGateId: null, selectedGateIds: [] }
+      return { selectedGateId: null, selectedGateIds: [], isDeleteDialogOpen: false }
     }
 
     if (!additive) {
-      return { selectedGateId: gateId, selectedGateIds: [gateId] }
+      return { selectedGateId: gateId, selectedGateIds: [gateId], isDeleteDialogOpen: false }
     }
 
     const isAlreadySelected = state.selectedGateIds.includes(gateId)
@@ -221,6 +267,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
     return {
       selectedGateIds,
       selectedGateId: selectedGateIds.length > 0 ? selectedGateIds[0] : null,
+      isDeleteDialogOpen: false,
     }
   }),
   setSelectedGates: (gateIds) => set((state) => {
@@ -232,10 +279,15 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
     return {
       selectedGateIds,
       selectedGateId: selectedGateIds.length > 0 ? selectedGateIds[0] : null,
+      isDeleteDialogOpen: false,
     }
   }),
   insertGateAtIndex: (gate, gateIndex, sequenceIndex) => set((state) => {
     if (!state.currentTrack) return state
+
+    if (hasSingletonGateConflict(state.currentTrack.gates, gate.type)) {
+      return state
+    }
 
     const history = pushHistory(state)
     const normalizedGate = normalizeGates([gate])[0]
@@ -256,6 +308,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       }),
       selectedGateId: normalizedGate.id,
       selectedGateIds: [normalizedGate.id],
+      isDeleteDialogOpen: false,
       ...history,
     }
   }),
@@ -274,9 +327,18 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       }),
       selectedGateId: null,
       selectedGateIds: [],
+      isDeleteDialogOpen: false,
       ...history,
     }
   }),
+  openDeleteDialog: () => set((state) => {
+    if (!state.selectedGateId || state.selectedGateIds.length !== 1) {
+      return state
+    }
+
+    return { isDeleteDialogOpen: true }
+  }),
+  closeDeleteDialog: () => set({ isDeleteDialogOpen: false }),
   toggleGateDirection: (gateId, openingId) => set((state) => {
     if (!state.currentTrack) return state
     const gate = state.currentTrack.gates.find((candidate) => candidate.id === gateId)
@@ -317,6 +379,40 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       ...history,
     }
   }),
+  moveGateSequenceEntry: (gateId, openingId, fromSequenceNumber, toSequenceNumber) => set((state) => {
+    if (!state.currentTrack) return state
+
+    const sourceIndex = fromSequenceNumber - 1
+    const targetIndex = toSequenceNumber - 1
+    const sequence = state.currentTrack.gateSequence
+    const sourceEntry = sequence[sourceIndex]
+
+    if (
+      sourceIndex < 0
+      || sourceIndex >= sequence.length
+      || targetIndex < 0
+      || targetIndex >= sequence.length
+      || sourceIndex === targetIndex
+      || sourceEntry.gateId !== gateId
+      || sourceEntry.openingId !== openingId
+    ) {
+      return state
+    }
+
+    const history = pushHistory(state)
+    const nextSequence = [...sequence]
+    const [movedEntry] = nextSequence.splice(sourceIndex, 1)
+    nextSequence.splice(targetIndex, 0, movedEntry)
+
+    return {
+      currentTrack: normalizeTrack({
+        ...state.currentTrack,
+        gateSequence: nextSequence,
+        updatedAt: new Date().toISOString(),
+      }),
+      ...history,
+    }
+  }),
   undo: () => set((state) => {
     if (state.past.length === 0 || !state.currentTrack) return state
 
@@ -332,6 +428,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       ...getSelectionState(previous, previousEntry.selectedGateId, previousEntry.selectedGateIds),
       past: newPast,
       future: [currentEntry, ...state.future],
+      isDeleteDialogOpen: false,
     }
   }),
   redo: () => set((state) => {
@@ -349,6 +446,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       ...getSelectionState(next, nextEntry.selectedGateId, nextEntry.selectedGateIds),
       past: [...state.past, currentEntry],
       future: newFuture,
+      isDeleteDialogOpen: false,
     }
   }),
   setDraggingGate: (isDragging) => set({ isDraggingGate: isDragging }),

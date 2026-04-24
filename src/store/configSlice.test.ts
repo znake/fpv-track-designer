@@ -32,4 +32,30 @@ describe('ConfigSlice - default settings', () => {
     expect(store.getState().config.gateQuantities.ladder).toBe(1)
     expect(store.getState().config.gateQuantities.flag).toBe(1)
   })
+
+  it('replaces config when loading a saved track', () => {
+    const store = createTestStore()
+
+    store.getState().setConfig({
+      gateQuantities: {
+        standard: 3,
+        'start-finish': 1,
+        'h-gate': 0,
+        'double-h': 2,
+        dive: 1,
+        double: 0,
+        ladder: 4,
+        flag: 1,
+      },
+      fieldSize: { width: 42, height: 24 },
+      gateSize: 1.5,
+      showFlightPath: false,
+      showOpeningLabels: false,
+    })
+
+    expect(store.getState().config.fieldSize).toEqual({ width: 42, height: 24 })
+    expect(store.getState().config.gateSize).toBe(1.5)
+    expect(store.getState().config.showFlightPath).toBe(false)
+    expect(store.getState().config.gateQuantities.ladder).toBe(4)
+  })
 })

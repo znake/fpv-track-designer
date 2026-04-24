@@ -50,6 +50,39 @@ describe('TrackSlice - Undo/Redo', () => {
     expect(store.getState().selectedGateIds).toEqual([])
   })
 
+  it('should replace track without preserving undo history', () => {
+    const originalTrack = createTestTrack([
+      createTestGate('gate-1'),
+    ])
+    const loadedTrack = createTestTrack([
+      createTestGate('gate-2', { position: { x: 5, y: 0, z: 0 } }),
+    ])
+
+    store.getState().setTrack(originalTrack)
+    store.getState().moveGate('gate-1', 'N', 1)
+    expect(store.getState().past.length).toBe(1)
+
+    store.getState().replaceTrack(loadedTrack)
+    store.getState().undo()
+
+    expect(store.getState().currentTrack?.gates[0]?.id).toBe('gate-2')
+    expect(store.getState().past).toEqual([])
+    expect(store.getState().future).toEqual([])
+  })
+
+  it('should sync current track without adding undo history', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1'),
+    ])
+
+    store.getState().setTrack(track)
+    store.getState().syncCurrentTrack({ ...track, name: 'Saved Name' })
+
+    expect(store.getState().currentTrack?.name).toBe('Saved Name')
+    expect(store.getState().past).toEqual([])
+    expect(store.getState().future).toEqual([])
+  })
+
   it('should move gate and record history', () => {
     const track = createTestTrack([
       createTestGate('gate-1'),
@@ -211,6 +244,51 @@ describe('TrackSlice - Undo/Redo', () => {
     expect(store.getState().past.length).toBe(1)
   })
 
+  it('should move a gate sequence entry to a new number and shift the rest', () => {
+    const firstDoubleGate = createTestGate('gate-1', {
+      type: 'double',
+      openings: createDefaultGateOpenings('double', 1),
+    })
+    const secondDoubleGate = createTestGate('gate-2', {
+      type: 'double',
+      openings: createDefaultGateOpenings('double', 1),
+    })
+    const track = createTestTrack([firstDoubleGate, secondDoubleGate])
+    track.gateSequence = [
+      { gateId: 'gate-1', openingId: 'lower', reverse: false },
+      { gateId: 'gate-1', openingId: 'upper', reverse: false },
+      { gateId: 'gate-2', openingId: 'lower', reverse: false },
+      { gateId: 'gate-2', openingId: 'upper', reverse: false },
+    ]
+
+    store.getState().setTrack(track)
+    store.getState().moveGateSequenceEntry('gate-2', 'lower', 3, 2)
+
+    expect(store.getState().currentTrack?.gateSequence).toEqual([
+      { gateId: 'gate-1', openingId: 'lower', reverse: false },
+      { gateId: 'gate-2', openingId: 'lower', reverse: false },
+      { gateId: 'gate-1', openingId: 'upper', reverse: false },
+      { gateId: 'gate-2', openingId: 'upper', reverse: false },
+    ])
+    expect(store.getState().past.length).toBe(1)
+  })
+
+  it('should ignore sequence moves with mismatched source labels', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1'),
+      createTestGate('gate-2'),
+    ])
+
+    store.getState().setTrack(track)
+    store.getState().moveGateSequenceEntry('gate-2', 'main', 1, 2)
+
+    expect(store.getState().currentTrack?.gateSequence).toEqual([
+      { gateId: 'gate-1', openingId: 'main', reverse: false },
+      { gateId: 'gate-2', openingId: 'main', reverse: false },
+    ])
+    expect(store.getState().past).toEqual([])
+  })
+
   it('should select gate', () => {
     store.getState().selectGate('gate-1')
     expect(store.getState().selectedGateId).toBe('gate-1')
@@ -257,6 +335,36 @@ describe('TrackSlice - Undo/Redo', () => {
     expect(store.getState().selectedGateIds).toEqual([])
   })
 
+  it('should only open delete dialog for a single selected gate', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1'),
+      createTestGate('gate-2', { position: { x: 10, y: 0, z: 0 } }),
+    ])
+
+    store.getState().setTrack(track)
+    store.getState().setSelectedGates(['gate-1'])
+    expect(store.getState().isDeleteDialogOpen).toBe(false)
+
+    store.getState().openDeleteDialog()
+    expect(store.getState().isDeleteDialogOpen).toBe(true)
+
+    store.getState().setSelectedGates(['gate-1', 'gate-2'])
+    store.getState().openDeleteDialog()
+    expect(store.getState().isDeleteDialogOpen).toBe(false)
+  })
+
+  it('should close delete dialog', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+
+    store.getState().setTrack(track)
+    store.getState().setSelectedGates(['gate-1'])
+    store.getState().openDeleteDialog()
+    expect(store.getState().isDeleteDialogOpen).toBe(true)
+
+    store.getState().closeDeleteDialog()
+    expect(store.getState().isDeleteDialogOpen).toBe(false)
+  })
+
   it('should insert a gate at the provided gate and sequence indexes', () => {
     const track = createTestTrack([
       createTestGate('gate-1'),
@@ -288,6 +396,92 @@ describe('TrackSlice - Undo/Redo', () => {
     expect(store.getState().selectedGateIds).toEqual(['gate-3'])
     expect(store.getState().currentTrack?.updatedAt).not.toBe('2026-04-23T00:00:00.000Z')
     expect(store.getState().past.length).toBe(1)
+  })
+
+  it('should not insert a second start-finish gate', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish', 1) }),
+      createTestGate('gate-2', { position: { x: 10, y: 0, z: 0 } }),
+    ])
+
+    store.getState().setTrack(track)
+
+    store.getState().insertGateAtIndex(
+      {
+        id: 'gate-3',
+        type: 'start-finish',
+        position: { x: 5, y: 0, z: 0 },
+        rotation: 30,
+        size: 1,
+        openings: createDefaultGateOpenings('start-finish', 1),
+      },
+      1,
+      1,
+    )
+
+    expect(store.getState().currentTrack?.gates.map((gate) => gate.id)).toEqual(['gate-1', 'gate-2'])
+    expect(store.getState().past).toEqual([])
+  })
+
+  it('should not insert a second flag gate', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { type: 'flag', openings: createDefaultGateOpenings('flag', 1) }),
+      createTestGate('gate-2', { position: { x: 10, y: 0, z: 0 } }),
+    ])
+
+    store.getState().setTrack(track)
+
+    store.getState().insertGateAtIndex(
+      {
+        id: 'gate-3',
+        type: 'flag',
+        position: { x: 5, y: 0, z: 0 },
+        rotation: 30,
+        size: 1,
+        openings: createDefaultGateOpenings('flag', 1),
+      },
+      1,
+      1,
+    )
+
+    expect(store.getState().currentTrack?.gates.map((gate) => gate.id)).toEqual(['gate-1', 'gate-2'])
+    expect(store.getState().past).toEqual([])
+  })
+
+  it('should not update another gate to an existing singleton gate type', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish', 1) }),
+      createTestGate('gate-2'),
+      createTestGate('gate-3', { type: 'flag', openings: createDefaultGateOpenings('flag', 1) }),
+      createTestGate('gate-4'),
+    ])
+
+    store.getState().setTrack(track)
+    store.getState().updateGate('gate-2', { type: 'start-finish' })
+    store.getState().updateGate('gate-4', { type: 'flag' })
+
+    expect(store.getState().currentTrack?.gates.map((gate) => gate.type)).toEqual([
+      'start-finish',
+      'standard',
+      'flag',
+      'standard',
+    ])
+    expect(store.getState().past).toEqual([])
+  })
+
+  it('should remove duplicate singleton gates when setting a track', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish', 1) }),
+      createTestGate('gate-2', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish', 1) }),
+      createTestGate('gate-3', { type: 'flag', openings: createDefaultGateOpenings('flag', 1) }),
+      createTestGate('gate-4', { type: 'flag', openings: createDefaultGateOpenings('flag', 1) }),
+      createTestGate('gate-5'),
+    ])
+
+    store.getState().setTrack(track)
+
+    expect(store.getState().currentTrack?.gates.map((gate) => gate.id)).toEqual(['gate-1', 'gate-3', 'gate-5'])
+    expect(store.getState().currentTrack?.gateSequence.map((entry) => entry.gateId)).toEqual(['gate-1', 'gate-3', 'gate-5'])
   })
 
   it('should insert double gates as lower then upper sequence visits', () => {

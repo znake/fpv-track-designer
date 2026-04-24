@@ -3,6 +3,7 @@ import type { Config, GateType } from '../types'
 
 export interface ConfigSlice {
   config: Config
+  setConfig: (config: Config) => void
   setGateQuantity: (type: GateType, quantity: number) => void
   setFieldSize: (width: number, height: number) => void
   setGateSize: (size: 0.75 | 1 | 1.5) => void
@@ -30,6 +31,7 @@ export const defaultConfig: Config = {
 
 export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> = (set) => ({
   config: defaultConfig,
+  setConfig: (config) => set({ config }),
   setGateQuantity: (type, quantity) => set((state) => ({
     config: {
       ...state.config,
