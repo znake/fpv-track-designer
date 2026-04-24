@@ -5,7 +5,7 @@ import { useAppStore } from '@/store'
 import { defaultConfig } from '@/store/configSlice'
 import type { Config, Track } from '@/types'
 import { createDefaultGateOpenings } from '@/utils/gateOpenings'
-import { saveTrack } from '@/utils/storage'
+import { listTracks, saveTrack } from '@/utils/storage'
 
 import { TrackGallery } from './TrackGallery'
 
@@ -28,6 +28,13 @@ const localStorageMock = (() => {
 
 Object.defineProperty(globalThis, 'localStorage', {
   value: localStorageMock,
+  configurable: true,
+})
+
+Object.defineProperty(globalThis, 'crypto', {
+  value: {
+    randomUUID: vi.fn(() => 'duplicated-track-id'),
+  },
   configurable: true,
 })
 
@@ -113,12 +120,92 @@ describe('TrackGallery', () => {
 
     render(<TrackGallery open onOpenChange={onOpenChange} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /load/i }))
+    fireEvent.click(screen.getByRole('button', { name: /laden/i }))
 
     expect(useAppStore.getState().currentTrack?.id).toBe('loaded-track')
     expect(useAppStore.getState().config.fieldSize).toEqual({ width: 42, height: 24 })
     expect(useAppStore.getState().config.gateSize).toBe(1.5)
     expect(useAppStore.getState().config.showFlightPath).toBe(false)
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('asks for confirmation before deleting a saved track', () => {
+    saveTrack(createTestTrack({ id: 'track-to-delete', name: 'Delete Me' }), createTestConfig())
+
+    render(<TrackGallery open onOpenChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /löschen/i }))
+
+    expect(screen.getByText('Gespeicherte Strecke löschen?')).not.toBeNull()
+    expect(screen.getByText(/„Delete Me“ wird aus der Galerie entfernt/i)).not.toBeNull()
+    expect(listTracks()).toHaveLength(1)
+  })
+
+  it('keeps the track when delete confirmation is cancelled', () => {
+    saveTrack(createTestTrack({ id: 'track-to-keep', name: 'Keep Me' }), createTestConfig())
+
+    render(<TrackGallery open onOpenChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /löschen/i }))
+    fireEvent.click(screen.getByRole('button', { name: /abbrechen/i }))
+
+    expect(screen.queryByText('Gespeicherte Strecke löschen?')).toBeNull()
+    expect(screen.getByText('Keep Me')).not.toBeNull()
+    expect(listTracks()).toHaveLength(1)
+  })
+
+  it('deletes and refreshes the gallery when confirmed', () => {
+    saveTrack(createTestTrack({ id: 'track-to-confirm', name: 'Confirm Delete' }), createTestConfig())
+
+    render(<TrackGallery open onOpenChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /löschen/i }))
+    fireEvent.click(screen.getByRole('button', { name: /strecke löschen/i }))
+
+    expect(screen.queryByText('Confirm Delete')).toBeNull()
+    expect(screen.getByText('Noch keine gespeicherten Strecken')).not.toBeNull()
+    expect(listTracks()).toHaveLength(0)
+  })
+
+  it('duplicates a saved track with a new name', () => {
+    saveTrack(createTestTrack({ id: 'track-to-copy', name: 'Original Track' }), createTestConfig())
+
+    render(<TrackGallery open onOpenChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /duplizieren/i }))
+    expect(screen.getByText('Strecke duplizieren')).not.toBeNull()
+    expect(screen.getByDisplayValue('Original Track Kopie')).not.toBeNull()
+
+    fireEvent.change(screen.getByLabelText('Neuer Streckenname'), {
+      target: { value: 'Version 2' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^duplizieren$/i }))
+
+    const tracks = listTracks()
+    expect(tracks).toHaveLength(2)
+    expect(tracks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'track-to-copy', name: 'Original Track' }),
+        expect.objectContaining({ id: 'duplicated-track-id', name: 'Version 2' }),
+      ]),
+    )
+    expect(screen.getByText('Original Track')).not.toBeNull()
+    expect(screen.getByText('Version 2')).not.toBeNull()
+  })
+
+  it('confirms the delete dialog when Enter is pressed', () => {
+    saveTrack(createTestTrack({ id: 'track-enter-delete', name: 'Enter Delete' }), createTestConfig())
+
+    render(<TrackGallery open onOpenChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /löschen/i }))
+    const confirmationForm = screen.getByText('Gespeicherte Strecke löschen?').closest('form')
+    if (!confirmationForm) {
+      throw new Error('Expected delete confirmation form to be rendered')
+    }
+    fireEvent.keyDown(confirmationForm, { key: 'Enter' })
+
+    expect(screen.queryByText('Enter Delete')).toBeNull()
+    expect(listTracks()).toHaveLength(0)
   })
 })
