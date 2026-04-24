@@ -1,14 +1,22 @@
 import type { StateCreator } from 'zustand'
 import type { Track, Gate } from '../types'
+import { normalizeGates, recreateGateOpenings } from '../utils/gateOpenings'
+import { buildDefaultGateSequenceEntries, normalizeGateSequence } from '../utils/gateSequence'
 
 const MAX_HISTORY = 50
+
+interface TrackHistoryEntry {
+  track: Track
+  selectedGateId: string | null
+  selectedGateIds: string[]
+}
 
 export interface TrackSlice {
   currentTrack: Track | null
   selectedGateId: string | null
   selectedGateIds: string[]
-  past: Track[]
-  future: Track[]
+  past: TrackHistoryEntry[]
+  future: TrackHistoryEntry[]
   setTrack: (track: Track | null) => void
   updateGate: (gateId: string, updates: Partial<Gate>) => void
   setGatePosition: (gateId: string, position: { x: number; y: number; z: number }) => void
@@ -19,6 +27,7 @@ export interface TrackSlice {
   rotateGate: (gateId: string, clockwise: boolean) => void
   selectGate: (gateId: string | null, additive?: boolean) => void
   setSelectedGates: (gateIds: string[]) => void
+  insertGateAtIndex: (gate: Gate, gateIndex: number, sequenceIndex: number) => void
   deleteSelectedGates: () => void
   undo: () => void
   redo: () => void
@@ -26,40 +35,52 @@ export interface TrackSlice {
   isDraggingGate: boolean
 }
 
-function normalizeGateSequence(track: Track): string[] {
-  const gateIds = new Set(track.gates.map((g) => g.id))
-  const source = Array.isArray(track.gateSequence) && track.gateSequence.length > 0
-    ? track.gateSequence
-    : track.gates.map((g) => g.id)
-
-  const normalized: string[] = []
-  for (const id of source) {
-    if (!gateIds.has(id)) continue
-    if (normalized.length > 0 && normalized[normalized.length - 1] === id) continue
-    normalized.push(id)
-  }
-
-  if (normalized.length > 1 && normalized[0] === normalized[normalized.length - 1]) {
-    normalized.pop()
-  }
-
-  if (normalized.length === 0) {
-    return track.gates.map((g) => g.id)
-  }
-
-  return normalized
-}
-
 function normalizeTrack(track: Track): Track {
+  const gates = normalizeGates(track.gates)
+
   return {
     ...track,
-    gateSequence: normalizeGateSequence(track),
+    gates,
+    gateSequence: normalizeGateSequence(track.gateSequence, gates),
   }
 }
 
-function pushHistory(state: TrackSlice): { past: Track[]; future: Track[] } {
+function createHistoryEntry(state: Pick<TrackSlice, 'currentTrack' | 'selectedGateId' | 'selectedGateIds'>): TrackHistoryEntry | null {
+  if (!state.currentTrack) return null
+
+  return {
+    track: state.currentTrack,
+    selectedGateId: state.selectedGateId,
+    selectedGateIds: state.selectedGateIds,
+  }
+}
+
+function getSelectionState(track: Track, selectedGateId: string | null, selectedGateIds: string[]) {
+  const existingGateIds = new Set(track.gates.map((gate) => gate.id))
+  const nextSelectedGateIds = [...new Set(selectedGateIds)].filter((gateId) => existingGateIds.has(gateId))
+
+  if (selectedGateId && existingGateIds.has(selectedGateId)) {
+    return {
+      selectedGateId,
+      selectedGateIds: nextSelectedGateIds.includes(selectedGateId)
+        ? nextSelectedGateIds
+        : [selectedGateId, ...nextSelectedGateIds],
+    }
+  }
+
+  return {
+    selectedGateId: nextSelectedGateIds[0] ?? null,
+    selectedGateIds: nextSelectedGateIds,
+  }
+}
+
+function pushHistory(state: TrackSlice): { past: TrackHistoryEntry[]; future: TrackHistoryEntry[] } {
   if (!state.currentTrack) return { past: state.past, future: [] }
-  const newPast = [...state.past, state.currentTrack].slice(-MAX_HISTORY)
+
+  const entry = createHistoryEntry(state)
+  if (!entry) return { past: state.past, future: [] }
+
+  const newPast = [...state.past, entry].slice(-MAX_HISTORY)
   return { past: newPast, future: [] }
 }
 
@@ -79,12 +100,22 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
   updateGate: (gateId, updates) => set((state) => {
     if (!state.currentTrack) return state
     const history = pushHistory(state)
+
     return {
       currentTrack: normalizeTrack({
         ...state.currentTrack,
-        gates: state.currentTrack.gates.map((g) =>
-          g.id === gateId ? { ...g, ...updates } : g,
-        ),
+        gates: state.currentTrack.gates.map((gate) => {
+          if (gate.id !== gateId) return gate
+
+          return {
+            ...gate,
+            ...updates,
+            openings: updates.openings
+              ?? (updates.type || updates.size
+                ? recreateGateOpenings({ id: gate.id, type: updates.type ?? gate.type, size: updates.size ?? gate.size })
+                : gate.openings),
+          }
+        }),
         updatedAt: new Date().toISOString(),
       }),
       ...history,
@@ -103,7 +134,11 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
   }),
   commitGateDrag: () => set((state) => {
     if (!state.currentTrack) return state
-    const newPast = [...state.past, state.currentTrack].slice(-MAX_HISTORY)
+
+    const entry = createHistoryEntry(state)
+    if (!entry) return state
+
+    const newPast = [...state.past, entry].slice(-MAX_HISTORY)
     return { past: newPast, future: [] }
   }),
   setGateRotation: (gateId, rotation) => set((state) => {
@@ -198,6 +233,31 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       selectedGateId: selectedGateIds.length > 0 ? selectedGateIds[0] : null,
     }
   }),
+  insertGateAtIndex: (gate, gateIndex, sequenceIndex) => set((state) => {
+    if (!state.currentTrack) return state
+
+    const history = pushHistory(state)
+    const normalizedGate = normalizeGates([gate])[0]
+    const nextGates = [...state.currentTrack.gates]
+    const nextSequence = [...state.currentTrack.gateSequence]
+    const clampedGateIndex = Math.max(0, Math.min(gateIndex, nextGates.length))
+    const clampedSequenceIndex = Math.max(0, Math.min(sequenceIndex, nextSequence.length))
+
+    nextGates.splice(clampedGateIndex, 0, normalizedGate)
+    nextSequence.splice(clampedSequenceIndex, 0, ...buildDefaultGateSequenceEntries(normalizedGate))
+
+    return {
+      currentTrack: normalizeTrack({
+        ...state.currentTrack,
+        gates: nextGates,
+        gateSequence: nextSequence,
+        updatedAt: new Date().toISOString(),
+      }),
+      selectedGateId: normalizedGate.id,
+      selectedGateIds: [normalizedGate.id],
+      ...history,
+    }
+  }),
   deleteSelectedGates: () => set((state) => {
     if (!state.currentTrack || state.selectedGateIds.length === 0) return state
 
@@ -208,7 +268,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       currentTrack: normalizeTrack({
         ...state.currentTrack,
         gates: state.currentTrack.gates.filter((g) => !selectedIds.has(g.id)),
-        gateSequence: state.currentTrack.gateSequence.filter((gateId) => !selectedIds.has(gateId)),
+        gateSequence: state.currentTrack.gateSequence.filter((entry) => !selectedIds.has(entry.gateId)),
         updatedAt: new Date().toISOString(),
       }),
       selectedGateId: null,
@@ -218,21 +278,35 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
   }),
   undo: () => set((state) => {
     if (state.past.length === 0 || !state.currentTrack) return state
-    const previous = normalizeTrack(state.past[state.past.length - 1])
+
+    const previousEntry = state.past[state.past.length - 1]
+    const previous = normalizeTrack(previousEntry.track)
     const newPast = state.past.slice(0, -1)
+
+    const currentEntry = createHistoryEntry(state)
+    if (!currentEntry) return state
+
     return {
       currentTrack: previous,
+      ...getSelectionState(previous, previousEntry.selectedGateId, previousEntry.selectedGateIds),
       past: newPast,
-      future: [state.currentTrack, ...state.future],
+      future: [currentEntry, ...state.future],
     }
   }),
   redo: () => set((state) => {
     if (state.future.length === 0 || !state.currentTrack) return state
-    const next = normalizeTrack(state.future[0])
+
+    const nextEntry = state.future[0]
+    const next = normalizeTrack(nextEntry.track)
     const newFuture = state.future.slice(1)
+
+    const currentEntry = createHistoryEntry(state)
+    if (!currentEntry) return state
+
     return {
       currentTrack: next,
-      past: [...state.past, state.currentTrack],
+      ...getSelectionState(next, nextEntry.selectedGateId, nextEntry.selectedGateIds),
+      past: [...state.past, currentEntry],
       future: newFuture,
     }
   }),
