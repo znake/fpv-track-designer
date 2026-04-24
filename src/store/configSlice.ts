@@ -6,22 +6,26 @@ export interface ConfigSlice {
   setGateQuantity: (type: GateType, quantity: number) => void
   setFieldSize: (width: number, height: number) => void
   setGateSize: (size: 0.75 | 1 | 1.5) => void
+  setShowFlightPath: (value: boolean) => void
+  setShowOpeningLabels: (value: boolean) => void
   resetToDefault: () => void
 }
 
 export const defaultConfig: Config = {
   gateQuantities: {
-    'standard': 3,
+    'standard': 2,
     'start-finish': 1,
-    'h-gate': 0,
-    'asymmetric': 0,
-    'dive': 0,
-    'double': 0,
-    'ladder': 0,
-    'flag': 0,
+    'h-gate': 1,
+    'asymmetric': 1,
+    'dive': 1,
+    'double': 1,
+    'ladder': 1,
+    'flag': 1,
   },
   fieldSize: { width: 20, height: 15 },
   gateSize: 1,
+  showFlightPath: true,
+  showOpeningLabels: true,
 }
 
 export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> = (set) => ({
@@ -37,6 +41,12 @@ export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> =
   })),
   setGateSize: (size) => set((state) => ({
     config: { ...state.config, gateSize: size },
+  })),
+  setShowFlightPath: (value) => set((state) => ({
+    config: { ...state.config, showFlightPath: value },
+  })),
+  setShowOpeningLabels: (value) => set((state) => ({
+    config: { ...state.config, showOpeningLabels: value },
   })),
   resetToDefault: () => set({ config: defaultConfig }),
 })

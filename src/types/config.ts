@@ -4,4 +4,6 @@ export interface Config {
   gateQuantities: Record<GateType, number>;
   fieldSize: { width: number; height: number };
   gateSize: 0.75 | 1 | 1.5;
+  showFlightPath: boolean;
+  showOpeningLabels: boolean;
 }
