@@ -31,20 +31,20 @@ interface HelpStep {
 
 const helpSteps: HelpStep[] = [
   {
-    title: 'Gate verschieben',
-    description: 'Gate einmal anklicken, dann das Verschieben-Symbol gedrückt halten und das Gate an die gewünschte Position ziehen.',
+    title: 'Tor verschieben',
+    description: 'Tor einmal anklicken, dann das Verschieben-Symbol gedrückt halten und das Tor an die gewünschte Position ziehen.',
     Icon: Move,
     accentClassName: 'text-primary border-primary/40 bg-primary/10',
   },
   {
-    title: 'Gate drehen',
-    description: 'Gate einmal anklicken, dann das Dreh-Symbol gedrückt halten und seitlich ziehen, bis die Ausrichtung passt.',
+    title: 'Tor drehen',
+    description: 'Tor einmal anklicken, dann das Dreh-Symbol gedrückt halten und seitlich ziehen, bis die Ausrichtung passt.',
     Icon: RotateCw,
     accentClassName: 'text-secondary border-secondary/40 bg-secondary/10',
   },
   {
-    title: 'Gate hinzufügen',
-    description: 'Gate anklicken, bei dem davor oder danach ein neues Gate eingefügt werden soll. Dann auf das Plus-Icon klicken und den Gate-Typ auswählen.',
+    title: 'Tor hinzufügen',
+    description: 'Tor anklicken, bei dem davor oder danach ein neues Tor eingefügt werden soll. Dann auf das Plus-Symbol klicken und den Tortyp auswählen.',
     Icon: Plus,
     accentClassName: 'text-primary border-primary/40 bg-primary/10',
   },
@@ -52,33 +52,35 @@ const helpSteps: HelpStep[] = [
 
 const shortcuts: ShortcutGroup[] = [
   {
-    category: 'Track',
+    category: 'Strecke',
     shortcuts: [
-      { description: 'Shuffle Track', keys: ['R'] },
-      { description: 'Save Track', keys: [ctrl, 'S'] },
-      { description: 'New Track', keys: [ctrl, 'N'] },
+      { description: 'Strecke mischen', keys: ['R'] },
+      { description: 'Strecke speichern', keys: [ctrl, 'S'] },
+      { description: 'Neue Strecke', keys: [ctrl, 'N'] },
     ],
   },
   {
-    category: 'Navigation',
+    category: 'Steuerung',
     shortcuts: [
-      { description: 'Open Gallery', keys: ['G'] },
-      { description: 'Deselect Gate / Close Dialogs', keys: ['Escape'] },
+      { description: 'Galerie öffnen', keys: ['G'] },
+      { description: 'Ansicht verschieben', keys: ['Space + linke Maustaste ziehen'] },
+      { description: 'Kamerahöhe ändern', keys: ['Shift + linke Maustaste ziehen'] },
+      { description: 'Tor abwählen / Dialoge schließen', keys: ['Escape'] },
     ],
   },
   {
-    category: 'Gate Editing',
+    category: 'Tor-Bearbeitung',
     shortcuts: [
-      { description: 'Delete selected gate', keys: ['Backspace'] },
-      { description: 'Confirm delete', keys: ['Enter'] },
-      { description: 'Drag / Rotate Gate', keys: ['In-canvas handles'] },
+      { description: 'Ausgewähltes Tor löschen', keys: ['Backspace'] },
+      { description: 'Löschen bestätigen', keys: ['Enter'] },
+      { description: 'Tor ziehen / drehen', keys: ['Werkzeuge im 3D-Feld'] },
     ],
   },
   {
-    category: 'History',
+    category: 'Verlauf',
     shortcuts: [
-      { description: 'Undo', keys: [ctrl, 'Z'] },
-      { description: 'Redo', keys: [ctrl, 'Y', '/', ctrl, 'Shift', 'Z'] },
+      { description: 'Rückgängig', keys: [ctrl, 'Z'] },
+      { description: 'Wiederholen', keys: [ctrl, 'Y', '/', ctrl, 'Shift', 'Z'] },
     ],
   },
 ]
@@ -94,11 +96,11 @@ function Kbd({ children }: { children: React.ReactNode }) {
 function ShortcutKeys({ keys }: { keys: string[] }) {
   // Keys that contain special UI text (not keyboard keys) render as plain text
   if (keys.length === 1 && keys[0].includes(' ')) {
-    return <span className="text-xs text-muted-foreground">{keys[0]}</span>
+    return <span className="shrink-0 text-xs text-muted-foreground">{keys[0]}</span>
   }
 
   return (
-    <span className="flex items-center gap-1">
+    <span className="flex shrink-0 items-center gap-1">
       {keys.map((key, i) => (
         <Kbd key={i}>{key}</Kbd>
       ))}
@@ -112,7 +114,7 @@ export function KeyboardShortcutsDialog({
 }: KeyboardShortcutsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="w-[min(calc(100vw-2rem),72rem)] max-w-none sm:max-w-none">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CircleHelp className="size-5" />
@@ -120,14 +122,14 @@ export function KeyboardShortcutsDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[32rem] pr-4">
-          <div className="flex flex-col gap-6">
+        <ScrollArea className="max-h-[34rem] pr-4">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
             <div className="rounded-xl border border-border bg-muted/30 p-4">
               <h3 className="text-sm font-semibold text-foreground">
-                Gates bearbeiten
+                Tore bearbeiten
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Wähle zuerst ein Gate im Track aus. Danach erscheinen direkt am Gate die passenden Werkzeuge.
+                Wähle zuerst ein Tor in der Strecke aus. Danach erscheinen direkt am Tor die passenden Werkzeuge.
               </p>
               <div className="mt-4 grid gap-3">
                 {helpSteps.map(({ title, description, Icon, accentClassName }) => (
@@ -147,26 +149,28 @@ export function KeyboardShortcutsDialog({
               </div>
             </div>
 
-            {shortcuts.map((group) => (
-              <div key={group.category} className="flex flex-col gap-2">
-                <h3 className="text-sm font-semibold text-foreground">
-                  {group.category}
-                </h3>
-                <div className="flex flex-col">
-                  {group.shortcuts.map((shortcut, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between border-b border-border py-2 last:border-0"
-                    >
-                      <span className="text-sm text-muted-foreground">
-                        {shortcut.description}
-                      </span>
-                      <ShortcutKeys keys={shortcut.keys} />
-                    </div>
-                  ))}
+            <div className="grid gap-4">
+              {shortcuts.map((group) => (
+                <div key={group.category} className="rounded-xl border border-border bg-background/70 p-3">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {group.category}
+                  </h3>
+                  <div className="mt-2 flex flex-col">
+                    {group.shortcuts.map((shortcut, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-3 border-b border-border py-2 last:border-0"
+                      >
+                        <span className="min-w-0 text-sm text-muted-foreground">
+                          {shortcut.description}
+                        </span>
+                        <ShortcutKeys keys={shortcut.keys} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </ScrollArea>
       </DialogContent>

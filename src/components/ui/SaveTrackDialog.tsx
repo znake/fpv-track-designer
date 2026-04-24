@@ -45,28 +45,35 @@ export const SaveTrackDialog: FC<SaveTrackDialogProps> = ({ open, onOpenChange }
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Save Track</DialogTitle>
+          <DialogTitle>Strecke speichern</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label htmlFor="track-name">Track Name</Label>
-            <Input
-              id="track-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter track name"
-              autoFocus
-            />
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            handleSave()
+          }}
+        >
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="track-name">Streckenname</Label>
+              <Input
+                id="track-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Streckenname eingeben"
+                autoFocus
+              />
+            </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={!currentTrack}>
-            Save
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+              Abbrechen
+            </Button>
+            <Button type="submit" disabled={!currentTrack}>
+              Speichern
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
