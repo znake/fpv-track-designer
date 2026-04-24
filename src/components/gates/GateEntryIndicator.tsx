@@ -1,12 +1,14 @@
 import { Text } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
 import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useRef } from 'react'
 
 interface GateEntryIndicatorProps {
   width: number
   height: number
-  baseY?: number
-  zPosition?: number
+  position?: [number, number, number]
+  rotationY?: number
   label?: string
   onClick?: (e: ThreeEvent<MouseEvent>) => void
 }
@@ -16,38 +18,55 @@ interface GateEntryIndicatorProps {
  * Green on the entry side (front, -Z), red on the back side (+Z).
  * Makes it immediately clear which side to approach the gate from.
  */
-export function GateEntryIndicator({ width, height, baseY = 0, zPosition = 0, label, onClick }: GateEntryIndicatorProps) {
-  const y = baseY + height / 2
+export function GateEntryIndicator({ width, height, position = [0, height / 2, 0], rotationY = 0, label, onClick }: GateEntryIndicatorProps) {
+  const groupRef = useRef<THREE.Group>(null)
+  const entryLabelRef = useRef<THREE.Group>(null)
+  const exitLabelRef = useRef<THREE.Group>(null)
   const lines = label?.split('\n') ?? []
   const lineCount = Math.max(lines.length, 1)
   const widestLineLength = Math.max(...lines.map((line) => line.length), 1)
-  const fontSize = Math.min((width * 0.7) / widestLineLength, (height * 0.72) / lineCount)
-  const entryLabelColor = '#bbf7d0'
-  const exitLabelColor = '#fecaca'
+  const fontSize = Math.min((width * 0.58) / widestLineLength, (height * 0.56) / lineCount)
+  const entryLabelColor = '#86efac'
+  const exitLabelColor = '#fca5a5'
   const entryOutlineColor = '#4ade80'
   const exitOutlineColor = '#f87171'
 
+  useFrame(({ camera }) => {
+    if (!groupRef.current) return
+
+    const localCameraPosition = groupRef.current.worldToLocal(camera.position.clone())
+    const isEntrySideVisible = localCameraPosition.z <= 0
+
+    if (entryLabelRef.current) {
+      entryLabelRef.current.visible = isEntrySideVisible
+    }
+
+    if (exitLabelRef.current) {
+      exitLabelRef.current.visible = !isEntrySideVisible
+    }
+  })
+
   return (
-    <group>
+    <group ref={groupRef} position={position} rotation-y={(rotationY * Math.PI) / 180}>
       {/* Entry side — green (approach from here) */}
-      <mesh position={[0, y, zPosition - 0.02]} onClick={onClick}>
+      <mesh position={[0, 0, -0.02]} onClick={onClick}>
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
           color="#16a34a"
           transparent
-          opacity={0.8}
+          opacity={0.5}
           side={THREE.DoubleSide}
           depthWrite={false}
         />
       </mesh>
 
       {/* Exit side — red (do not approach from here) */}
-      <mesh position={[0, y, zPosition + 0.02]} onClick={onClick}>
+      <mesh position={[0, 0, 0.02]} onClick={onClick}>
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
           color="#ef4444"
           transparent
-          opacity={0.8}
+          opacity={0.5}
           side={THREE.DoubleSide}
           depthWrite={false}
         />
@@ -55,7 +74,7 @@ export function GateEntryIndicator({ width, height, baseY = 0, zPosition = 0, la
 
       {label && (
         <>
-          <group position={[0, y, zPosition - 0.03]} rotation={[0, Math.PI, 0]}>
+          <group ref={entryLabelRef} position={[0, 0, -0.03]} rotation={[0, Math.PI, 0]}>
             <Text
               color={entryLabelColor}
               fontSize={fontSize}
@@ -63,9 +82,9 @@ export function GateEntryIndicator({ width, height, baseY = 0, zPosition = 0, la
               lineHeight={0.9}
               anchorX="center"
               anchorY="middle"
-              outlineWidth={fontSize * 0.025}
+              outlineWidth={fontSize * 0.006}
               outlineColor={entryOutlineColor}
-              fillOpacity={0.72}
+              fillOpacity={0.12}
               material-side={THREE.FrontSide}
               renderOrder={2}
               onClick={onClick}
@@ -74,7 +93,7 @@ export function GateEntryIndicator({ width, height, baseY = 0, zPosition = 0, la
             </Text>
           </group>
 
-          <group position={[0, y, zPosition + 0.03]}>
+          <group ref={exitLabelRef} position={[0, 0, 0.03]}>
             <Text
               color={exitLabelColor}
               fontSize={fontSize}
@@ -82,9 +101,9 @@ export function GateEntryIndicator({ width, height, baseY = 0, zPosition = 0, la
               lineHeight={0.9}
               anchorX="center"
               anchorY="middle"
-              outlineWidth={fontSize * 0.025}
+              outlineWidth={fontSize * 0.006}
               outlineColor={exitOutlineColor}
-              fillOpacity={0.72}
+              fillOpacity={0.12}
               material-side={THREE.FrontSide}
               renderOrder={2}
               onClick={onClick}
