@@ -8,6 +8,11 @@ const createTestStore = () =>
   }))
 
 describe('ConfigSlice - default settings', () => {
+  it('defines the default field size', () => {
+    expect(defaultConfig.fieldSize.width).toBe(30)
+    expect(defaultConfig.fieldSize.height).toBe(15)
+  })
+
   it('defines double-h, dive, ladder and flag as 1 by default', () => {
     const config = defaultConfig
 

@@ -23,7 +23,7 @@ export const defaultConfig: Config = {
     'ladder': 1,
     'flag': 1,
   },
-  fieldSize: { width: 20, height: 15 },
+  fieldSize: { width: 30, height: 15 },
   gateSize: 1,
   showFlightPath: true,
   showOpeningLabels: true,

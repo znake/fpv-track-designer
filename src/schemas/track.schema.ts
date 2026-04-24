@@ -169,7 +169,7 @@ function validateFieldSize(fieldSize: unknown, prefix: string): ValidationError[
   }
 
   if (typeof candidate.height !== 'number' || candidate.height <= 0) {
-    errors.push({ field: `${prefix}.height`, message: 'Height must be a positive number' })
+    errors.push({ field: `${prefix}.height`, message: 'Length must be a positive number' })
   }
 
   return errors
