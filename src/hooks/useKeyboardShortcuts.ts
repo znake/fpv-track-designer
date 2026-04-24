@@ -13,8 +13,12 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
   const undo = useAppStore((s) => s.undo)
   const redo = useAppStore((s) => s.redo)
   const selectGate = useAppStore((s) => s.selectGate)
-  const moveGate = useAppStore((s) => s.moveGate)
   const selectedGateId = useAppStore((s) => s.selectedGateId)
+  const selectedGateIds = useAppStore((s) => s.selectedGateIds)
+  const isDeleteDialogOpen = useAppStore((s) => s.isDeleteDialogOpen)
+  const openDeleteDialog = useAppStore((s) => s.openDeleteDialog)
+  const closeDeleteDialog = useAppStore((s) => s.closeDeleteDialog)
+  const deleteSelectedGates = useAppStore((s) => s.deleteSelectedGates)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -59,25 +63,42 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
 
       if (e.key === 'Escape') {
         selectGate(null)
+        if (isDeleteDialogOpen) {
+          closeDeleteDialog()
+        }
         return
       }
 
-      if (selectedGateId) {
-        const dirMap: Record<string, 'N' | 'S' | 'E' | 'W'> = {
-          ArrowUp: 'N',
-          ArrowDown: 'S',
-          ArrowLeft: 'W',
-          ArrowRight: 'E',
-        }
-        if (dirMap[e.key]) {
-          e.preventDefault()
-          moveGate(selectedGateId, dirMap[e.key])
-          return
-        }
+      if (e.key === 'Backspace' && selectedGateId && selectedGateIds.length === 1) {
+        e.preventDefault()
+        openDeleteDialog()
+        return
       }
-    }
 
+      if (e.key === 'Enter' && isDeleteDialogOpen) {
+        e.preventDefault()
+        deleteSelectedGates()
+        closeDeleteDialog()
+        return
+      }
+
+    }
+  
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo, onSave, onNewTrack, onShuffle, onOpenGallery, selectGate, moveGate, selectedGateId])
+  }, [
+    undo,
+    redo,
+    onSave,
+    onNewTrack,
+    onShuffle,
+    onOpenGallery,
+    selectGate,
+    selectedGateId,
+    selectedGateIds,
+    isDeleteDialogOpen,
+    openDeleteDialog,
+    closeDeleteDialog,
+    deleteSelectedGates,
+  ])
 }
