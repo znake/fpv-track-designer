@@ -113,9 +113,12 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
     }
 
     saveTrack(copiedTrack, saved.config)
+    setConfig(saved.config)
+    replaceTrack(copiedTrack)
     window.dispatchEvent(new CustomEvent('track-saved'))
     setTrackToDuplicate(null)
     setDuplicateName('')
+    onOpenChange(false)
     refreshTracks()
   }
 

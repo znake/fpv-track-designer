@@ -167,10 +167,25 @@ describe('TrackGallery', () => {
     expect(listTracks()).toHaveLength(0)
   })
 
-  it('duplicates a saved track with a new name', () => {
-    saveTrack(createTestTrack({ id: 'track-to-copy', name: 'Original Track' }), createTestConfig())
+  it('duplicates a saved track with a new name and loads the copy', () => {
+    const onOpenChange = vi.fn()
+    const savedConfig = createTestConfig({
+      fieldSize: { width: 36, height: 18 },
+      gateSize: 1.5,
+      showOpeningLabels: false,
+    })
 
-    render(<TrackGallery open onOpenChange={vi.fn()} />)
+    saveTrack(
+      createTestTrack({
+        id: 'track-to-copy',
+        name: 'Original Track',
+        fieldSize: savedConfig.fieldSize,
+        gateSize: savedConfig.gateSize,
+      }),
+      savedConfig,
+    )
+
+    render(<TrackGallery open onOpenChange={onOpenChange} />)
 
     fireEvent.click(screen.getByRole('button', { name: /duplizieren/i }))
     expect(screen.getByText('Strecke duplizieren')).not.toBeNull()
@@ -191,6 +206,12 @@ describe('TrackGallery', () => {
     )
     expect(screen.getByText('Original Track')).not.toBeNull()
     expect(screen.getByText('Version 2')).not.toBeNull()
+    expect(useAppStore.getState().currentTrack?.id).toBe('duplicated-track-id')
+    expect(useAppStore.getState().currentTrack?.name).toBe('Version 2')
+    expect(useAppStore.getState().config.fieldSize).toEqual({ width: 36, height: 18 })
+    expect(useAppStore.getState().config.gateSize).toBe(1.5)
+    expect(useAppStore.getState().config.showOpeningLabels).toBe(false)
+    expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
   it('confirms the delete dialog when Enter is pressed', () => {
