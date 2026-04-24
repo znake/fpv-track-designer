@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { Text } from '@react-three/drei'
 import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { GateOpening } from '../../types'
@@ -18,15 +19,22 @@ interface GateComponentProps {
 const POST_THICKNESS = 0.06
 const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
+const PANEL_WIDTH = 0.6
+const PANEL_HEIGHT = 0.25
+const PANEL_DEPTH = 0.02
+const PANEL_TEXT = 'Start'
 
 export function StartFinishGate({ position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const width = BASE_WIDTH * scale
   const height = BASE_HEIGHT * scale
-  const accentColor = '#111827'
+  const accentColor = '#f9fafb'
+  const textColor = '#111827'
   const emissiveColor = isSelected ? '#22d3ee' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
+  const panelY = height + 0.25 * scale
+  const panelTextZ = PANEL_DEPTH / 2 + 0.006
 
   return (
     <group
@@ -53,11 +61,36 @@ export function StartFinishGate({ position, rotation, size, openings, openingLab
       </mesh>
 
 
-      {/* Checkered panel on top */}
-      <mesh position={[0, height + 0.25 * scale, 0]} onClick={onClick}>
-        <boxGeometry args={[0.6 * scale, 0.25 * scale, 0.02]} />
+      {/* Start panel on top */}
+      <mesh position={[0, panelY, 0]} onClick={onClick}>
+        <boxGeometry args={[PANEL_WIDTH * scale, PANEL_HEIGHT * scale, PANEL_DEPTH]} />
         <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
+
+      <Text
+        position={[0, panelY, panelTextZ]}
+        color={textColor}
+        fontSize={0.13 * scale}
+        maxWidth={PANEL_WIDTH * scale * 0.86}
+        anchorX="center"
+        anchorY="middle"
+        onClick={onClick}
+      >
+        {PANEL_TEXT}
+      </Text>
+
+      <Text
+        position={[0, panelY, -panelTextZ]}
+        rotation-y={Math.PI}
+        color={textColor}
+        fontSize={0.13 * scale}
+        maxWidth={PANEL_WIDTH * scale * 0.86}
+        anchorX="center"
+        anchorY="middle"
+        onClick={onClick}
+      >
+        {PANEL_TEXT}
+      </Text>
 
       {/* Entry/exit indicator — green entry side, red exit side */}
       <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} onOpeningClick={onOpeningClick} />
