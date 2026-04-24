@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Trash2, Play, RefreshCw, Ghost } from 'lucide-react'
 
 import { useAppStore } from '@/store'
@@ -23,14 +23,29 @@ interface TrackGalleryProps {
 
 export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
   const currentTrack = useAppStore((state) => state.currentTrack)
-  const setTrack = useAppStore((state) => state.setTrack)
+  const replaceTrack = useAppStore((state) => state.replaceTrack)
+  const setConfig = useAppStore((state) => state.setConfig)
   const [tracks, setTracks] = useState<SavedTrackInfo[]>(() => listTracks())
-  const refreshTracks = () => setTracks(listTracks())
+  const refreshTracks = useCallback(() => setTracks(listTracks()), [])
+
+  useEffect(() => {
+    if (open) {
+      const timeoutId = window.setTimeout(refreshTracks, 0)
+      return () => window.clearTimeout(timeoutId)
+    }
+  }, [open, refreshTracks])
+
+  useEffect(() => {
+    window.addEventListener('track-saved', refreshTracks)
+    return () => window.removeEventListener('track-saved', refreshTracks)
+  }, [refreshTracks])
 
   const handleLoad = (id: string) => {
     const result = loadTrack(id)
     if (result) {
-      setTrack(result.track)
+      setConfig(result.config)
+      replaceTrack(result.track)
+      onOpenChange(false)
     }
     refreshTracks()
   }

@@ -29,7 +29,8 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
   const redo = useAppStore((state) => state.redo)
   const currentTrack = useAppStore((state) => state.currentTrack)
   const config = useAppStore((state) => state.config)
-  const setTrack = useAppStore((state) => state.setTrack)
+  const replaceTrack = useAppStore((state) => state.replaceTrack)
+  const setConfig = useAppStore((state) => state.setConfig)
   const setShowFlightPath = useAppStore((state) => state.setShowFlightPath)
   const setShowOpeningLabels = useAppStore((state) => state.setShowOpeningLabels)
 
@@ -56,7 +57,8 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
         if ('error' in result) {
           console.error('Import failed:', result.error)
         } else {
-          setTrack(result.track)
+          setConfig(result.config)
+          replaceTrack(result.track)
         }
       } catch {
         console.error('Failed to parse JSON file')
@@ -184,14 +186,14 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
 
         <Separator orientation="vertical" className="h-6" />
 
-        {/* Keyboard shortcuts help */}
+        {/* Help */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" onClick={onShortcutsClick}>
               <CircleHelp className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Keyboard Shortcuts</TooltipContent>
+          <TooltipContent>Hilfe</TooltipContent>
         </Tooltip>
       </div>
     </header>

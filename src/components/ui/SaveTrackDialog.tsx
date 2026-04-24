@@ -20,6 +20,7 @@ interface SaveTrackDialogProps {
 
 export const SaveTrackDialog: FC<SaveTrackDialogProps> = ({ open, onOpenChange }) => {
   const currentTrack = useAppStore((state) => state.currentTrack)
+  const syncCurrentTrack = useAppStore((state) => state.syncCurrentTrack)
   const config = useAppStore((state) => state.config)
   const [name, setName] = useState(currentTrack?.name ?? '')
 
@@ -35,6 +36,7 @@ export const SaveTrackDialog: FC<SaveTrackDialogProps> = ({ open, onOpenChange }
     const trackName = name || currentTrack.name
     const updated = { ...currentTrack, name: trackName, updatedAt: new Date().toISOString() }
     saveTrack(updated, config)
+    syncCurrentTrack(updated)
     window.dispatchEvent(new CustomEvent('track-saved'))
     onOpenChange(false)
   }
