@@ -32,3 +32,7 @@ const action = (payload) => set((state) => {
   return { ...newState, ...history }
 })
 ```
+
+## NOTES
+- `trackSlice.ts` duplicates `moveGate`/`rotateGate` logic from `utils/gateOperations.ts`
+- `commitGateDrag()` pushes history without snapshotting (avoids undo stack pollution during drag)
