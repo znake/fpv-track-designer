@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculateFlightPath, GATE_BASE_HEIGHT, GATE_STRUCTURE_CLEARANCE } from './flightPath'
+import { calculateFlightPath, DIVE_TOP_APPROACH_CLEARANCE, GATE_BASE_HEIGHT, GATE_STRUCTURE_CLEARANCE } from './flightPath'
 import type { Gate, GateSequenceItem } from '../types'
 import { createDefaultGateOpenings, getHGateBackrestSide } from './gateOpenings'
 
@@ -254,6 +254,104 @@ describe('calculateFlightPath', () => {
     expect(lastTransitionSegment[lastTransitionSegment.length - 1].z).toBeCloseTo(entryAnchor.z, 5)
   })
 
+  it('reaches reversed gate at its red entry anchor', () => {
+    const gates = [
+      createGate('g1', 0, 0, 0),
+      { ...createGate('g2', 0, 0, 10), rotation: 0 },
+    ]
+    const sequence: GateSequenceItem[] = [
+      { gateId: 'g1', openingId: 'main', reverse: false },
+      { gateId: 'g2', openingId: 'main', reverse: true },
+    ]
+
+    const path = calculateFlightPath(gates, sequence)
+    const entryAnchor = { x: 0, z: 10.45 }
+
+    const entrySegmentIndex = path.sampledSegments.findIndex((segment) => {
+      const end = segment[segment.length - 1]
+      return Math.abs(end.x - entryAnchor.x) < 0.01 && Math.abs(end.z - entryAnchor.z) < 0.01
+    })
+
+    expect(entrySegmentIndex).toBeGreaterThan(0)
+
+    const throughGateForReversed = path.sampledSegments.some((segment) => {
+      const start = segment[0]
+      const end = segment[segment.length - 1]
+      return (
+        Math.abs(start.x - 0) < 0.01
+        && Math.abs(start.z - 10.45) < 0.01
+        && Math.abs(end.x - 0) < 0.01
+        && Math.abs(end.z - 9.55) < 0.01
+      )
+    })
+
+    expect(throughGateForReversed).toBe(true)
+  })
+
+  it('uses reversed entry anchor for the first gate when reverse=true', () => {
+    const gates = [
+      createGate('g1', 0, 0, 0),
+      createGate('g2', 10, 0, 0),
+    ]
+    const sequence: GateSequenceItem[] = [
+      { gateId: 'g1', openingId: 'main', reverse: true },
+      { gateId: 'g2', openingId: 'main', reverse: false },
+    ]
+
+    const path = calculateFlightPath(gates, sequence)
+
+    expect(path.points[0].x).toBeCloseTo(0, 5)
+    expect(path.points[0].z).toBeCloseTo(0.45, 5)
+    expect(path.points[1].z).toBeGreaterThan(0.1)
+  })
+
+  it('routes outside after a reversed gate instead of re-entering the same opening', () => {
+    const gates = [
+      createGate('g1', 0, 0, 0),
+      createGate('g2', 0, 0, 10),
+    ]
+    const sequence: GateSequenceItem[] = [
+      { gateId: 'g1', openingId: 'main', reverse: true },
+      { gateId: 'g2', openingId: 'main', reverse: false },
+    ]
+
+    const path = calculateFlightPath(gates, sequence)
+    const transitionAfterReversedGate = path.sampledSegments[1]
+    const maxLateralOffset = Math.max(...transitionAfterReversedGate.map((point) => Math.abs(point.x)))
+    const pointsReturningThroughFirstOpening = transitionAfterReversedGate.filter((point) => (
+      Math.abs(point.x) < 0.6
+      && Math.abs(point.z) < 0.3
+      && point.y >= 0
+      && point.y <= GATE_BASE_HEIGHT
+    ))
+
+    expect(maxLateralOffset).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
+    expect(pointsReturningThroughFirstOpening).toHaveLength(0)
+  })
+
+  it('routes outside between opposite directions of the same gate opening', () => {
+    const gate = createGate('g1', 0, 0, 0)
+    const nextGate = createGate('g2', 8, 0, 0)
+    const sequence: GateSequenceItem[] = [
+      { gateId: gate.id, openingId: 'main', reverse: false },
+      { gateId: gate.id, openingId: 'main', reverse: true },
+      { gateId: nextGate.id, openingId: 'main', reverse: false },
+    ]
+
+    const path = calculateFlightPath([gate, nextGate], sequence)
+    const transitionBetweenOppositePasses = path.sampledSegments[1]
+    const maxLateralOffset = Math.max(...transitionBetweenOppositePasses.map((point) => Math.abs(point.x)))
+    const pointsInsideOpening = transitionBetweenOppositePasses.filter((point) => (
+      Math.abs(point.x) < 0.6
+      && Math.abs(point.z) < 0.3
+      && point.y >= 0
+      && point.y <= GATE_BASE_HEIGHT
+    ))
+
+    expect(maxLateralOffset).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
+    expect(pointsInsideOpening).toHaveLength(0)
+  })
+
   it('routes around a gate instead of approaching from the red side', () => {
     const gates = [
       createGate('g1', 0, 0, 20),
@@ -453,5 +551,74 @@ describe('calculateFlightPath', () => {
 
     expect(Math.sign(furthestSidePoint.z)).toBe(-expectedSide)
     expect(Math.abs(furthestSidePoint.z)).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
+  })
+
+  it('routes double-h lower-to-middle and middle-to-upper transitions on the extension side', () => {
+    const gate: Gate = {
+      id: 'double-h-extension-side',
+      type: 'double-h',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 0,
+      size: 1,
+      openings: createDefaultGateOpenings('double-h', 1),
+    }
+    const nextGate = createGate('g2', 8, 0, 0)
+    const sequence: GateSequenceItem[] = [
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'middle', reverse: false },
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+      { gateId: nextGate.id, openingId: 'main', reverse: false },
+    ]
+
+    const path = calculateFlightPath([gate, nextGate], sequence)
+    const lowerToMiddleTransition = path.sampledSegments[1]
+    const middleToUpperTransition = path.sampledSegments[5]
+    const expectedSide = getHGateBackrestSide(gate.id)
+    const lowerToMiddleSidePoint = lowerToMiddleTransition.reduce((furthest, point) => (
+      Math.abs(point.x) > Math.abs(furthest.x) ? point : furthest
+    ))
+    const middleToUpperSidePoint = middleToUpperTransition.reduce((furthest, point) => (
+      Math.abs(point.x) > Math.abs(furthest.x) ? point : furthest
+    ))
+
+    expect(Math.sign(lowerToMiddleSidePoint.x)).toBe(expectedSide)
+    expect(Math.abs(lowerToMiddleSidePoint.x)).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
+    expect(Math.sign(middleToUpperSidePoint.x)).toBe(expectedSide)
+    expect(Math.abs(middleToUpperSidePoint.x)).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
+  })
+
+  it('approaches dive gates from at least 0.5m above the top before diving through the center', () => {
+    const startGate = createGate('start', 0, 0, 0)
+    const diveGate: Gate = {
+      id: 'dive-gate',
+      type: 'dive',
+      position: { x: 0, y: 0, z: 10 },
+      rotation: 0,
+      size: 1,
+      openings: createDefaultGateOpenings('dive', 1, 'dive-gate'),
+    }
+    const sequence: GateSequenceItem[] = [
+      { gateId: startGate.id, openingId: 'main', reverse: false },
+      { gateId: diveGate.id, openingId: 'entry-top', reverse: false },
+      { gateId: diveGate.id, openingId: diveGate.openings[1].id, reverse: false },
+    ]
+
+    const path = calculateFlightPath([startGate, diveGate], sequence)
+    const transitionToDive = path.sampledSegments[1]
+    const diveThroughTop = path.sampledSegments[2]
+    const topY = diveGate.position.y + GATE_BASE_HEIGHT * diveGate.size
+    const approachY = topY + DIVE_TOP_APPROACH_CLEARANCE
+    const insideY = topY - DIVE_TOP_APPROACH_CLEARANCE
+    const transitionEnd = transitionToDive[transitionToDive.length - 1]
+    const diveStart = diveThroughTop[0]
+    const diveEnd = diveThroughTop[diveThroughTop.length - 1]
+
+    expect(transitionEnd.x).toBeCloseTo(diveGate.position.x, 5)
+    expect(transitionEnd.z).toBeCloseTo(diveGate.position.z, 5)
+    expect(transitionEnd.y).toBeGreaterThanOrEqual(approachY - 0.01)
+    expect(diveStart).toEqual(transitionEnd)
+    expect(diveEnd.x).toBeCloseTo(diveGate.position.x, 5)
+    expect(diveEnd.z).toBeCloseTo(diveGate.position.z, 5)
+    expect(diveEnd.y).toBeCloseTo(insideY, 5)
   })
 })

@@ -7,7 +7,7 @@ const createTestConfig = (overrides: Partial<Config> = {}): Config => ({
     'start-finish': 1,
     standard: 4,
     'h-gate': 2,
-    asymmetric: 1,
+    'double-h': 1,
     dive: 1,
     double: 1,
     ladder: 1,
@@ -158,7 +158,7 @@ const config: Config = {
         'start-finish': 0,
         standard: 3,
         'h-gate': 0,
-        asymmetric: 0,
+        'double-h': 0,
         dive: 0,
         double: 0,
         ladder: 0,
@@ -215,7 +215,7 @@ const config: Config = {
         'start-finish': 0,
         standard: 0,
         'h-gate': 0,
-        asymmetric: 0,
+        'double-h': 0,
         dive: 0,
         double: 1,
         ladder: 0,
@@ -239,7 +239,7 @@ const config: Config = {
         'start-finish': 0,
         standard: 0,
         'h-gate': 1,
-        asymmetric: 0,
+        'double-h': 0,
         dive: 0,
         double: 0,
         ladder: 0,
@@ -254,6 +254,31 @@ const config: Config = {
     expect(track.gateSequence).toEqual([
       { gateId: hGate.id, openingId: 'lower', reverse: false },
       { gateId: hGate.id, openingId: 'backrest-pass', reverse: false },
+    ])
+  })
+
+  it('adds ladder gates to the default sequence with lower then middle and upper openings', () => {
+    const config = createTestConfig({
+      gateQuantities: {
+        'start-finish': 0,
+        standard: 0,
+        'h-gate': 0,
+        'double-h': 0,
+        dive: 0,
+        double: 0,
+        ladder: 1,
+        flag: 0,
+      },
+    })
+
+    const track = generateTrack(config)
+    const ladderGate = track.gates[0]
+
+    expect(ladderGate.type).toBe('ladder')
+    expect(track.gateSequence).toEqual([
+      { gateId: ladderGate.id, openingId: 'lower', reverse: false },
+      { gateId: ladderGate.id, openingId: 'middle', reverse: false },
+      { gateId: ladderGate.id, openingId: 'upper', reverse: false },
     ])
   })
 })

@@ -1,7 +1,27 @@
 import type { Gate, GateSequenceItem } from '../types'
-import { getPrimaryOpeningId } from './gateOpenings'
+import { getPrimaryOpeningId, normalizeGates } from './gateOpenings'
 
 type RawGateSequenceItem = string | GateSequenceItem
+
+const LADDER_OPENING_ORDER = ['lower', 'middle', 'upper'] as const
+const DOUBLE_H_OPENING_ORDER = ['lower', 'middle', 'upper'] as const
+
+function buildOpeningsSequence(gate: Gate, openingIds: readonly string[]): GateSequenceItem[] {
+  const entries: GateSequenceItem[] = []
+
+  for (const openingId of openingIds) {
+    const opening = gate.openings.find((candidate) => candidate.id === openingId)
+    if (!opening) return []
+
+    entries.push({ gateId: gate.id, openingId: opening.id, reverse: Boolean(opening.reverse) })
+  }
+
+  return entries
+}
+
+function getOpeningReverse(gate: Gate, openingId: string): boolean {
+  return Boolean(gate.openings.find((opening) => opening.id === openingId)?.reverse)
+}
 
 function isSameSequenceItem(a: GateSequenceItem, b: GateSequenceItem): boolean {
   return a.gateId === b.gateId && a.openingId === b.openingId && Boolean(a.reverse) === Boolean(b.reverse)
@@ -40,8 +60,8 @@ export function buildDefaultGateSequenceEntries(gate: Gate): GateSequenceItem[] 
 
     if (lowerOpening && backrestPassOpening) {
       return [
-        { gateId: gate.id, openingId: lowerOpening.id, reverse: false },
-        { gateId: gate.id, openingId: backrestPassOpening.id, reverse: false },
+        { gateId: gate.id, openingId: lowerOpening.id, reverse: Boolean(lowerOpening.reverse) },
+        { gateId: gate.id, openingId: backrestPassOpening.id, reverse: Boolean(backrestPassOpening.reverse) },
       ]
     }
   }
@@ -52,22 +72,51 @@ export function buildDefaultGateSequenceEntries(gate: Gate): GateSequenceItem[] 
 
     if (lowerOpening && upperOpening) {
       return [
-        { gateId: gate.id, openingId: lowerOpening.id, reverse: false },
-        { gateId: gate.id, openingId: upperOpening.id, reverse: false },
+        { gateId: gate.id, openingId: lowerOpening.id, reverse: Boolean(lowerOpening.reverse) },
+        { gateId: gate.id, openingId: upperOpening.id, reverse: Boolean(upperOpening.reverse) },
       ]
+    }
+  }
+
+  if (gate.type === 'dive') {
+    const entryOpening = gate.openings.find((opening) => opening.id === 'entry-top') ?? gate.openings[0]
+    const exitOpening = gate.openings.find((opening) => opening.id.startsWith('exit-') && opening.id !== entryOpening?.id) ?? gate.openings[1]
+
+    if (entryOpening && exitOpening) {
+      return [
+        { gateId: gate.id, openingId: entryOpening.id, reverse: Boolean(entryOpening.reverse) },
+        { gateId: gate.id, openingId: exitOpening.id, reverse: Boolean(exitOpening.reverse) },
+      ]
+    }
+  }
+
+  if (gate.type === 'ladder') {
+    const ladderEntries = buildOpeningsSequence(gate, LADDER_OPENING_ORDER)
+
+    if (ladderEntries.length > 0) {
+      return ladderEntries
+    }
+  }
+
+  if (gate.type === 'double-h') {
+    const doubleHEntries = buildOpeningsSequence(gate, DOUBLE_H_OPENING_ORDER)
+
+    if (doubleHEntries.length > 0) {
+      return doubleHEntries
     }
   }
 
   return [{
     gateId: gate.id,
     openingId: getPrimaryOpeningId(gate),
-    reverse: false,
+    reverse: getOpeningReverse(gate, getPrimaryOpeningId(gate)),
   }]
 }
 
 export function normalizeGateSequence(sequence: RawGateSequenceItem[] | undefined, gates: Gate[]): GateSequenceItem[] {
-  const gateMap = new Map(gates.map((gate) => [gate.id, gate]))
-  const source = Array.isArray(sequence) && sequence.length > 0 ? sequence : buildFallbackGateSequence(gates)
+  const normalizedGates = normalizeGates(gates)
+  const gateMap = new Map(normalizedGates.map((gate) => [gate.id, gate]))
+  const source = Array.isArray(sequence) && sequence.length > 0 ? sequence : buildFallbackGateSequence(normalizedGates)
   const normalized: GateSequenceItem[] = []
 
   for (const item of source) {
@@ -85,5 +134,5 @@ export function normalizeGateSequence(sequence: RawGateSequenceItem[] | undefine
     normalized.pop()
   }
 
-  return normalized.length > 0 ? normalized : buildFallbackGateSequence(gates)
+  return normalized.length > 0 ? normalized : buildFallbackGateSequence(normalizedGates)
 }

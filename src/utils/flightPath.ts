@@ -11,6 +11,7 @@ const MAX_CONTROL_HANDLE_LENGTH = 2.5
 const U_TURN_DOT_THRESHOLD = -0.3
 const FORBIDDEN_ZONE_TOLERANCE = 0.2
 const MIN_CLEARANCE = 0.3
+export const DIVE_TOP_APPROACH_CLEARANCE = 0.5
 export const GATE_STRUCTURE_CLEARANCE = 0.5
 const GATE_AVOIDANCE_SIDE_MARGIN = GATE_STRUCTURE_CLEARANCE
 const GATE_AVOIDANCE_FRONT_MARGIN = 0.25
@@ -118,8 +119,15 @@ function rotateLocalVector(x: number, z: number, rotation: number): { x: number;
 }
 
 export function getGateEntryDirection(gate: Gate, opening: GateOpening, reverse = false): Vector3 {
-  const rad = ((gate.rotation + opening.rotation) * Math.PI) / 180
-  const direction = new Vector3(-Math.sin(rad), 0, -Math.cos(rad)).normalize()
+  const pitchRad = ((opening.rotationX ?? 0) * Math.PI) / 180
+  const yawRad = ((gate.rotation + opening.rotation) * Math.PI) / 180
+  const pitchedLocalY = Math.sin(pitchRad)
+  const pitchedLocalZ = -Math.cos(pitchRad)
+  const direction = new Vector3(
+    pitchedLocalZ * Math.sin(yawRad),
+    pitchedLocalY,
+    pitchedLocalZ * Math.cos(yawRad),
+  ).normalize()
   return reverse ? direction.negate() : direction
 }
 
@@ -137,7 +145,8 @@ function getGateVisitCenterPoint(visit: GateVisit): Vector3 {
 }
 
 function getGatePassThroughOffset(opening: GateOpening): number {
-  return Math.min(opening.width, opening.height) * 0.375
+  const defaultOffset = Math.min(opening.width, opening.height) * 0.375
+  return opening.id === 'entry-top' ? Math.max(defaultOffset, DIVE_TOP_APPROACH_CLEARANCE) : defaultOffset
 }
 
 function getGateEntryPoint(visit: GateVisit): Vector3 {
@@ -278,6 +287,22 @@ function isHGateBackrestTransition(fromVisit: GateVisit, toVisit: GateVisit): bo
   return openingIds.has('lower') && openingIds.has('backrest-pass')
 }
 
+function isDoubleHGateStackTransition(fromVisit: GateVisit, toVisit: GateVisit): boolean {
+  if (fromVisit.gate.id !== toVisit.gate.id || fromVisit.gate.type !== 'double-h') {
+    return false
+  }
+
+  const openingOrder = ['lower', 'middle', 'upper']
+  const fromIndex = openingOrder.indexOf(fromVisit.opening.id)
+  const toIndex = openingOrder.indexOf(toVisit.opening.id)
+
+  return fromIndex >= 0 && toIndex >= 0 && Math.abs(fromIndex - toIndex) === 1
+}
+
+function isSideDefinedSameGateTransition(fromVisit: GateVisit, toVisit: GateVisit): boolean {
+  return isHGateBackrestTransition(fromVisit, toVisit) || isDoubleHGateStackTransition(fromVisit, toVisit)
+}
+
 function createSameGateClearanceCurve(
   from: Vector3,
   fromDirection: Vector3,
@@ -360,9 +385,14 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceIt
     let transitionCurves = [{ curve: standardCurve, length: standardCurve.getLength() }]
     let needsAvoidance = isSameGateTransition
       && fromVisit.opening.id === toVisit.opening.id
-      && fromVisit.reverse === toVisit.reverse
+    let reentersFromOpening = false
 
     if (!needsAvoidance && curvePassesForbiddenZone(standardCurve, toVisit)) {
+      needsAvoidance = true
+    }
+
+    if (curveReentersGateOpening(standardCurve, fromVisit)) {
+      reentersFromOpening = true
       needsAvoidance = true
     }
 
@@ -373,7 +403,7 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceIt
       }
     }
 
-    if (isHGateBackrestTransition(fromVisit, toVisit)) {
+    if (isSideDefinedSameGateTransition(fromVisit, toVisit)) {
       const backrestSideDirection = getGateLocalXDirection(fromVisit.gate).multiplyScalar(getHGateBackrestSide(fromVisit.gate.id))
       const sideAwareCurve = createSameGatePhysicalSideClearanceCurve(
         from,
@@ -391,7 +421,9 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceIt
           return createSameGateClearanceCurve(from, fromDirection, to, toDirection, fromVisit, toVisit, side)
         }
 
-        const waypoint = calculateWaypointForSide(toVisit, side)
+        const waypoint = reentersFromOpening
+          ? calculateOutsideLaneWaypoint(fromVisit, side, fromDirection)
+          : calculateWaypointForSide(toVisit, side)
         return createAvoidanceCurve(from, fromDirection, to, toDirection, waypoint)
       })
 

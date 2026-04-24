@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { createDefaultGateOpenings } from './gateOpenings'
+import type { Gate } from '../types'
+import { createDefaultGateOpenings, normalizeGate } from './gateOpenings'
 
 describe('createDefaultGateOpenings', () => {
-  it('creates two side-pass openings for flags', () => {
+  it('creates a single side-pass opening for flags', () => {
     const openings = createDefaultGateOpenings('flag', 1)
 
-    expect(openings).toHaveLength(2)
-    expect(openings.map((opening) => opening.id)).toEqual(['left', 'right'])
+    expect(openings).toHaveLength(1)
+    expect(openings.map((opening) => opening.id)).toEqual(['main'])
     expect(openings[0].position.x).toBeLessThan(0)
-    expect(openings[1].position.x).toBeGreaterThan(0)
+    expect(openings[0].position.x).toBe(-0.45)
   })
 
   it('creates top and bottom openings for double gates', () => {
@@ -17,6 +18,15 @@ describe('createDefaultGateOpenings', () => {
     expect(openings).toHaveLength(2)
     expect(openings.map((opening) => opening.id)).toEqual(['lower', 'upper'])
     expect(openings[0].position.y).toBeLessThan(openings[1].position.y)
+  })
+
+  it('creates three ladder-like openings for double-h gates', () => {
+    const openings = createDefaultGateOpenings('double-h', 1)
+
+    expect(openings).toHaveLength(3)
+    expect(openings.map((opening) => opening.id)).toEqual(['lower', 'middle', 'upper'])
+    expect(openings[0].position.y).toBeLessThan(openings[1].position.y)
+    expect(openings[1].position.y).toBeLessThan(openings[2].position.y)
   })
 
   it('creates a lower fly-through and backrest pass for h-gates', () => {
@@ -42,5 +52,103 @@ describe('createDefaultGateOpenings', () => {
     const backrestPass = openings.find((opening) => opening.id === 'backrest-pass')
 
     expect(backrestPass?.rotation).toBe(lower?.rotation)
+  })
+
+  it('creates a dive gate with a top entry and one random side exit', () => {
+    const openings = createDefaultGateOpenings('dive', 1, 'stable-gate-id')
+
+    expect(openings).toHaveLength(2)
+    expect(openings[0].id).toBe('entry-top')
+    expect(openings[0].position.y).toBe(1.2)
+    expect(openings[0].rotationX).toBe(90)
+    expect(openings[1].id).toMatch(/^exit-(front|back|left|right)$/)
+  })
+
+  it('uses deterministic dive exit side for the same gate id', () => {
+    const a = createDefaultGateOpenings('dive', 1, 'same-id')
+    const b = createDefaultGateOpenings('dive', 1, 'same-id')
+
+    expect(a).toEqual(b)
+    expect(a[1].id).toEqual(b[1].id)
+  })
+
+  it('orients dive side exits with green inside and red outside', () => {
+    expect(createDefaultGateOpenings('dive', 1, 'd')[1]).toMatchObject({
+      id: 'exit-front',
+      position: { x: 0, y: 0.6, z: -0.6 },
+      rotation: 180,
+    })
+    expect(createDefaultGateOpenings('dive', 1, 'e')[1]).toMatchObject({
+      id: 'exit-back',
+      position: { x: 0, y: 0.6, z: 0.6 },
+      rotation: 0,
+    })
+    expect(createDefaultGateOpenings('dive', 1, 'f')[1]).toMatchObject({
+      id: 'exit-left',
+      position: { x: -0.6, y: 0.6, z: 0 },
+      rotation: 270,
+    })
+    expect(createDefaultGateOpenings('dive', 1, 'g')[1]).toMatchObject({
+      id: 'exit-right',
+      position: { x: 0.6, y: 0.6, z: 0 },
+      rotation: 90,
+    })
+  })
+
+  it('normalizes a legacy single dive opening into top entry and side exit', () => {
+    const legacy: Gate = {
+      id: 'legacy-dive-gate',
+      type: 'dive',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 0,
+      size: 1,
+      openings: [
+        {
+          id: 'main',
+          position: { x: 0, y: 1.2 / 2, z: 0 },
+          width: 1.2,
+          height: 1.2,
+          rotation: 0,
+        },
+      ],
+    }
+    const normalized = normalizeGate(legacy)
+
+    expect(normalized.openings).toHaveLength(2)
+    expect(normalized.openings[0].id).toBe('entry-top')
+    expect(normalized.openings[1].id).toMatch(/^exit-(front|back|left|right)$/)
+  })
+
+  it('normalizes legacy two-opening double-h gates into lower, middle and upper passes', () => {
+    const legacy: Gate = {
+      id: 'legacy-double-h-gate',
+      type: 'double-h',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 0,
+      size: 1,
+      openings: [
+        {
+          id: 'lower',
+          position: { x: 0, y: 0.6, z: 0 },
+          width: 1.2,
+          height: 1.2,
+          rotation: 0,
+        },
+        {
+          id: 'upper',
+          position: { x: 0, y: 1.8, z: 0 },
+          width: 1.2,
+          height: 1.2,
+          rotation: 0,
+          reverse: true,
+        },
+      ],
+    }
+    const normalized = normalizeGate(legacy)
+
+    expect(normalized.openings).toHaveLength(3)
+    expect(normalized.openings.map((opening) => opening.id)).toEqual(['lower', 'middle', 'upper'])
+    expect(normalized.openings[1].reverse).toBe(true)
+    expect(normalized.openings[2].reverse).toBeUndefined()
   })
 })
