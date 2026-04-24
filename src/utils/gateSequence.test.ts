@@ -73,6 +73,19 @@ describe('gateSequence', () => {
     ])
   })
 
+  it('inserts the missing middle pass for legacy explicit double-h lower-to-upper sequences', () => {
+    const gate = createGate('legacy-explicit-double-h', 'double-h')
+
+    expect(normalizeGateSequence([
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+    ], [gate])).toEqual([
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'middle', reverse: false },
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+    ])
+  })
+
   it('builds dive default sequence as entry-top then an exit side', () => {
     const gate = {
       ...createGate('dive-1', 'dive'),

@@ -27,6 +27,35 @@ function isSameSequenceItem(a: GateSequenceItem, b: GateSequenceItem): boolean {
   return a.gateId === b.gateId && a.openingId === b.openingId && Boolean(a.reverse) === Boolean(b.reverse)
 }
 
+function shouldInsertDoubleHMiddlePass(previous: GateSequenceItem | undefined, current: GateSequenceItem, gate: Gate | undefined): boolean {
+  if (!previous || !gate || gate.type !== 'double-h' || previous.gateId !== current.gateId) {
+    return false
+  }
+
+  const openingIds = new Set([previous.openingId, current.openingId])
+  return openingIds.has('lower') && openingIds.has('upper')
+}
+
+function insertMissingDoubleHMiddlePasses(sequence: GateSequenceItem[], gateMap: Map<string, Gate>): GateSequenceItem[] {
+  const expanded: GateSequenceItem[] = []
+
+  for (const item of sequence) {
+    const previous = expanded[expanded.length - 1]
+    const gate = gateMap.get(item.gateId)
+
+    if (shouldInsertDoubleHMiddlePass(previous, item, gate)) {
+      const middleOpening = gate?.openings.find((opening) => opening.id === 'middle')
+      if (middleOpening) {
+        expanded.push({ gateId: item.gateId, openingId: middleOpening.id, reverse: Boolean(middleOpening.reverse) })
+      }
+    }
+
+    expanded.push(item)
+  }
+
+  return expanded
+}
+
 function normalizeSequenceItem(item: RawGateSequenceItem, gateMap: Map<string, Gate>): GateSequenceItem[] {
   if (typeof item === 'string') {
     const gate = gateMap.get(item)
@@ -130,9 +159,11 @@ export function normalizeGateSequence(sequence: RawGateSequenceItem[] | undefine
     }
   }
 
-  if (normalized.length > 1 && isSameSequenceItem(normalized[0], normalized[normalized.length - 1])) {
-    normalized.pop()
+  const expanded = insertMissingDoubleHMiddlePasses(normalized, gateMap)
+
+  if (expanded.length > 1 && isSameSequenceItem(expanded[0], expanded[expanded.length - 1])) {
+    expanded.pop()
   }
 
-  return normalized.length > 0 ? normalized : buildFallbackGateSequence(normalizedGates)
+  return expanded.length > 0 ? expanded : buildFallbackGateSequence(normalizedGates)
 }
