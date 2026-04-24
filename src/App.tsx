@@ -6,6 +6,15 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { SaveTrackDialog } from './components/ui/SaveTrackDialog'
 import { TrackGallery } from './components/ui/TrackGallery'
 import { KeyboardShortcutsDialog } from './components/ui/KeyboardShortcutsDialog'
+import { Button } from './components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './components/ui/dialog'
 import {
   Sheet,
   SheetContent,
@@ -25,6 +34,9 @@ function App() {
   const currentTrack = useAppStore((state) => state.currentTrack)
   const setTrack = useAppStore((state) => state.setTrack)
   const config = useAppStore((state) => state.config)
+  const isDeleteDialogOpen = useAppStore((state) => state.isDeleteDialogOpen)
+  const closeDeleteDialog = useAppStore((state) => state.closeDeleteDialog)
+  const deleteSelectedGates = useAppStore((state) => state.deleteSelectedGates)
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
@@ -76,9 +88,9 @@ function App() {
       <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
         <SheetContent side="left" className="gap-0 p-0 sm:max-w-md">
           <SheetHeader className="pr-12">
-            <SheetTitle>Track Settings</SheetTitle>
+            <SheetTitle>Strecken-Einstellungen</SheetTitle>
             <SheetDescription>
-              Adjust gate quantities, field dimensions, gate size, and reset defaults.
+              Passe Toranzahl, Feldmaße und Torgröße an oder setze die Standardeinstellungen zurück.
             </SheetDescription>
           </SheetHeader>
           <Separator />
@@ -92,6 +104,41 @@ function App() {
       <SaveTrackDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen} />
       <TrackGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <Dialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeDeleteDialog()
+        }}
+      >
+        <DialogContent>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              deleteSelectedGates()
+              closeDeleteDialog()
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Ausgewähltes Tor löschen?</DialogTitle>
+              <DialogDescription>
+                Dadurch wird das ausgewählte Tor aus der Strecke entfernt und die aktuelle Auswahl gelöscht.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeDeleteDialog}
+              >
+                Abbrechen
+              </Button>
+              <Button type="submit" variant="destructive" autoFocus>
+                Tor löschen
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   )
 }

@@ -36,7 +36,6 @@ const FLAG_BASE_HEIGHT = 2
 const POST_THICKNESS = 0.06
 const H_GATE_BACKREST_HEIGHT_MULTIPLIER = 1.85
 const HANDLE_CLEARANCE_ABOVE_GATE = 0.5
-const DELETE_DIALOG_OFFSET_Y = 1.95
 const INSERT_HANDLE_OFFSET_Y = 0.9
 const DELETE_HANDLE_OFFSET_Y = 0.35
 const DEGREES_PER_PIXEL = 1
@@ -44,14 +43,14 @@ const FALLBACK_INSERT_DISTANCE = 3
 const HANDLE_BUTTON_CLASSNAME = 'pointer-events-auto flex size-11 items-center justify-center rounded-full border shadow-lg shadow-black/30 backdrop-blur supports-backdrop-filter:backdrop-blur-sm transition-colors select-none touch-none'
 
 const GATE_TYPE_OPTIONS: { type: GateType; label: string }[] = [
-  { type: 'start-finish', label: 'Start/Ziel' },
-  { type: 'standard', label: 'Standard' },
-  { type: 'h-gate', label: 'H-Gate' },
-  { type: 'double-h', label: 'Doppel-H-Gate' },
-  { type: 'dive', label: 'Dive' },
-  { type: 'double', label: 'Double' },
-  { type: 'ladder', label: 'Ladder' },
-  { type: 'flag', label: 'Flag' },
+  { type: 'start-finish', label: 'Start/Ziel-Tor' },
+  { type: 'standard', label: 'Standard-Tor' },
+  { type: 'h-gate', label: 'H-Tor' },
+  { type: 'double-h', label: 'Doppel-H-Tor' },
+  { type: 'dive', label: 'Dive-Tor' },
+  { type: 'double', label: 'Doppeltor' },
+  { type: 'ladder', label: 'Leitertor' },
+  { type: 'flag', label: 'Flaggen-Tor' },
 ]
 
 function isSingletonGateType(type: GateType): boolean {
@@ -137,7 +136,6 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
   const modeRef = useRef<DragMode>('none')
   const [activeMode, setActiveMode] = useState<DragMode>('none')
   const [activeInsertPosition, setActiveInsertPosition] = useState<InsertPosition | null>(null)
-  const isDeleteDialogOpen = useAppStore((state) => state.isDeleteDialogOpen)
   const openDeleteDialog = useAppStore((state) => state.openDeleteDialog)
   const closeDeleteDialog = useAppStore((state) => state.closeDeleteDialog)
 
@@ -158,7 +156,6 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
   const selectedGateId = useAppStore((state) => state.selectedGateId)
   const selectedGateIds = useAppStore((state) => state.selectedGateIds)
   const insertGateAtIndex = useAppStore((state) => state.insertGateAtIndex)
-  const deleteSelectedGates = useAppStore((state) => state.deleteSelectedGates)
   const unavailableSingletonGateTypes = useMemo(() => {
     const gateTypes = new Set<GateType>()
 
@@ -362,11 +359,6 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
     setActiveInsertPosition(null)
   }, [currentTrack, insertGateAtIndex, selectedGate, unavailableSingletonGateTypes])
 
-  const handleDeleteConfirm = useCallback(() => {
-    deleteSelectedGates()
-    closeDeleteDialog()
-  }, [deleteSelectedGates, closeDeleteDialog])
-
   const beforeInsertControl = isSingleSelectedGate ? getInsertControlConfig('before') : null
   const afterInsertControl = isSingleSelectedGate ? getInsertControlConfig('after') : null
 
@@ -495,7 +487,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
               closeDeleteDialog()
               setActiveInsertPosition((current) => current === control.direction ? null : control.direction)
             }}
-            aria-label={`Insert ${control.direction} ${gateId}`}
+            aria-label={`${gateId} ${control.direction === 'before' ? 'vorher' : 'nachher'} einfügen`}
           >
             <Plus className="size-4" />
           </Button>
@@ -506,79 +498,31 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
 
   return (
     <>
-      {renderInsertControl(beforeInsertControl, 'Before')}
-      {renderInsertControl(afterInsertControl, 'After')}
+      {renderInsertControl(beforeInsertControl, 'Vorher')}
+      {renderInsertControl(afterInsertControl, 'Nachher')}
 
       {isSingleSelectedGate && (
-        <>
-          <Html
-            position={[position.x, DELETE_HANDLE_OFFSET_Y, position.z]}
-            center
-            distanceFactor={9}
-            style={{ pointerEvents: 'none' }}
+        <Html
+          position={[position.x, DELETE_HANDLE_OFFSET_Y, position.z]}
+          center
+          distanceFactor={9}
+          style={{ pointerEvents: 'none' }}
+        >
+          <Button
+            variant="destructive"
+            size="sm"
+            className="pointer-events-auto shadow-lg shadow-black/35"
+            onPointerDown={stopHtmlInteraction}
+            onClick={(event) => {
+              stopHtmlInteraction(event)
+              setActiveInsertPosition(null)
+              openDeleteDialog()
+            }}
           >
-            <Button
-              variant="destructive"
-              size="sm"
-              className="pointer-events-auto shadow-lg shadow-black/35"
-              onPointerDown={stopHtmlInteraction}
-              onClick={(event) => {
-                stopHtmlInteraction(event)
-                setActiveInsertPosition(null)
-                openDeleteDialog()
-              }}
-            >
-              <Trash2 className="size-3.5" />
-              Delete gate
-            </Button>
-          </Html>
-
-          {isDeleteDialogOpen && (
-            <Html
-              position={[position.x, position.y + DELETE_DIALOG_OFFSET_Y, position.z]}
-              center
-              distanceFactor={10}
-              style={{ pointerEvents: 'none' }}
-            >
-              <div
-                className="pointer-events-auto w-64 rounded-xl border border-border bg-popover/95 p-3 text-sm text-popover-foreground shadow-xl shadow-black/35 backdrop-blur supports-backdrop-filter:backdrop-blur-sm"
-                onPointerDown={stopHtmlInteraction}
-                onClick={stopHtmlInteraction}
-              >
-                <div className="space-y-1">
-                  <p className="font-medium">Delete selected gate?</p>
-                  <p className="text-xs text-muted-foreground">
-                    This removes the selected gate from the course and clears its current selection.
-                  </p>
-                </div>
-                <div className="mt-3 flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onPointerDown={stopHtmlInteraction}
-                      onClick={(event) => {
-                        stopHtmlInteraction(event)
-                        closeDeleteDialog()
-                      }}
-                    >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onPointerDown={stopHtmlInteraction}
-                    onClick={(event) => {
-                      stopHtmlInteraction(event)
-                      handleDeleteConfirm()
-                    }}
-                  >
-                    Delete gate
-                  </Button>
-                </div>
-              </div>
-            </Html>
-          )}
-        </>
+            <Trash2 className="size-3.5" />
+            Tor löschen
+          </Button>
+        </Html>
       )}
 
       <Html
@@ -591,7 +535,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
           {/* Move handle (left) */}
           <button
             type="button"
-            aria-label={`Move ${gateId}`}
+            aria-label={`${gateId} bewegen`}
             onPointerDown={handleMoveDown}
             className={`${HANDLE_BUTTON_CLASSNAME} ${activeMode === 'move'
               ? 'border-primary bg-primary text-primary-foreground'
@@ -605,7 +549,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
           {/* Rotate handle (right) */}
           <button
             type="button"
-            aria-label={`Rotate ${gateId}`}
+            aria-label={`${gateId} drehen`}
             onPointerDown={handleRotateDown}
             className={`${HANDLE_BUTTON_CLASSNAME} ${activeMode === 'rotate'
               ? 'border-secondary bg-secondary text-secondary-foreground'
