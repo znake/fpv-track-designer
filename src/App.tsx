@@ -45,7 +45,6 @@ function App() {
 
   useKeyboardShortcuts({
     onSave: () => setSaveDialogOpen(true),
-    onNewTrack: () => setTrack(generateTrack(config)),
     onShuffle: () => setTrack(generateTrack(config)),
     onOpenGallery: () => {
       setSettingsOpen(false)
@@ -69,7 +68,6 @@ function App() {
         />
         <div className="flex flex-1 overflow-hidden">
           <LeftToolPanel
-            onNewTrackClick={() => setTrack(generateTrack(config))}
             onSaveClick={() => setSaveDialogOpen(true)}
             onGalleryClick={() => {
               setSettingsOpen(false)

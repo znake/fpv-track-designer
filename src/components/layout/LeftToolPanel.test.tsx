@@ -56,47 +56,29 @@ describe('LeftToolPanel', () => {
     vi.clearAllMocks()
   })
 
-  it('calls generateTrack and setTrack for both Mischen and Neue Strecke', () => {
+  it('calls generateTrack and setTrack from Mischen', () => {
     const trackByShuffle = createMockTrack('shuffle')
-    const trackByNew = createMockTrack('new')
 
     const generateTrackMock = vi
       .spyOn(generator, 'generateTrack')
       .mockReturnValueOnce(trackByShuffle)
-      .mockReturnValueOnce(trackByNew)
 
     renderPanel()
 
-    const buttons = screen.getAllByRole('button')
-    const shuffleButton = buttons[0]
-    const newTrackButton = buttons[2]
+    const shuffleButton = screen.getByRole('button', { name: 'Mischen' })
 
     fireEvent.click(shuffleButton)
     expect(generateTrackMock).toHaveBeenCalledTimes(1)
     expect(generateTrackMock).toHaveBeenCalledWith(useAppStore.getState().config)
     expect(useAppStore.getState().currentTrack?.id).toBe('shuffle')
-
-    fireEvent.click(newTrackButton)
-    expect(generateTrackMock).toHaveBeenCalledTimes(2)
-    expect(generateTrackMock).toHaveBeenNthCalledWith(2, useAppStore.getState().config)
-    expect(useAppStore.getState().currentTrack?.id).toBe('new')
   })
 
-  it('uses onNewTrackClick override for Neue Strecke and skips internal generator usage', () => {
-    const onNewTrackClick = vi.fn()
-    const generateTrackMock = vi.spyOn(generator, 'generateTrack')
+  it('renders Galerie below Speichern and Einstellungen as the fourth icon', () => {
+    renderPanel()
 
-    render(
-      <TooltipProvider>
-        <LeftToolPanel onNewTrackClick={onNewTrackClick} />
-      </TooltipProvider>,
-    )
+    const buttonNames = screen.getAllByRole('button').map((button) => button.getAttribute('aria-label'))
 
-    const buttons = screen.getAllByRole('button')
-    const newTrackButton = buttons[2]
-
-    fireEvent.click(newTrackButton)
-    expect(onNewTrackClick).toHaveBeenCalledTimes(1)
-    expect(generateTrackMock).not.toHaveBeenCalled()
+    expect(buttonNames).toEqual(['Mischen', 'Speichern', 'Galerie', 'Einstellungen'])
+    expect(screen.queryByRole('button', { name: 'Neue Strecke' })).toBeNull()
   })
 })

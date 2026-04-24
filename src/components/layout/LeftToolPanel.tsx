@@ -1,6 +1,6 @@
 import type { FC } from 'react'
 import { useState, useCallback } from 'react'
-import { Dice5, Save, FilePlus, Settings2, GalleryVertical } from 'lucide-react'
+import { Dice5, Save, Settings2, GalleryVertical } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { generateTrack } from '@/utils/generator'
 import { Button } from '@/components/ui/button'
@@ -15,14 +15,12 @@ interface LeftToolPanelProps {
   onSaveClick?: () => void
   onGalleryClick?: () => void
   onSettingsClick?: () => void
-  onNewTrackClick?: () => void
 }
 
 export const LeftToolPanel: FC<LeftToolPanelProps> = ({
   onSaveClick,
   onGalleryClick,
   onSettingsClick,
-  onNewTrackClick,
 }) => {
   const config = useAppStore((state) => state.config)
   const setTrack = useAppStore((state) => state.setTrack)
@@ -33,15 +31,6 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
     const track = generateTrack(config)
     setTrack(track)
   }, [config, setTrack])
-
-  const handleNew = useCallback(() => {
-    if (onNewTrackClick) {
-      onNewTrackClick()
-      return
-    }
-
-    setTrack(generateTrack(config))
-  }, [config, onNewTrackClick, setTrack])
 
   const handleSaveClick = useCallback(() => {
     if (onSaveClick) {
@@ -59,7 +48,7 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
     onSettingsClick?.()
   }, [onSettingsClick])
 
-  const tools = [
+  const primaryTools = [
     {
       icon: Dice5,
       label: 'Mischen',
@@ -73,10 +62,10 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
       action: handleSaveClick,
     },
     {
-      icon: FilePlus,
-      label: 'Neue Strecke',
-      shortcut: 'Ctrl+N',
-      action: handleNew,
+      icon: GalleryVertical,
+      label: 'Galerie',
+      shortcut: 'G',
+      action: handleGalleryClick,
     },
     {
       icon: Settings2,
@@ -84,25 +73,21 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
       shortcut: '',
       action: handleSettingsClick,
     },
-    {
-      icon: GalleryVertical,
-      label: 'Galerie',
-      shortcut: 'G',
-      action: handleGalleryClick,
-    },
   ]
 
   return (
     <>
       <aside className="flex w-12 shrink-0 flex-col items-center border-r border-border bg-surface py-2 transition-all duration-200 ease-out">
         <div className="flex flex-col items-center gap-1">
-          {tools.map(({ icon: Icon, label, shortcut, action }) => (
+          {primaryTools.map(({ icon: Icon, label, shortcut, action }) => (
             <Tooltip key={label}>
               <TooltipTrigger asChild>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   onClick={action}
+                  aria-label={label}
                   className="size-8"
                 >
                   <Icon className="size-4" />
