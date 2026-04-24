@@ -1,7 +1,8 @@
 # FPV TRACK DESIGNER — PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-04-21
-**Stack:** React 19 + Vite 8 + TypeScript 6 + R3F + Zustand 5 + Tailwind v4 + Vitest
+**Generated:** 2026-04-24
+**Commit:** 8419a1f
+**Branch:** main
 
 ## OVERVIEW
 3D FPV drone racing track designer. Random track generation, gate fine-tuning, JSON persistence. Desktop-only, no backend.
@@ -11,16 +12,17 @@
 fpv-track-designer/
 ├── src/
 │   ├── components/
-│   │   ├── gates/       # 7 gate 3D components + dispatcher
-│   │   ├── scene/       # R3F scene, flight path, grid
-│   │   └── ui/          # 6 sidebar panels
-│   ├── hooks/           # useGateSelection
-│   ├── schemas/         # track.schema.ts (JSON validation)
+│   │   ├── gates/       # 8 gate 3D components + dispatcher + handles
+│   │   ├── scene/       # R3F Canvas, flight path, grid, camera controllers
+│   │   ├── ui/          # shadcn primitives + 4 sidebar panels
+│   │   └── layout/      # TopBar, LeftToolPanel
+│   ├── hooks/           # useGateSelection, useKeyboardShortcuts
+│   ├── schemas/         # track.schema.ts (Zod JSON validation)
 │   ├── store/           # Zustand slices (config + track)
 │   ├── types/           # Gate, Track, Config interfaces
-│   └── utils/           # generator, flightPath, gateOperations, storage
+│   └── utils/           # generator, flightPath, gateOperations, gateOpenings, gateSequence, storage
 ├── public/              # Static assets
-└── vite.config.ts       # React + Tailwind v4 + Vitest
+└── vite.config.ts       # React + Tailwind v4 + Vitest (inline)
 ```
 
 ## WHERE TO LOOK
@@ -33,6 +35,9 @@ fpv-track-designer/
 | Change 3D scene | `src/components/scene/Scene.tsx` |
 | Flight path logic | `src/utils/flightPath.ts` |
 | Storage/persistence | `src/utils/storage.ts` |
+| Camera controls | `src/components/scene/CameraPan.tsx`, `CameraVerticalPan.tsx`, `SmoothZoom.tsx` |
+| Gate openings/sequence | `src/utils/gateOpenings.ts`, `src/utils/gateSequence.ts` |
+| Keyboard shortcuts | `src/hooks/useKeyboardShortcuts.ts` |
 
 ## CONVENTIONS
 - **Named exports only** — no default exports except App.tsx
@@ -41,12 +46,13 @@ fpv-track-designer/
 - **Tests co-located** — `*.test.ts` next to source file
 - **Zustand slice pattern** — each domain gets its own slice file
 - **Tailwind v4** — CSS-based config via `@import "tailwindcss"`, no tailwind.config.js
+- **Import style split** — `gates/` and `scene/` use relative paths, `ui/` and `layout/` use `@/` alias. Prefer `@/` for consistency.
 
 ## ANTI-PATTERNS
 - ❌ No `as any` or `@ts-ignore` — strict TS enforced
 - ❌ No backend/API calls — localStorage only
 - ❌ No per-gate size adjustment — global `config.gateSize` only
-- ❌ No custom gate type creation — fixed 7 types
+- ❌ No custom gate type creation — fixed 8 types
 - ❌ No mobile touch gestures — desktop mouse/keyboard only
 - ❌ No auth, no database, no AR/VR, no video export
 
@@ -56,6 +62,7 @@ fpv-track-designer/
 - Undo/redo: past/future arrays, MAX_HISTORY=50
 - Min gate distance: 3m enforced by generator
 - Flight path: nearest-neighbor ordering, arrows every 5m
+- R3F camera: Space+click pan, Shift+click vertical pan, wheel smooth zoom
 
 ## COMMANDS
 ```bash
@@ -66,7 +73,9 @@ npm run lint     # eslint .
 ```
 
 ## NOTES
-- `src/App.css` is leftover Vite template (dead code, not imported)
 - `src/assets/hero.png`, `react.svg`, `vite.svg` — unused template assets
 - Chunk size warning (>500KB) from R3F+drei bundle — acceptable for MVP
 - ErrorBoundary wraps entire app in main.tsx
+- Test libraries (`vitest`, `@testing-library/*`) are in `dependencies` — should be `devDependencies`
+- `src/components/gates/index.ts` barrel is incomplete (missing LadderGate) and unused
+- `trackSlice.ts` duplicates `moveGate`/`rotateGate` logic from `utils/gateOperations.ts`
