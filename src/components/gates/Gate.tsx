@@ -12,17 +12,20 @@ import { GateHandles } from './GateHandles'
 
 interface GateProps {
   gate: GateType
-  label?: string
+  openingLabels?: Record<string, string>
 }
 
-export function Gate({ gate, label }: GateProps) {
+export function Gate({ gate, openingLabels }: GateProps) {
   const { isSelected, handleClick } = useGateSelection(gate.id)
+
+  const showOpeningLabels = Boolean(openingLabels)
 
   const commonProps = {
     position: gate.position,
     rotation: gate.rotation,
     size: gate.size,
-    gateLabel: label,
+    openings: showOpeningLabels ? gate.openings : [],
+    openingLabels,
     isSelected,
     onClick: handleClick,
   }
@@ -30,7 +33,7 @@ export function Gate({ gate, label }: GateProps) {
   let gateComponent: React.ReactNode
   switch (gate.type) {
     case 'h-gate':
-      gateComponent = <HGate {...commonProps} />
+      gateComponent = <HGate {...commonProps} gateId={gate.id} />
       break
     case 'asymmetric':
       gateComponent = <AsymmetricGate {...commonProps} />

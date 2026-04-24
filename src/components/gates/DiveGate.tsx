@@ -1,13 +1,15 @@
 import { useRef } from 'react'
 import type { Mesh } from 'three'
-import { GateEntryIndicator } from './GateEntryIndicator'
 import type { ThreeEvent } from '@react-three/fiber'
+import type { GateOpening } from '../../types'
+import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
   position: { x: number; y: number; z: number }
   rotation: number
   size: 0.75 | 1 | 1.5
-  gateLabel?: string
+  openings: GateOpening[]
+  openingLabels?: Record<string, string>
   isSelected?: boolean
   onClick?: (e: ThreeEvent<MouseEvent>) => void
 }
@@ -15,7 +17,7 @@ interface GateComponentProps {
 const POST_THICKNESS = 0.06
 const BASE_SIZE = 1.2
 
-export function DiveGate({ position, rotation, size, gateLabel, isSelected, onClick }: GateComponentProps) {
+export function DiveGate({ position, rotation, size, openings, openingLabels, isSelected, onClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const s = BASE_SIZE * scale
@@ -76,7 +78,7 @@ export function DiveGate({ position, rotation, size, gateLabel, isSelected, onCl
       </mesh>
 
       {/* Entry/exit indicator — green entry side, red exit side */}
-      <GateEntryIndicator width={s} height={s} label={gateLabel} onClick={onClick} />
+      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} />
     </group>
   )
 }

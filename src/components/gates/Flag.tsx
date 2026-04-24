@@ -1,11 +1,15 @@
 import { useRef } from 'react'
 import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
+import type { GateOpening } from '../../types'
+import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
   position: { x: number; y: number; z: number }
   rotation: number
   size: 0.75 | 1 | 1.5
+  openings: GateOpening[]
+  openingLabels?: Record<string, string>
   isSelected?: boolean
   onClick?: (e: ThreeEvent<MouseEvent>) => void
 }
@@ -13,7 +17,7 @@ interface GateComponentProps {
 const POLE_THICKNESS = 0.06
 const BASE_HEIGHT = 2
 
-export function Flag({ position, rotation, size, isSelected, onClick }: GateComponentProps) {
+export function Flag({ position, rotation, size, openings, openingLabels, isSelected, onClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const height = BASE_HEIGHT * scale
@@ -38,6 +42,8 @@ export function Flag({ position, rotation, size, isSelected, onClick }: GateComp
         <boxGeometry args={[0.3 * scale, 0.2 * scale, 0.02]} />
         <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
+
+      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} />
 
     </group>
   )

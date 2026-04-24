@@ -1,13 +1,17 @@
 import { useRef } from 'react'
 import type { Mesh } from 'three'
-import { GateEntryIndicator } from './GateEntryIndicator'
 import type { ThreeEvent } from '@react-three/fiber'
+import type { GateOpening } from '../../types'
+import { getHGateBackrestSide } from '../../utils/gateOpenings'
+import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
+  gateId: string
   position: { x: number; y: number; z: number }
   rotation: number
   size: 0.75 | 1 | 1.5
-  gateLabel?: string
+  openings: GateOpening[]
+  openingLabels?: Record<string, string>
   isSelected?: boolean
   onClick?: (e: ThreeEvent<MouseEvent>) => void
 }
@@ -15,14 +19,16 @@ interface GateComponentProps {
 const POST_THICKNESS = 0.06
 const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
-const EXTENDED_HEIGHT_MULTIPLIER = 2
+const BACKREST_HEIGHT_MULTIPLIER = 1.85
 
-export function HGate({ position, rotation, size, gateLabel, isSelected, onClick }: GateComponentProps) {
+export function HGate({ gateId, position, rotation, size, openings, openingLabels, isSelected, onClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const width = BASE_WIDTH * scale
   const height = BASE_HEIGHT * scale
-  const extendedHeight = height * EXTENDED_HEIGHT_MULTIPLIER
+  const backrestHeight = height * BACKREST_HEIGHT_MULTIPLIER
+  const backrestSide = getHGateBackrestSide(gateId)
+  const backrestX = backrestSide * width / 2
   const color = isSelected ? '#f87171' : '#ef4444'
   const emissiveColor = isSelected ? '#22d3ee' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
@@ -33,27 +39,29 @@ export function HGate({ position, rotation, size, gateLabel, isSelected, onClick
       position={[position.x, position.y, position.z]}
       rotation-y={(rotation * Math.PI) / 180}
     >
-      {/* Left post — extended to double height (tall stroke of the 'h') */}
-      <mesh position={[-width / 2, extendedHeight / 2, 0]} onClick={onClick}>
-        <boxGeometry args={[POST_THICKNESS, extendedHeight, POST_THICKNESS]} />
+      {/* Lower gate: the fly-through under the "seat" */}
+      <mesh position={[-width / 2, height / 2, 0]} onClick={onClick}>
+        <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
         <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
 
-      {/* Right post — normal gate height */}
       <mesh position={[width / 2, height / 2, 0]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
         <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
 
-      {/* Top crossbar at normal gate height */}
       <mesh position={[0, height, 0]} onClick={onClick}>
         <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
         <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
 
+      {/* Backrest/flag: deterministic 50/50 left or right, not a second full gate */}
+      <mesh position={[backrestX, height + (backrestHeight - height) / 2, 0]} onClick={onClick}>
+        <boxGeometry args={[POST_THICKNESS, backrestHeight - height, POST_THICKNESS]} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+      </mesh>
 
-      {/* Entry/exit indicator — green entry side, red exit side */}
-      <GateEntryIndicator width={width} height={height} label={gateLabel} onClick={onClick} />
+      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} />
     </group>
   )
 }
