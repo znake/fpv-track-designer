@@ -3,15 +3,18 @@ import { Html } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { Vector2, Raycaster } from 'three'
 import { Move, Plus, RotateCw, Trash2 } from 'lucide-react'
-import type { GateType } from '../../types'
+import type { GateSize, GateType } from '../../types'
 import { useAppStore } from '../../store'
+import { calculateFlightPath } from '../../utils/flightPath'
 import { createDefaultGateOpenings } from '../../utils/gateOpenings'
 import { Button } from '../ui/button'
 
 interface GateHandlesProps {
   gateId: string
+  gateType: GateType
   position: { x: number; y: number; z: number }
   rotation: number
+  size: GateSize
 }
 
 type GatePosition = { x: number; y: number; z: number }
@@ -21,13 +24,19 @@ type InsertPosition = 'before' | 'after'
 
 interface InsertControlConfig {
   direction: InsertPosition
-  midpoint: GatePosition
+  insertPosition: GatePosition
+  handlePosition: GatePosition
   gateIndex: number
   sequenceIndex: number
 }
 
 const RAYCASTER = new Raycaster()
-const HANDLE_OFFSET_Y = 1.5
+const BASE_GATE_HEIGHT = 1.2
+const FLAG_BASE_HEIGHT = 2
+const POST_THICKNESS = 0.06
+const H_GATE_BACKREST_HEIGHT_MULTIPLIER = 1.85
+const HANDLE_CLEARANCE_ABOVE_GATE = 0.5
+const DELETE_DIALOG_OFFSET_Y = 1.95
 const INSERT_HANDLE_OFFSET_Y = 0.9
 const DELETE_HANDLE_OFFSET_Y = 0.35
 const DEGREES_PER_PIXEL = 1
@@ -45,12 +54,32 @@ const GATE_TYPE_OPTIONS: { type: GateType; label: string }[] = [
   { type: 'flag', label: 'Flag' },
 ]
 
+function isSingletonGateType(type: GateType): boolean {
+  return type === 'start-finish' || type === 'flag'
+}
+
 function getMidpoint(a: GatePosition, b: GatePosition): GatePosition {
   return {
     x: (a.x + b.x) / 2,
     y: (a.y + b.y) / 2,
     z: (a.z + b.z) / 2,
   }
+}
+
+function getSquaredDistance(a: GatePosition, b: GatePosition): number {
+  return (a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2
+}
+
+function getClosestPathPoint(target: GatePosition, pathPoints: GatePosition[]): GatePosition | null {
+  if (pathPoints.length === 0) return null
+
+  return pathPoints.reduce((closest, point) => (
+    getSquaredDistance(point, target) < getSquaredDistance(closest, target) ? point : closest
+  ))
+}
+
+function getWrappedSequenceIndex(index: number, length: number): number {
+  return length > 0 ? (index + length) % length : -1
 }
 
 function clampPositionToField(position: GatePosition, fieldSize: { width: number; height: number }): GatePosition {
@@ -80,12 +109,37 @@ function getFallbackInsertPosition(
   }, fieldSize)
 }
 
-export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
+function getGateTopOffset(gateType: GateType, size: GateSize): number {
+  const height = BASE_GATE_HEIGHT * size
+  const topBarHalfThickness = POST_THICKNESS / 2
+
+  switch (gateType) {
+    case 'h-gate':
+      return height * H_GATE_BACKREST_HEIGHT_MULTIPLIER
+    case 'double-h':
+      return height + height * H_GATE_BACKREST_HEIGHT_MULTIPLIER
+    case 'double':
+      return height * 2 + topBarHalfThickness
+    case 'ladder':
+      return height * 3 + topBarHalfThickness
+    case 'start-finish':
+      return height + 0.375 * size
+    case 'flag':
+      return FLAG_BASE_HEIGHT * size
+    case 'dive':
+    case 'standard':
+      return height + topBarHalfThickness
+  }
+}
+
+export function GateHandles({ gateId, gateType, position, rotation, size }: GateHandlesProps) {
   const { camera, gl, controls } = useThree()
   const modeRef = useRef<DragMode>('none')
   const [activeMode, setActiveMode] = useState<DragMode>('none')
   const [activeInsertPosition, setActiveInsertPosition] = useState<InsertPosition | null>(null)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const isDeleteDialogOpen = useAppStore((state) => state.isDeleteDialogOpen)
+  const openDeleteDialog = useAppStore((state) => state.openDeleteDialog)
+  const closeDeleteDialog = useAppStore((state) => state.closeDeleteDialog)
 
   // Move refs
   const dragStartRef = useRef<{ x: number; z: number } | null>(null)
@@ -105,6 +159,17 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
   const selectedGateIds = useAppStore((state) => state.selectedGateIds)
   const insertGateAtIndex = useAppStore((state) => state.insertGateAtIndex)
   const deleteSelectedGates = useAppStore((state) => state.deleteSelectedGates)
+  const unavailableSingletonGateTypes = useMemo(() => {
+    const gateTypes = new Set<GateType>()
+
+    currentTrack?.gates.forEach((gate) => {
+      if (isSingletonGateType(gate.type)) {
+        gateTypes.add(gate.type)
+      }
+    })
+
+    return gateTypes
+  }, [currentTrack?.gates])
 
   // Stable refs for window listeners
   const gateIdRef = useRef(gateId)
@@ -135,8 +200,13 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
     () => currentTrack?.gateSequence.map((entry) => entry.gateId) ?? [],
     [currentTrack?.gateSequence],
   )
+  const flightPath = useMemo(
+    () => currentTrack ? calculateFlightPath(currentTrack.gates, currentTrack.gateSequence) : null,
+    [currentTrack],
+  )
   const selectedGateIndex = currentTrack?.gates.findIndex((gate) => gate.id === gateId) ?? -1
   const selectedGate = selectedGateIndex >= 0 ? currentTrack?.gates[selectedGateIndex] : null
+  const moveRotateHandleY = position.y + getGateTopOffset(gateType, size) + HANDLE_CLEARANCE_ABOVE_GATE
 
   const intersectGround = useCallback((clientX: number, clientY: number) => {
     const rect = glRef.current.domElement.getBoundingClientRect()
@@ -237,33 +307,51 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
         ? selectedSequenceIndex + 1
         : currentTrack.gateSequence.length
 
-    const neighborSequenceIndex = direction === 'before'
-      ? selectedSequenceIndex - 1
-      : selectedSequenceIndex + 1
+    const neighborSequenceIndex = selectedSequenceIndex >= 0
+      ? getWrappedSequenceIndex(
+        direction === 'before' ? selectedSequenceIndex - 1 : selectedSequenceIndex + 1,
+        gateSequence.length,
+      )
+      : -1
     const neighborId = gateSequence[neighborSequenceIndex]
     const neighborGate = neighborId
       ? currentTrack.gates.find((gate) => gate.id === neighborId)
       : null
 
+    const fallbackPosition = getFallbackInsertPosition(selectedGate.position, selectedGate.rotation, direction, currentTrack.fieldSize)
+    const centerTarget = neighborGate ? getMidpoint(selectedGate.position, neighborGate.position) : fallbackPosition
+    const pathLegIndex = direction === 'before' ? neighborSequenceIndex : selectedSequenceIndex
+    const pathPoints = pathLegIndex >= 0 ? flightPath?.sampledLegs[pathLegIndex] ?? [] : []
+    const closestPathPoint = getClosestPathPoint(centerTarget, pathPoints)
+    const insertPosition = clampPositionToField({
+      x: closestPathPoint?.x ?? centerTarget.x,
+      y: selectedGate.position.y,
+      z: closestPathPoint?.z ?? centerTarget.z,
+    }, currentTrack.fieldSize)
+    const handlePosition = closestPathPoint
+      ? { x: insertPosition.x, y: closestPathPoint.y, z: insertPosition.z }
+      : { x: insertPosition.x, y: insertPosition.y + INSERT_HANDLE_OFFSET_Y, z: insertPosition.z }
+
     return {
       direction,
-      midpoint: neighborGate
-        ? getMidpoint(selectedGate.position, neighborGate.position)
-        : getFallbackInsertPosition(selectedGate.position, selectedGate.rotation, direction, currentTrack.fieldSize),
+      insertPosition,
+      handlePosition,
       gateIndex: direction === 'before' ? selectedGateIndex : selectedGateIndex + 1,
       sequenceIndex: insertionSequenceIndex,
     }
-  }, [currentTrack, gateId, gateSequence, selectedGate, selectedGateIndex])
+  }, [currentTrack, flightPath?.sampledLegs, gateId, gateSequence, selectedGate, selectedGateIndex])
 
   const handleInsertGate = useCallback((control: InsertControlConfig, type: GateType) => {
     if (!currentTrack || !selectedGate) return
+    if (unavailableSingletonGateTypes.has(type)) return
+
     const id = crypto.randomUUID()
 
     insertGateAtIndex(
       {
         id,
         type,
-        position: control.midpoint,
+        position: control.insertPosition,
         rotation: selectedGate.rotation,
         size: currentTrack.gateSize,
         openings: createDefaultGateOpenings(type, currentTrack.gateSize, id),
@@ -272,12 +360,12 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
       control.sequenceIndex,
     )
     setActiveInsertPosition(null)
-  }, [currentTrack, insertGateAtIndex, selectedGate])
+  }, [currentTrack, insertGateAtIndex, selectedGate, unavailableSingletonGateTypes])
 
   const handleDeleteConfirm = useCallback(() => {
     deleteSelectedGates()
-    setIsDeleteDialogOpen(false)
-  }, [deleteSelectedGates])
+    closeDeleteDialog()
+  }, [deleteSelectedGates, closeDeleteDialog])
 
   const beforeInsertControl = isSingleSelectedGate ? getInsertControlConfig('before') : null
   const afterInsertControl = isSingleSelectedGate ? getInsertControlConfig('after') : null
@@ -352,9 +440,9 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
       <Html
         key={control.direction}
         position={[
-          control.midpoint.x,
-          control.midpoint.y + INSERT_HANDLE_OFFSET_Y,
-          control.midpoint.z,
+          control.handlePosition.x,
+          control.handlePosition.y,
+          control.handlePosition.z,
         ]}
         center
         distanceFactor={9}
@@ -367,21 +455,31 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
               onPointerDown={stopHtmlInteraction}
               onClick={stopHtmlInteraction}
             >
-              {GATE_TYPE_OPTIONS.map((option) => (
-                <Button
-                  key={option.type}
-                  variant="outline"
-                  size="xs"
-                  className="h-auto justify-start py-1.5"
-                  onPointerDown={stopHtmlInteraction}
-                  onClick={(event) => {
-                    stopHtmlInteraction(event)
-                    handleInsertGate(control, option.type)
-                  }}
-                >
-                  {option.label}
-                </Button>
-              ))}
+              {GATE_TYPE_OPTIONS.map((option) => {
+                const isGateTypeDisabled = unavailableSingletonGateTypes.has(option.type)
+
+                return (
+                  <Button
+                    key={option.type}
+                    variant="outline"
+                    size="xs"
+                    className="h-auto justify-start py-1.5"
+                    onPointerDown={stopHtmlInteraction}
+                    disabled={isGateTypeDisabled}
+                    onClick={(event) => {
+                      if (isGateTypeDisabled) {
+                        stopHtmlInteraction(event)
+                        return
+                      }
+
+                      stopHtmlInteraction(event)
+                      handleInsertGate(control, option.type)
+                    }}
+                  >
+                    {option.label}
+                  </Button>
+                )
+              })}
             </div>
           )}
           <div className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground shadow-md shadow-black/20 backdrop-blur">
@@ -394,7 +492,7 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
             onPointerDown={stopHtmlInteraction}
             onClick={(event) => {
               stopHtmlInteraction(event)
-              setIsDeleteDialogOpen(false)
+              closeDeleteDialog()
               setActiveInsertPosition((current) => current === control.direction ? null : control.direction)
             }}
             aria-label={`Insert ${control.direction} ${gateId}`}
@@ -427,7 +525,7 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
               onClick={(event) => {
                 stopHtmlInteraction(event)
                 setActiveInsertPosition(null)
-                setIsDeleteDialogOpen(true)
+                openDeleteDialog()
               }}
             >
               <Trash2 className="size-3.5" />
@@ -437,7 +535,7 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
 
           {isDeleteDialogOpen && (
             <Html
-              position={[position.x, position.y + HANDLE_OFFSET_Y + 0.45, position.z]}
+              position={[position.x, position.y + DELETE_DIALOG_OFFSET_Y, position.z]}
               center
               distanceFactor={10}
               style={{ pointerEvents: 'none' }}
@@ -454,15 +552,15 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
                   </p>
                 </div>
                 <div className="mt-3 flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onPointerDown={stopHtmlInteraction}
-                    onClick={(event) => {
-                      stopHtmlInteraction(event)
-                      setIsDeleteDialogOpen(false)
-                    }}
-                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onPointerDown={stopHtmlInteraction}
+                      onClick={(event) => {
+                        stopHtmlInteraction(event)
+                        closeDeleteDialog()
+                      }}
+                    >
                     Cancel
                   </Button>
                   <Button
@@ -484,7 +582,7 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
       )}
 
       <Html
-        position={[position.x, position.y + HANDLE_OFFSET_Y, position.z]}
+        position={[position.x, moveRotateHandleY, position.z]}
         center
         distanceFactor={8}
         style={{ pointerEvents: 'none' }}
