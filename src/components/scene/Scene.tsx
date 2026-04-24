@@ -60,6 +60,7 @@ export function Scene() {
               key={gate.id}
               gate={gate}
               openingLabels={config.showOpeningLabels ? gateLabels.get(gate.id) : undefined}
+              showOpeningLabels={config.showOpeningLabels}
             />
           ))}
           {config.showFlightPath && <FlightPath gates={currentTrack.gates} gateSequence={currentTrack.gateSequence} />}

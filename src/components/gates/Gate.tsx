@@ -15,15 +15,14 @@ import { GateHandles } from './GateHandles'
 interface GateProps {
   gate: GateType
   openingLabels?: Record<string, string>
+  showOpeningLabels?: boolean
 }
 
-export function Gate({ gate, openingLabels }: GateProps) {
+export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProps) {
   const { isSelected, handleClick } = useGateSelection(gate.id)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const toggleGateDirection = useAppStore((state) => state.toggleGateDirection)
   const selectGate = useAppStore((state) => state.selectGate)
-
-  const showOpeningLabels = Boolean(openingLabels)
 
   const handleOpeningClick = (openingId: string, e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
@@ -41,11 +40,11 @@ export function Gate({ gate, openingLabels }: GateProps) {
     position: gate.position,
     rotation: gate.rotation,
     size: gate.size,
-    openings: gate.openings,
+    openings: showOpeningLabels ? gate.openings : [],
     openingLabels: showOpeningLabels ? openingLabels : undefined,
     isSelected,
     onClick: handleClick,
-    onOpeningClick: handleOpeningClick,
+    onOpeningClick: showOpeningLabels ? handleOpeningClick : undefined,
   }
 
   let gateComponent: React.ReactNode
