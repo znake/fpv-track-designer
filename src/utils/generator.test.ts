@@ -15,6 +15,8 @@ const createTestConfig = (overrides: Partial<Config> = {}): Config => ({
   },
   fieldSize: { width: 50, height: 50 },
   gateSize: 1,
+  showFlightPath: true,
+  showOpeningLabels: true,
   ...overrides,
 })
 
@@ -151,7 +153,7 @@ describe('generateTrack', () => {
   })
 
   it('handles config with no start-finish gate', () => {
-    const config: Config = {
+const config: Config = {
       gateQuantities: {
         'start-finish': 0,
         standard: 3,
@@ -161,10 +163,12 @@ describe('generateTrack', () => {
         double: 0,
         ladder: 0,
         flag: 0,
-      },
-      fieldSize: { width: 50, height: 50 },
-      gateSize: 1,
-    }
+  },
+  fieldSize: { width: 50, height: 50 },
+  gateSize: 1,
+  showFlightPath: true,
+  showOpeningLabels: true,
+}
 
     const track = generateTrack(config)
     expect(track.gates).toHaveLength(3)
@@ -203,5 +207,53 @@ describe('generateTrack', () => {
       const minDiff = Math.min(diff, 360 - diff)
       expect(minDiff).toBeLessThanOrEqual(15)
     }
+  })
+
+  it('adds double gates to the default sequence twice with lower then upper openings', () => {
+    const config = createTestConfig({
+      gateQuantities: {
+        'start-finish': 0,
+        standard: 0,
+        'h-gate': 0,
+        asymmetric: 0,
+        dive: 0,
+        double: 1,
+        ladder: 0,
+        flag: 0,
+      },
+    })
+
+    const track = generateTrack(config)
+    const doubleGate = track.gates[0]
+
+    expect(doubleGate.type).toBe('double')
+    expect(track.gateSequence).toEqual([
+      { gateId: doubleGate.id, openingId: 'lower', reverse: false },
+      { gateId: doubleGate.id, openingId: 'upper', reverse: false },
+    ])
+  })
+
+  it('adds h-gates to the default sequence with lower then backrest-pass openings', () => {
+    const config = createTestConfig({
+      gateQuantities: {
+        'start-finish': 0,
+        standard: 0,
+        'h-gate': 1,
+        asymmetric: 0,
+        dive: 0,
+        double: 0,
+        ladder: 0,
+        flag: 0,
+      },
+    })
+
+    const track = generateTrack(config)
+    const hGate = track.gates[0]
+
+    expect(hGate.type).toBe('h-gate')
+    expect(track.gateSequence).toEqual([
+      { gateId: hGate.id, openingId: 'lower', reverse: false },
+      { gateId: hGate.id, openingId: 'backrest-pass', reverse: false },
+    ])
   })
 })

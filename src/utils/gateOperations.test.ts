@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { moveGate, rotateGate } from './gateOperations'
 import type { Gate } from '../types'
+import { createDefaultGateOpenings } from './gateOpenings'
 
 const createTestGate = (overrides: Partial<Gate> = {}): Gate => ({
   id: 'test-gate',
@@ -8,6 +9,7 @@ const createTestGate = (overrides: Partial<Gate> = {}): Gate => ({
   position: { x: 0, y: 2, z: 0 },
   rotation: 0,
   size: 1,
+  openings: createDefaultGateOpenings('standard', 1),
   ...overrides,
 })
 

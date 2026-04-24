@@ -1,4 +1,6 @@
 import type { Gate, GateType, Track, Config } from '../types'
+import { createDefaultGateOpenings } from './gateOpenings'
+import { buildFallbackGateSequence } from './gateSequence'
 
 const MIN_DISTANCE = 3 // meters
 const MAX_ATTEMPTS = 100
@@ -80,14 +82,6 @@ function alignGateRotations(gates: Gate[]): void {
   }
 }
 
-/**
- * Creates a simple sequential fly-through order.
- * Gates are visited in the order they appear in the array.
- */
-function buildGateSequence(gates: Gate[]): string[] {
-  return gates.map((g) => g.id)
-}
-
 export function generateTrack(config: Config): Track {
   const gates: Gate[] = []
   const gateTypes = Object.entries(config.gateQuantities)
@@ -97,6 +91,7 @@ export function generateTrack(config: Config): Track {
   const startFinishIndex = gateTypes.indexOf('start-finish')
   if (startFinishIndex >= 0) {
     const [sf] = gateTypes.splice(startFinishIndex, 1)
+    const id = crypto.randomUUID()
     const edge = Math.floor(Math.random() * 4) // 0=north, 1=south, 2=east, 3=west
     const halfW = config.fieldSize.width / 2
     const halfH = config.fieldSize.height / 2
@@ -125,11 +120,12 @@ export function generateTrack(config: Config): Track {
     }
 
     gates.push({
-      id: crypto.randomUUID(),
+      id,
       type: sf as GateType,
       position: { x: startX, y: 0, z: startZ },
       rotation: 0,
       size: config.gateSize,
+      openings: createDefaultGateOpenings(sf as GateType, config.gateSize),
     })
   }
 
@@ -138,12 +134,14 @@ export function generateTrack(config: Config): Track {
     let placed = false
     for (let attempt = 0; attempt < MAX_ATTEMPTS && !placed; attempt++) {
       const position = generateRandomPosition(config.fieldSize)
+      const id = crypto.randomUUID()
       const gate: Gate = {
-        id: crypto.randomUUID(),
+        id,
         type,
         position,
         rotation: Math.floor(Math.random() * 12) * 30, // 0-330 in 30deg steps
         size: config.gateSize,
+        openings: createDefaultGateOpenings(type, config.gateSize),
       }
       if (!isTooClose(gate, gates)) {
         gates.push(gate)
@@ -166,7 +164,7 @@ export function generateTrack(config: Config): Track {
     id: crypto.randomUUID(),
     name: `Track ${now.slice(0, 10)}`,
     gates: ordered,
-    gateSequence: buildGateSequence(ordered),
+    gateSequence: buildFallbackGateSequence(ordered),
     fieldSize: config.fieldSize,
     gateSize: config.gateSize,
     createdAt: now,
