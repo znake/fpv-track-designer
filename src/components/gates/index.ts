@@ -1,7 +1,7 @@
 export { Gate } from './Gate'
 export { StandardGate } from './StandardGate'
 export { HGate } from './HGate'
-export { AsymmetricGate } from './AsymmetricGate'
+export { DoubleHGate } from './DoubleHGate'
 export { DiveGate } from './DiveGate'
 export { DoubleGate } from './DoubleGate'
 export { StartFinishGate } from './StartFinishGate'

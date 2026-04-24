@@ -24,7 +24,7 @@ const GATE_TYPES: { type: GateType; label: string }[] = [
   { type: 'start-finish', label: 'Start/Ziel Gate' },
   { type: 'standard', label: 'Standard Gate' },
   { type: 'h-gate', label: 'H-Gate' },
-  { type: 'asymmetric', label: 'Asymmetrisch' },
+  { type: 'double-h', label: 'Doppel-H-Gate' },
   { type: 'dive', label: 'Dive' },
   { type: 'double', label: 'Double Gate' },
   { type: 'ladder', label: 'Ladder' },

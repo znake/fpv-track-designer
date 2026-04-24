@@ -12,6 +12,7 @@ interface GateComponentProps {
   openingLabels?: Record<string, string>
   isSelected?: boolean
   onClick?: (e: ThreeEvent<MouseEvent>) => void
+  onOpeningClick?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
 }
 
 const POST_THICKNESS = 0.06
@@ -39,7 +40,7 @@ function GateFrame({ y, width, height, color, emissiveColor, emissiveIntensity, 
   )
 }
 
-export function LadderGate({ position, rotation, size, openings, openingLabels, isSelected, onClick }: GateComponentProps) {
+export function LadderGate({ position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const width = BASE_WIDTH * scale
@@ -60,7 +61,7 @@ export function LadderGate({ position, rotation, size, openings, openingLabels, 
       <GateFrame y={stackOffset * 2} width={width} height={height} color={color} emissiveColor={emissiveColor} emissiveIntensity={emissiveIntensity} onClick={onClick} />
 
       {/* Entry/exit indicator — green entry side, red exit side */}
-      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} />
+      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} onOpeningClick={onOpeningClick} />
     </group>
   )
 }

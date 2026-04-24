@@ -32,8 +32,40 @@ export interface ValidationError {
   message: string
 }
 
-const VALID_GATE_TYPES: GateType[] = ['standard', 'h-gate', 'asymmetric', 'dive', 'double', 'ladder', 'start-finish', 'flag']
+const LEGACY_GATE_TYPE_MAP = {
+  asymmetric: 'double-h' as const,
+} as const
+
+const VALID_GATE_TYPES: GateType[] = ['standard', 'h-gate', 'double-h', 'dive', 'double', 'ladder', 'start-finish', 'flag']
 const VALID_GATE_SIZES = [0.75, 1, 1.5] as const
+
+function normalizeGateType(type: unknown): GateType | null {
+  if (typeof type !== 'string') return null
+  if (type in LEGACY_GATE_TYPE_MAP) {
+    return LEGACY_GATE_TYPE_MAP[type as keyof typeof LEGACY_GATE_TYPE_MAP]
+  }
+  return (VALID_GATE_TYPES as readonly string[]).includes(type) ? (type as GateType) : null
+}
+
+function getGateQuantityCandidate(candidate: Record<string, unknown>, gateType: GateType): number | undefined {
+  if (gateType === 'double-h' && candidate.asymmetric !== undefined) {
+    return typeof candidate.asymmetric === 'number' ? candidate.asymmetric : undefined
+  }
+
+  const value = candidate[gateType]
+  return typeof value === 'number' ? value : undefined
+}
+
+function normalizeGateQuantities(quantities: Record<string, unknown>): Record<GateType, number> {
+  const result = {} as Record<GateType, number>
+
+  VALID_GATE_TYPES.forEach((gateType) => {
+    const value = getGateQuantityCandidate(quantities, gateType)
+    result[gateType] = value ?? 0
+  })
+
+  return result
+}
 
 function validateOpening(opening: unknown, gateIndex: number, openingIndex: number): ValidationError[] {
   const errors: ValidationError[] = []
@@ -64,6 +96,14 @@ function validateOpening(opening: unknown, gateIndex: number, openingIndex: numb
     errors.push({ field: `track.gates[${gateIndex}].openings[${openingIndex}].rotation`, message: 'Opening rotation must be a number' })
   }
 
+  if (candidate.rotationX !== undefined && typeof candidate.rotationX !== 'number') {
+    errors.push({ field: `track.gates[${gateIndex}].openings[${openingIndex}].rotationX`, message: 'Opening rotationX must be a number when provided' })
+  }
+
+  if (candidate.reverse !== undefined && typeof candidate.reverse !== 'boolean') {
+    errors.push({ field: `track.gates[${gateIndex}].openings[${openingIndex}].reverse`, message: 'Opening reverse must be a boolean when provided' })
+  }
+
   return errors
 }
 
@@ -75,7 +115,7 @@ function validateGate(gate: unknown, index: number): ValidationError[] {
     errors.push({ field: `track.gates[${index}].id`, message: 'Gate id must be a string' })
   }
 
-  if (!VALID_GATE_TYPES.includes(candidate.type as GateType)) {
+  if (!normalizeGateType(candidate.type)) {
     errors.push({ field: `track.gates[${index}].type`, message: `Gate type must be one of: ${VALID_GATE_TYPES.join(', ')}` })
   }
 
@@ -152,7 +192,8 @@ function validateGateQuantities(quantities: unknown): ValidationError[] {
   }
 
   for (const gateType of VALID_GATE_TYPES) {
-    if (typeof candidate[gateType] !== 'number' || candidate[gateType] < 0 || !Number.isInteger(candidate[gateType])) {
+    const quantity = getGateQuantityCandidate(candidate, gateType)
+    if (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity)) {
       errors.push({ field: `config.gateQuantities.${gateType}`, message: `Gate quantity for ${gateType} must be a non-negative integer` })
     }
   }
@@ -346,7 +387,11 @@ export function deserializeTrack(jsonString: string): { track: Track; config: Co
   }
 
   const data = parsed as TrackExportSchema
-  const gates = normalizeGates(data.track.gates)
+  const normalizedGates = data.track.gates.map((gate) => ({
+    ...gate,
+    type: normalizeGateType(gate.type) ?? gate.type,
+  }))
+  const gates = normalizeGates(normalizedGates)
 
   return {
     track: {
@@ -360,7 +405,7 @@ export function deserializeTrack(jsonString: string): { track: Track; config: Co
       updatedAt: data.track.updatedAt,
     },
     config: {
-      gateQuantities: data.config.gateQuantities,
+      gateQuantities: normalizeGateQuantities(data.config.gateQuantities),
       fieldSize: data.config.fieldSize,
       gateSize: data.config.gateSize,
       showFlightPath: data.config.showFlightPath ?? true,

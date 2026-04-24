@@ -12,6 +12,7 @@ interface GateComponentProps {
   openingLabels?: Record<string, string>
   isSelected?: boolean
   onClick?: (e: ThreeEvent<MouseEvent>) => void
+  onOpeningClick?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
 }
 
 const POST_THICKNESS = 0.06
@@ -19,7 +20,7 @@ const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
 const STACK_DISTANCE = BASE_HEIGHT
 
-export function DoubleGate({ position, rotation, size, openings, openingLabels, isSelected, onClick }: GateComponentProps) {
+export function DoubleGate({ position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const width = BASE_WIDTH * scale
@@ -68,7 +69,7 @@ export function DoubleGate({ position, rotation, size, openings, openingLabels, 
       </group>
 
       {/* Entry/exit indicator — green entry side, red exit side */}
-      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} />
+      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} onOpeningClick={onOpeningClick} />
     </group>
   )
 }

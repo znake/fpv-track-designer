@@ -129,6 +129,88 @@ describe('TrackSlice - Undo/Redo', () => {
     expect(gate?.openings[0]?.id).toBe('lower')
   })
 
+  it('should toggle gate direction and update matching sequence entries', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1'),
+      createTestGate('gate-2'),
+    ])
+    track.gateSequence = [
+      { gateId: 'gate-1', openingId: 'main', reverse: false },
+      { gateId: 'gate-2', openingId: 'main', reverse: false },
+      { gateId: 'gate-1', openingId: 'main', reverse: false },
+      { gateId: 'gate-2', openingId: 'main', reverse: false },
+    ]
+
+    store.getState().setTrack(track)
+    store.getState().toggleGateDirection('gate-1', 'main')
+
+    const gate = store.getState().currentTrack?.gates.find((candidate) => candidate.id === 'gate-1')
+    expect(gate?.openings[0]?.reverse).toBe(true)
+    expect(store.getState().currentTrack?.gateSequence).toEqual([
+      { gateId: 'gate-1', openingId: 'main', reverse: true },
+      { gateId: 'gate-2', openingId: 'main', reverse: false },
+      { gateId: 'gate-1', openingId: 'main', reverse: true },
+      { gateId: 'gate-2', openingId: 'main', reverse: false },
+    ])
+    expect(store.getState().past.length).toBe(1)
+  })
+
+  it('should undo and redo gate opening direction toggles', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1'),
+      createTestGate('gate-2'),
+    ])
+
+    store.getState().setTrack(track)
+    store.getState().selectGate('gate-1')
+    store.getState().toggleGateDirection('gate-1', 'main')
+    store.getState().undo()
+
+    expect(store.getState().currentTrack?.gates[0].openings[0]?.reverse).toBeFalsy()
+    expect(store.getState().currentTrack?.gateSequence[0]?.reverse).toBe(false)
+    expect(store.getState().selectedGateId).toBe('gate-1')
+
+    store.getState().redo()
+
+    expect(store.getState().currentTrack?.gates[0].openings[0]?.reverse).toBe(true)
+    expect(store.getState().currentTrack?.gateSequence[0]?.reverse).toBe(true)
+    expect(store.getState().selectedGateId).toBe('gate-1')
+  })
+
+  it('should not modify state when toggling unknown gate opening', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1'),
+    ])
+
+    store.getState().setTrack(track)
+    store.getState().toggleGateDirection('gate-1', 'missing')
+
+    expect(store.getState().past).toEqual([])
+    expect(store.getState().currentTrack?.gates[0].openings[0]?.reverse).toBeFalsy()
+    expect(store.getState().currentTrack?.gateSequence[0]?.reverse).toBe(false)
+  })
+
+  it('should toggle visible opening direction even when the opening is not in the sequence', () => {
+    const gate = createTestGate('gate-1', {
+      type: 'double',
+      openings: createDefaultGateOpenings('double', 1),
+    })
+    const track = createTestTrack([gate])
+    track.gateSequence = [
+      { gateId: 'gate-1', openingId: 'lower', reverse: false },
+    ]
+
+    store.getState().setTrack(track)
+    store.getState().toggleGateDirection('gate-1', 'upper')
+
+    const upperOpening = store.getState().currentTrack?.gates[0].openings.find((opening) => opening.id === 'upper')
+    expect(upperOpening?.reverse).toBe(true)
+    expect(store.getState().currentTrack?.gateSequence).toEqual([
+      { gateId: 'gate-1', openingId: 'lower', reverse: false },
+    ])
+    expect(store.getState().past.length).toBe(1)
+  })
+
   it('should select gate', () => {
     store.getState().selectGate('gate-1')
     expect(store.getState().selectedGateId).toBe('gate-1')

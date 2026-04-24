@@ -14,6 +14,7 @@ interface GateComponentProps {
   openingLabels?: Record<string, string>
   isSelected?: boolean
   onClick?: (e: ThreeEvent<MouseEvent>) => void
+  onOpeningClick?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
 }
 
 const POST_THICKNESS = 0.06
@@ -21,7 +22,7 @@ const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
 const BACKREST_HEIGHT_MULTIPLIER = 1.85
 
-export function HGate({ gateId, position, rotation, size, openings, openingLabels, isSelected, onClick }: GateComponentProps) {
+export function HGate({ gateId, position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const scale = size
   const width = BASE_WIDTH * scale
@@ -61,7 +62,7 @@ export function HGate({ gateId, position, rotation, size, openings, openingLabel
         <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
 
-      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} />
+      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} onClick={onClick} onOpeningClick={onOpeningClick} />
     </group>
   )
 }

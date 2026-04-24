@@ -16,7 +16,7 @@ export const defaultConfig: Config = {
     'standard': 2,
     'start-finish': 1,
     'h-gate': 1,
-    'asymmetric': 1,
+    'double-h': 1,
     'dive': 1,
     'double': 1,
     'ladder': 1,

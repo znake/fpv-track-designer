@@ -1,8 +1,10 @@
+import type { ThreeEvent } from '@react-three/fiber'
 import type { Gate as GateType } from '../../types'
 import { useGateSelection } from '../../hooks/useGateSelection'
+import { useAppStore } from '../../store'
 import { StandardGate } from './StandardGate'
 import { HGate } from './HGate'
-import { AsymmetricGate } from './AsymmetricGate'
+import { DoubleHGate } from './DoubleHGate'
 import { DiveGate } from './DiveGate'
 import { DoubleGate } from './DoubleGate'
 import { LadderGate } from './LadderGate'
@@ -17,17 +19,33 @@ interface GateProps {
 
 export function Gate({ gate, openingLabels }: GateProps) {
   const { isSelected, handleClick } = useGateSelection(gate.id)
+  const isDraggingGate = useAppStore((state) => state.isDraggingGate)
+  const toggleGateDirection = useAppStore((state) => state.toggleGateDirection)
+  const selectGate = useAppStore((state) => state.selectGate)
 
   const showOpeningLabels = Boolean(openingLabels)
+
+  const handleOpeningClick = (openingId: string, e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation()
+    if (isDraggingGate) return
+
+    if (!isSelected) {
+      selectGate(gate.id)
+      return
+    }
+
+    toggleGateDirection(gate.id, openingId)
+  }
 
   const commonProps = {
     position: gate.position,
     rotation: gate.rotation,
     size: gate.size,
-    openings: showOpeningLabels ? gate.openings : [],
-    openingLabels,
+    openings: gate.openings,
+    openingLabels: showOpeningLabels ? openingLabels : undefined,
     isSelected,
     onClick: handleClick,
+    onOpeningClick: handleOpeningClick,
   }
 
   let gateComponent: React.ReactNode
@@ -35,8 +53,8 @@ export function Gate({ gate, openingLabels }: GateProps) {
     case 'h-gate':
       gateComponent = <HGate {...commonProps} gateId={gate.id} />
       break
-    case 'asymmetric':
-      gateComponent = <AsymmetricGate {...commonProps} />
+    case 'double-h':
+      gateComponent = <DoubleHGate {...commonProps} gateId={gate.id} />
       break
     case 'dive':
       gateComponent = <DiveGate {...commonProps} />

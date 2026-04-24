@@ -8,7 +8,9 @@ interface GateEntryIndicatorProps {
   width: number
   height: number
   position?: [number, number, number]
+  rotationX?: number
   rotationY?: number
+  reverse?: boolean
   label?: string
   onClick?: (e: ThreeEvent<MouseEvent>) => void
 }
@@ -18,7 +20,7 @@ interface GateEntryIndicatorProps {
  * Green on the entry side (front, -Z), red on the back side (+Z).
  * Makes it immediately clear which side to approach the gate from.
  */
-export function GateEntryIndicator({ width, height, position = [0, height / 2, 0], rotationY = 0, label, onClick }: GateEntryIndicatorProps) {
+export function GateEntryIndicator({ width, height, position = [0, height / 2, 0], rotationX = 0, rotationY = 0, reverse = false, label, onClick }: GateEntryIndicatorProps) {
   const groupRef = useRef<THREE.Group>(null)
   const entryLabelRef = useRef<THREE.Group>(null)
   const exitLabelRef = useRef<THREE.Group>(null)
@@ -30,12 +32,18 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
   const exitLabelColor = '#fca5a5'
   const entryOutlineColor = '#4ade80'
   const exitOutlineColor = '#f87171'
+  const entryZ = reverse ? 0.02 : -0.02
+  const exitZ = reverse ? -0.02 : 0.02
+  const entryLabelZ = reverse ? 0.03 : -0.03
+  const exitLabelZ = reverse ? -0.03 : 0.03
+  const entryLabelRotationY = reverse ? 0 : Math.PI
+  const exitLabelRotationY = reverse ? Math.PI : 0
 
   useFrame(({ camera }) => {
     if (!groupRef.current) return
 
     const localCameraPosition = groupRef.current.worldToLocal(camera.position.clone())
-    const isEntrySideVisible = localCameraPosition.z <= 0
+    const isEntrySideVisible = reverse ? localCameraPosition.z >= 0 : localCameraPosition.z <= 0
 
     if (entryLabelRef.current) {
       entryLabelRef.current.visible = isEntrySideVisible
@@ -47,9 +55,9 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
   })
 
   return (
-    <group ref={groupRef} position={position} rotation-y={(rotationY * Math.PI) / 180}>
+    <group ref={groupRef} position={position} rotation={[(rotationX * Math.PI) / 180, (rotationY * Math.PI) / 180, 0]}>
       {/* Entry side — green (approach from here) */}
-      <mesh position={[0, 0, -0.02]} onClick={onClick}>
+      <mesh position={[0, 0, entryZ]} onClick={onClick}>
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
           color="#16a34a"
@@ -61,7 +69,7 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
       </mesh>
 
       {/* Exit side — red (do not approach from here) */}
-      <mesh position={[0, 0, 0.02]} onClick={onClick}>
+      <mesh position={[0, 0, exitZ]} onClick={onClick}>
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
           color="#ef4444"
@@ -74,7 +82,7 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
 
       {label && (
         <>
-          <group ref={entryLabelRef} position={[0, 0, -0.03]} rotation={[0, Math.PI, 0]}>
+          <group ref={entryLabelRef} position={[0, 0, entryLabelZ]} rotation={[0, entryLabelRotationY, 0]}>
             <Text
               color={entryLabelColor}
               fontSize={fontSize}
@@ -93,7 +101,7 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
             </Text>
           </group>
 
-          <group ref={exitLabelRef} position={[0, 0, 0.03]}>
+          <group ref={exitLabelRef} position={[0, 0, exitLabelZ]} rotation={[0, exitLabelRotationY, 0]}>
             <Text
               color={exitLabelColor}
               fontSize={fontSize}

@@ -29,6 +29,7 @@ export interface TrackSlice {
   setSelectedGates: (gateIds: string[]) => void
   insertGateAtIndex: (gate: Gate, gateIndex: number, sequenceIndex: number) => void
   deleteSelectedGates: () => void
+  toggleGateDirection: (gateId: string, openingId: string) => void
   undo: () => void
   redo: () => void
   setDraggingGate: (isDragging: boolean) => void
@@ -273,6 +274,46 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       }),
       selectedGateId: null,
       selectedGateIds: [],
+      ...history,
+    }
+  }),
+  toggleGateDirection: (gateId, openingId) => set((state) => {
+    if (!state.currentTrack) return state
+    const gate = state.currentTrack.gates.find((candidate) => candidate.id === gateId)
+    const opening = gate?.openings.find((candidate) => candidate.id === openingId)
+    if (!gate || !opening) return state
+
+    const nextReverse = !opening.reverse
+    const nextSequence = state.currentTrack.gateSequence.map((entry) => {
+      if (entry.gateId !== gateId || entry.openingId !== openingId) return entry
+
+      return {
+        ...entry,
+        reverse: nextReverse,
+      }
+    })
+
+    const history = pushHistory(state)
+    const nextGates = state.currentTrack.gates.map((candidate) => {
+      if (candidate.id !== gateId) return candidate
+
+      return {
+        ...candidate,
+        openings: candidate.openings.map((candidateOpening) => (
+          candidateOpening.id === openingId
+            ? { ...candidateOpening, reverse: nextReverse }
+            : candidateOpening
+        )),
+      }
+    })
+
+    return {
+      currentTrack: normalizeTrack({
+        ...state.currentTrack,
+        gates: nextGates,
+        gateSequence: nextSequence,
+        updatedAt: new Date().toISOString(),
+      }),
       ...history,
     }
   }),
