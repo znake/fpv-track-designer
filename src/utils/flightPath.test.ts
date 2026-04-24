@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { calculateFlightPath, GATE_BASE_HEIGHT } from './flightPath'
-import type { Gate } from '../types'
+import { calculateFlightPath, GATE_BASE_HEIGHT, GATE_STRUCTURE_CLEARANCE } from './flightPath'
+import type { Gate, GateSequenceItem } from '../types'
+import { createDefaultGateOpenings, getHGateBackrestSide } from './gateOpenings'
 
 const createGate = (id: string, x: number, y: number, z: number, size: Gate['size'] = 1): Gate => ({
   id,
@@ -8,6 +9,7 @@ const createGate = (id: string, x: number, y: number, z: number, size: Gate['siz
   position: { x, y, z },
   rotation: 0,
   size,
+  openings: createDefaultGateOpenings('standard', size),
 })
 
 describe('calculateFlightPath', () => {
@@ -364,5 +366,92 @@ describe('calculateFlightPath', () => {
 
     expect(hasPointNearGateCenter(gates[0])).toBe(true)
     expect(hasPointNearGateCenter(gates[1])).toBe(true)
+  })
+
+  it('keeps lower-to-upper double gate transitions outside the gate structure clearance', () => {
+    const gate: Gate = {
+      id: 'double-1',
+      type: 'double',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 0,
+      size: 1,
+      openings: createDefaultGateOpenings('double', 1),
+    }
+    const nextGate = createGate('g2', 8, 0, 0)
+    const sequence: GateSequenceItem[] = [
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+      { gateId: nextGate.id, openingId: 'main', reverse: false },
+    ]
+
+    const path = calculateFlightPath([gate, nextGate], sequence)
+    const transitionFromLowerToUpper = path.sampledSegments[1]
+    const maxOutsideOffset = Math.max(...transitionFromLowerToUpper.map((point) => Math.abs(point.x)))
+
+    expect(maxOutsideOffset).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
+  })
+
+  it('routes h-gate lower-to-backrest transitions on the backrest side', () => {
+    const gate: Gate = {
+      id: 'h-gate-left',
+      type: 'h-gate',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 0,
+      size: 1,
+      openings: createDefaultGateOpenings('h-gate', 1),
+    }
+    const nextGate = createGate('g2', 8, 0, 0)
+    const sequence: GateSequenceItem[] = [
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'backrest-pass', reverse: false },
+      { gateId: nextGate.id, openingId: 'main', reverse: false },
+    ]
+
+    const path = calculateFlightPath([gate, nextGate], sequence)
+    const transitionFromLowerToBackrest = path.sampledSegments[1]
+    const fullTransition = path.sampledSegments.slice(1, 4).flat()
+    const expectedSide = getHGateBackrestSide(gate.id)
+    const lowerOpening = gate.openings.find((opening) => opening.id === 'lower')
+    const furthestSidePoint = transitionFromLowerToBackrest.reduce((furthest, point) => (
+      Math.abs(point.x) > Math.abs(furthest.x) ? point : furthest
+    ))
+    const pointsReturningThroughLowerEntry = fullTransition.filter((point) => (
+      lowerOpening
+      && Math.abs(point.x) < lowerOpening.width / 2
+      && point.z < -0.01
+      && point.y >= lowerOpening.position.y - lowerOpening.height / 2
+      && point.y <= lowerOpening.position.y + lowerOpening.height / 2
+    ))
+
+    expect(Math.sign(furthestSidePoint.x)).toBe(expectedSide)
+    expect(Math.abs(furthestSidePoint.x)).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
+    expect(pointsReturningThroughLowerEntry).toHaveLength(0)
+  })
+
+  it('routes rotated h-gate transitions on the rotated backrest side', () => {
+    const gate: Gate = {
+      id: 'h-gate-right',
+      type: 'h-gate',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 90,
+      size: 1,
+      openings: createDefaultGateOpenings('h-gate', 1),
+    }
+    const nextGate = createGate('g2', 8, 0, 0)
+    const sequence: GateSequenceItem[] = [
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'backrest-pass', reverse: false },
+      { gateId: nextGate.id, openingId: 'main', reverse: false },
+    ]
+
+    const path = calculateFlightPath([gate, nextGate], sequence)
+    const transitionFromLowerToBackrest = path.sampledSegments[1]
+    const expectedSide = getHGateBackrestSide(gate.id)
+    const furthestSidePoint = transitionFromLowerToBackrest.reduce((furthest, point) => (
+      Math.abs(point.z) > Math.abs(furthest.z) ? point : furthest
+    ))
+
+    expect(Math.sign(furthestSidePoint.z)).toBe(-expectedSide)
+    expect(Math.abs(furthestSidePoint.z)).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
   })
 })

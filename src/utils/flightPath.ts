@@ -1,17 +1,18 @@
-import { Vector3, CubicBezierCurve3, Quaternion } from 'three'
-import type { Gate } from '../types'
+import { CubicBezierCurve3, Quaternion, Vector3 } from 'three'
+import type { Gate, GateOpening, GateSequenceItem } from '../types'
+import { getHGateBackrestSide, normalizeGates } from './gateOpenings'
+import { buildFallbackGateSequence, normalizeGateSequence } from './gateSequence'
 
 const MIN_CURVE_SAMPLES_PER_SEGMENT = 80
 const MAX_CURVE_SAMPLES_PER_SEGMENT = 400
 const CURVE_SAMPLES_PER_METER = 14
 export const CONTROL_POINT_FACTOR = 0.25
-const GATE_PASS_THROUGH_OFFSET = 0.45
 const MAX_CONTROL_HANDLE_LENGTH = 2.5
 const U_TURN_DOT_THRESHOLD = -0.3
 const FORBIDDEN_ZONE_TOLERANCE = 0.2
-const GATE_OPENING_HALF_WIDTH = 0.7
 const MIN_CLEARANCE = 0.3
-const GATE_AVOIDANCE_SIDE_MARGIN = 0.35
+export const GATE_STRUCTURE_CLEARANCE = 0.5
+const GATE_AVOIDANCE_SIDE_MARGIN = GATE_STRUCTURE_CLEARANCE
 const GATE_AVOIDANCE_FRONT_MARGIN = 0.25
 
 export interface PathSegment {
@@ -36,12 +37,14 @@ export interface FlightPath {
   sampledSegments: { x: number; y: number; z: number }[][]
 }
 
+interface GateVisit {
+  gate: Gate
+  opening: GateOpening
+  reverse: boolean
+}
+
 const ARROW_SPACING = 1.5
 export const GATE_BASE_HEIGHT = 1.2
-
-function getGateFlightPathHeight(gate: Gate): number {
-  return gate.position.y + (GATE_BASE_HEIGHT * gate.size) / 2
-}
 
 function createStraightCurve(from: Vector3, to: Vector3): CubicBezierCurve3 {
   const delta = to.clone().sub(from)
@@ -103,56 +106,63 @@ function getCurveSamples(length: number): number {
   return Math.max(MIN_CURVE_SAMPLES_PER_SEGMENT, Math.min(MAX_CURVE_SAMPLES_PER_SEGMENT, byLength))
 }
 
-/**
- * Returns the entry direction for a gate based on its rotation.
- * The gate faces the direction of rotation (toward the next gate).
- * The entry side is opposite — the drone approaches from the back.
- * In local coords, the gate faces -Z before rotation; after rotation-y,
- * the entry (approach) direction is (-sin(rad), 0, -cos(rad)).
- */
-export function getGateEntryDirection(gate: Gate): Vector3 {
-  const rad = (gate.rotation * Math.PI) / 180
-  return new Vector3(-Math.sin(rad), 0, -Math.cos(rad)).normalize()
+function rotateLocalVector(x: number, z: number, rotation: number): { x: number; z: number } {
+  const rad = (rotation * Math.PI) / 180
+  const cosR = Math.cos(rad)
+  const sinR = Math.sin(rad)
+
+  return {
+    x: x * cosR + z * sinR,
+    z: -x * sinR + z * cosR,
+  }
 }
 
-function getGateExitDirection(gate: Gate): Vector3 {
-  return getGateEntryDirection(gate).negate()
+export function getGateEntryDirection(gate: Gate, opening: GateOpening, reverse = false): Vector3 {
+  const rad = ((gate.rotation + opening.rotation) * Math.PI) / 180
+  const direction = new Vector3(-Math.sin(rad), 0, -Math.cos(rad)).normalize()
+  return reverse ? direction.negate() : direction
 }
 
-/**
- * Gets the opening center the ideal line should pass through.
- */
-function getGateCenterPoint(gate: Gate): Vector3 {
+function getGateExitDirection(gate: Gate, opening: GateOpening, reverse = false): Vector3 {
+  return getGateEntryDirection(gate, opening, reverse).negate()
+}
+
+function getGateVisitCenterPoint(visit: GateVisit): Vector3 {
+  const rotatedPosition = rotateLocalVector(visit.opening.position.x, visit.opening.position.z, visit.gate.rotation)
   return new Vector3(
-    gate.position.x,
-    getGateFlightPathHeight(gate),
-    gate.position.z,
+    visit.gate.position.x + rotatedPosition.x,
+    visit.gate.position.y + visit.opening.position.y,
+    visit.gate.position.z + rotatedPosition.z,
   )
 }
 
-function getGateEntryPoint(gate: Gate): Vector3 {
-  const center = getGateCenterPoint(gate)
-  const offset = getGateEntryDirection(gate).multiplyScalar(GATE_PASS_THROUGH_OFFSET * gate.size)
+function getGatePassThroughOffset(opening: GateOpening): number {
+  return Math.min(opening.width, opening.height) * 0.375
+}
+
+function getGateEntryPoint(visit: GateVisit): Vector3 {
+  const center = getGateVisitCenterPoint(visit)
+  const offset = getGateEntryDirection(visit.gate, visit.opening, visit.reverse).multiplyScalar(getGatePassThroughOffset(visit.opening))
   return center.add(offset)
 }
 
-function getGateExitPoint(gate: Gate): Vector3 {
-  const center = getGateCenterPoint(gate)
-  const offset = getGateExitDirection(gate).multiplyScalar(GATE_PASS_THROUGH_OFFSET * gate.size)
+function getGateExitPoint(visit: GateVisit): Vector3 {
+  const center = getGateVisitCenterPoint(visit)
+  const offset = getGateExitDirection(visit.gate, visit.opening, visit.reverse).multiplyScalar(getGatePassThroughOffset(visit.opening))
   return center.add(offset)
 }
 
-function isInForbiddenZone(point: Vector3, gate: Gate): boolean {
-  const center = getGateCenterPoint(gate)
-  return point.clone().sub(center).dot(getGateEntryDirection(gate)) < -FORBIDDEN_ZONE_TOLERANCE
+function isInForbiddenZone(point: Vector3, visit: GateVisit): boolean {
+  const center = getGateVisitCenterPoint(visit)
+  return point.clone().sub(center).dot(getGateEntryDirection(visit.gate, visit.opening, visit.reverse)) < -FORBIDDEN_ZONE_TOLERANCE
 }
 
-function curvePassesForbiddenZone(curve: CubicBezierCurve3, gate: Gate): boolean {
-  const center = getGateCenterPoint(gate)
+function curvePassesForbiddenZone(curve: CubicBezierCurve3, visit: GateVisit): boolean {
+  const center = getGateVisitCenterPoint(visit)
 
   for (let t = 0.05; t < 0.95; t += 0.05) {
     const point = curve.getPoint(t)
-    if (point.distanceTo(center) < 3 && isInForbiddenZone(point, gate)) {
+    if (point.distanceTo(center) < 3 && isInForbiddenZone(point, visit)) {
       return true
     }
   }
@@ -160,12 +170,12 @@ function curvePassesForbiddenZone(curve: CubicBezierCurve3, gate: Gate): boolean
   return false
 }
 
-function curveReentersGateOpening(curve: CubicBezierCurve3, gate: Gate): boolean {
-  const center = getGateCenterPoint(gate)
-  const rad = (gate.rotation * Math.PI) / 180
+function curveReentersGateOpening(curve: CubicBezierCurve3, visit: GateVisit): boolean {
+  const center = getGateVisitCenterPoint(visit)
+  const rad = ((visit.gate.rotation + visit.opening.rotation) * Math.PI) / 180
   const cosR = Math.cos(rad)
   const sinR = Math.sin(rad)
-  const halfWidth = GATE_OPENING_HALF_WIDTH * gate.size
+  const halfWidth = visit.opening.width / 2
 
   for (let t = 0.2; t < 1; t += 0.03) {
     const point = curve.getPoint(t)
@@ -182,12 +192,12 @@ function curveReentersGateOpening(curve: CubicBezierCurve3, gate: Gate): boolean
   return false
 }
 
-function calculateWaypointForSide(gate: Gate, side: 1 | -1): Vector3 {
-  const center = getGateCenterPoint(gate)
-  const entryDir = getGateEntryDirection(gate)
+function calculateWaypointForSide(visit: GateVisit, side: 1 | -1): Vector3 {
+  const center = getGateVisitCenterPoint(visit)
+  const entryDir = getGateEntryDirection(visit.gate, visit.opening, visit.reverse)
   const sideDir = new Vector3(entryDir.z, 0, -entryDir.x).normalize()
-  const sideOffset = (GATE_OPENING_HALF_WIDTH + GATE_AVOIDANCE_SIDE_MARGIN) * gate.size
-  const frontOffset = (GATE_PASS_THROUGH_OFFSET + GATE_AVOIDANCE_FRONT_MARGIN) * gate.size
+  const sideOffset = visit.opening.width / 2 + GATE_AVOIDANCE_SIDE_MARGIN
+  const frontOffset = getGatePassThroughOffset(visit.opening) + GATE_AVOIDANCE_FRONT_MARGIN
 
   return center
     .clone()
@@ -195,57 +205,164 @@ function calculateWaypointForSide(gate: Gate, side: 1 | -1): Vector3 {
     .add(entryDir.multiplyScalar(frontOffset))
 }
 
-/**
- * Calculates the flight path through gates in the given sequence order.
- * The ideal line should approach each gate from the green side, pass straight
- * through the opening, then curve outside the gate toward the next entry.
- *
- * @param gates - Array of unique gate definitions
- * @param gateSequence - Ordered array of gate IDs defining the fly-through order.
- *                       Same gate can appear multiple times but not consecutively.
- *                       Defaults to sequential order of gates array.
- */
-export function calculateFlightPath(gates: Gate[], gateSequence?: string[]): FlightPath {
-  if (gates.length < 2) {
+function calculateOutsideLaneWaypoint(visit: GateVisit, side: 1 | -1, frontDirection: Vector3): Vector3 {
+  const center = getGateVisitCenterPoint(visit)
+  const entryDir = getGateEntryDirection(visit.gate, visit.opening, visit.reverse)
+  const sideDir = new Vector3(entryDir.z, 0, -entryDir.x).normalize()
+  const sideOffset = visit.opening.width / 2 + GATE_STRUCTURE_CLEARANCE
+  const frontOffset = getGatePassThroughOffset(visit.opening) + GATE_AVOIDANCE_FRONT_MARGIN
+
+  return center
+    .clone()
+    .add(sideDir.multiplyScalar(side * sideOffset))
+    .add(frontDirection.clone().normalize().multiplyScalar(frontOffset))
+}
+
+function getGateLocalXDirection(gate: Gate): Vector3 {
+  const rotated = rotateLocalVector(1, 0, gate.rotation)
+  return new Vector3(rotated.x, 0, rotated.z).normalize()
+}
+
+function calculatePhysicalSideOutsideLaneWaypoint(
+  visit: GateVisit,
+  physicalSideDirection: Vector3,
+  frontDirection: Vector3,
+): Vector3 {
+  const center = getGateVisitCenterPoint(visit)
+  const sideOffset = visit.opening.width / 2 + GATE_STRUCTURE_CLEARANCE
+  const frontOffset = getGatePassThroughOffset(visit.opening) + GATE_AVOIDANCE_FRONT_MARGIN
+
+  return center
+    .clone()
+    .add(physicalSideDirection.clone().normalize().multiplyScalar(sideOffset))
+    .add(frontDirection.clone().normalize().multiplyScalar(frontOffset))
+}
+
+function createSameGatePhysicalSideClearanceCurve(
+  from: Vector3,
+  fromDirection: Vector3,
+  to: Vector3,
+  toDirection: Vector3,
+  fromVisit: GateVisit,
+  toVisit: GateVisit,
+  physicalSideDirection: Vector3,
+): { curves: { curve: CubicBezierCurve3; length: number }[]; totalLength: number } {
+  const fromWaypoint = calculatePhysicalSideOutsideLaneWaypoint(fromVisit, physicalSideDirection, fromDirection)
+  const toWaypoint = calculatePhysicalSideOutsideLaneWaypoint(toVisit, physicalSideDirection, getGateEntryDirection(toVisit.gate, toVisit.opening, toVisit.reverse))
+  const laneDirection = normalize(toWaypoint.clone().sub(fromWaypoint))
+  const sideExitDirection = normalize(physicalSideDirection.clone().multiplyScalar(2).add(fromDirection))
+
+  const curve1 = createDirectionalCurve(from, fromWaypoint, sideExitDirection, laneDirection)
+  const curve2 = createStraightCurve(fromWaypoint, toWaypoint)
+  const curve3 = createDirectionalCurve(toWaypoint, to, laneDirection, toDirection)
+  const length1 = curve1.getLength()
+  const length2 = curve2.getLength()
+  const length3 = curve3.getLength()
+
+  return {
+    curves: [
+      { curve: curve1, length: length1 },
+      { curve: curve2, length: length2 },
+      { curve: curve3, length: length3 },
+    ],
+    totalLength: length1 + length2 + length3,
+  }
+}
+
+function isHGateBackrestTransition(fromVisit: GateVisit, toVisit: GateVisit): boolean {
+  if (fromVisit.gate.id !== toVisit.gate.id || fromVisit.gate.type !== 'h-gate') {
+    return false
+  }
+
+  const openingIds = new Set([fromVisit.opening.id, toVisit.opening.id])
+  return openingIds.has('lower') && openingIds.has('backrest-pass')
+}
+
+function createSameGateClearanceCurve(
+  from: Vector3,
+  fromDirection: Vector3,
+  to: Vector3,
+  toDirection: Vector3,
+  fromVisit: GateVisit,
+  toVisit: GateVisit,
+  side: 1 | -1,
+): { curves: { curve: CubicBezierCurve3; length: number }[]; totalLength: number } {
+  const fromWaypoint = calculateOutsideLaneWaypoint(fromVisit, side, fromDirection)
+  const toWaypoint = calculateOutsideLaneWaypoint(toVisit, side, getGateEntryDirection(toVisit.gate, toVisit.opening, toVisit.reverse))
+  const laneDirection = normalize(toWaypoint.clone().sub(fromWaypoint))
+
+  const curve1 = createDirectionalCurve(from, fromWaypoint, fromDirection, laneDirection)
+  const curve2 = createStraightCurve(fromWaypoint, toWaypoint)
+  const curve3 = createDirectionalCurve(toWaypoint, to, laneDirection, toDirection)
+  const length1 = curve1.getLength()
+  const length2 = curve2.getLength()
+  const length3 = curve3.getLength()
+
+  return {
+    curves: [
+      { curve: curve1, length: length1 },
+      { curve: curve2, length: length2 },
+      { curve: curve3, length: length3 },
+    ],
+    totalLength: length1 + length2 + length3,
+  }
+}
+
+function resolveVisits(gates: Gate[], gateSequence?: GateSequenceItem[]): GateVisit[] {
+  const normalizedGates = normalizeGates(gates)
+  const sequence = normalizeGateSequence(gateSequence ?? buildFallbackGateSequence(normalizedGates), normalizedGates)
+  const gateMap = new Map(normalizedGates.map((gate) => [gate.id, gate]))
+
+  return sequence.map((entry) => {
+    const gate = gateMap.get(entry.gateId)
+    if (!gate) return null
+
+    const opening = gate.openings.find((candidate) => candidate.id === entry.openingId) ?? gate.openings[0]
+    if (!opening) return null
+
+    return {
+      gate,
+      opening,
+      reverse: Boolean(entry.reverse),
+    }
+  }).filter((visit): visit is GateVisit => visit !== null)
+}
+
+export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceItem[]): FlightPath {
+  const orderedVisits = resolveVisits(gates, gateSequence)
+  if (orderedVisits.length < 2) {
     return { segments: [], arrows: [], totalLength: 0, points: [], sampledPoints: [], sampledSegments: [] }
   }
 
-  // Build ordered gate list from sequence
-  const seq = gateSequence ?? gates.map(g => g.id)
-  const gateMap = new Map(gates.map(g => [g.id, g]))
-  const orderedGates = seq.map(id => gateMap.get(id)).filter((g): g is Gate => g !== undefined)
-
-  if (orderedGates.length < 2) {
-    return { segments: [], arrows: [], totalLength: 0, points: [], sampledPoints: [], sampledSegments: [] }
-  }
-
-  const n = orderedGates.length
   const curves: { curve: CubicBezierCurve3; length: number }[] = []
   const allPoints: Vector3[] = []
   const segments: PathSegment[] = []
   let totalLength = 0
 
-  for (let i = 0; i < n; i++) {
-    const fromGate = orderedGates[i]
-    const toGate = orderedGates[(i + 1) % n]
+  for (let i = 0; i < orderedVisits.length; i++) {
+    const fromVisit = orderedVisits[i]
+    const toVisit = orderedVisits[(i + 1) % orderedVisits.length]
 
-    const throughGateCurve = createStraightCurve(getGateEntryPoint(fromGate), getGateExitPoint(fromGate))
+    const throughGateCurve = createStraightCurve(getGateEntryPoint(fromVisit), getGateExitPoint(fromVisit))
     const throughGateLength = throughGateCurve.getLength()
     curves.push({ curve: throughGateCurve, length: throughGateLength })
     totalLength += throughGateLength
     allPoints.push(throughGateCurve.v0, throughGateCurve.v1, throughGateCurve.v2)
 
-    const from = getGateExitPoint(fromGate)
-    const to = getGateEntryPoint(toGate)
-    const fromDirection = getGateExitDirection(fromGate)
-    const toDirection = getGateExitDirection(toGate)
+    const from = getGateExitPoint(fromVisit)
+    const to = getGateEntryPoint(toVisit)
+    const fromDirection = getGateExitDirection(fromVisit.gate, fromVisit.opening, fromVisit.reverse)
+    const toDirection = getGateExitDirection(toVisit.gate, toVisit.opening, toVisit.reverse)
     const standardCurve = createDirectionalCurve(from, to, fromDirection, toDirection)
-    const tangent = normalize(getGateCenterPoint(toGate).clone().sub(getGateCenterPoint(fromGate)))
+    const tangent = normalize(getGateVisitCenterPoint(toVisit).clone().sub(getGateVisitCenterPoint(fromVisit)))
+    const isSameGateTransition = fromVisit.gate.id === toVisit.gate.id
 
     let transitionCurves = [{ curve: standardCurve, length: standardCurve.getLength() }]
-    let needsAvoidance = fromGate.id === toGate.id
+    let needsAvoidance = isSameGateTransition
+      && fromVisit.opening.id === toVisit.opening.id
+      && fromVisit.reverse === toVisit.reverse
 
-    if (!needsAvoidance && curvePassesForbiddenZone(standardCurve, toGate)) {
+    if (!needsAvoidance && curvePassesForbiddenZone(standardCurve, toVisit)) {
       needsAvoidance = true
     }
 
@@ -256,13 +373,29 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: string[]): Fli
       }
     }
 
-    if (needsAvoidance) {
+    if (isHGateBackrestTransition(fromVisit, toVisit)) {
+      const backrestSideDirection = getGateLocalXDirection(fromVisit.gate).multiplyScalar(getHGateBackrestSide(fromVisit.gate.id))
+      const sideAwareCurve = createSameGatePhysicalSideClearanceCurve(
+        from,
+        fromDirection,
+        to,
+        toDirection,
+        fromVisit,
+        toVisit,
+        backrestSideDirection,
+      )
+      transitionCurves = sideAwareCurve.curves
+    } else if (needsAvoidance) {
       const candidates = ([1, -1] as const).map((side) => {
-        const waypoint = calculateWaypointForSide(toGate, side)
+        if (isSameGateTransition) {
+          return createSameGateClearanceCurve(from, fromDirection, to, toDirection, fromVisit, toVisit, side)
+        }
+
+        const waypoint = calculateWaypointForSide(toVisit, side)
         return createAvoidanceCurve(from, fromDirection, to, toDirection, waypoint)
       })
 
-      const validCandidates = candidates.filter((candidate) => candidate.curves.every(({ curve }) => !curveReentersGateOpening(curve, fromGate)))
+      const validCandidates = candidates.filter((candidate) => candidate.curves.every(({ curve }) => !curveReentersGateOpening(curve, fromVisit)))
       const pool = validCandidates.length > 0 ? validCandidates : candidates
       const best = pool.reduce((shortest, current) => current.totalLength < shortest.totalLength ? current : shortest)
       transitionCurves = best.curves
@@ -275,14 +408,13 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: string[]): Fli
     }
 
     segments.push({
-      from: fromGate.position,
-      to: toGate.position,
+      from: fromVisit.gate.position,
+      to: toVisit.gate.position,
       direction: { x: tangent.x, y: tangent.y, z: tangent.z },
-      length: distance3d(fromGate.position, toGate.position),
+      length: distance3d(fromVisit.gate.position, toVisit.gate.position),
     })
   }
 
-  // Sample points along all curves
   const sampledPoints: { x: number; y: number; z: number }[] = []
   const sampledSegments: { x: number; y: number; z: number }[][] = []
 
@@ -292,8 +424,8 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: string[]): Fli
 
     for (let i = 0; i < samples; i++) {
       const t = i / samples
-      const p = curve.getPoint(t)
-      const sampledPoint = { x: p.x, y: p.y, z: p.z }
+      const point = curve.getPoint(t)
+      const sampledPoint = { x: point.x, y: point.y, z: point.z }
       sampledPoints.push(sampledPoint)
       segmentPoints.push(sampledPoint)
     }
@@ -305,7 +437,6 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: string[]): Fli
     sampledSegments.push(segmentPoints)
   }
 
-  // Sample arrows along the path
   const arrows: ArrowPosition[] = []
   const arrowCount = Math.max(1, Math.floor(totalLength / ARROW_SPACING))
 
@@ -313,24 +444,25 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: string[]): Fli
     const targetDist = (i / arrowCount) * totalLength
     let accumulatedDist = 0
 
-    for (let ci = 0; ci < curves.length; ci++) {
-      const { curve, length: segLen } = curves[ci]
+    for (let curveIndex = 0; curveIndex < curves.length; curveIndex++) {
+      const { curve, length } = curves[curveIndex]
 
-      if (accumulatedDist + segLen >= targetDist || ci === curves.length - 1) {
-        const localT = segLen > 0 ? (targetDist - accumulatedDist) / segLen : 0
+      if (accumulatedDist + length >= targetDist || curveIndex === curves.length - 1) {
+        const localT = length > 0 ? (targetDist - accumulatedDist) / length : 0
         const clampedT = Math.max(0, Math.min(1, localT))
         const point = curve.getPointAt(clampedT)
         const tangent = curve.getTangentAt(clampedT)
-        const dir = normalize(tangent)
-        const q = new Quaternion().setFromUnitVectors(new Vector3(0, 0, -1), dir)
+        const direction = normalize(tangent)
+        const quaternion = new Quaternion().setFromUnitVectors(new Vector3(0, 0, -1), direction)
         arrows.push({
           position: { x: point.x, y: point.y, z: point.z },
           direction: { x: tangent.x, y: tangent.y, z: tangent.z },
-          quaternion: { x: q.x, y: q.y, z: q.z, w: q.w },
+          quaternion: { x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w },
         })
         break
       }
-      accumulatedDist += segLen
+
+      accumulatedDist += length
     }
   }
 
@@ -338,7 +470,7 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: string[]): Fli
     segments,
     arrows,
     totalLength,
-    points: allPoints.map(p => ({ x: p.x, y: p.y, z: p.z })),
+    points: allPoints.map((point) => ({ x: point.x, y: point.y, z: point.z })),
     sampledPoints,
     sampledSegments,
   }
