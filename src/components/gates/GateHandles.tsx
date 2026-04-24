@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Html } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { Vector2, Raycaster } from 'three'
+import { Move, Plus, RotateCw, Trash2 } from 'lucide-react'
+import type { GateType } from '../../types'
 import { useAppStore } from '../../store'
-import { Move, RotateCw } from 'lucide-react'
+import { createDefaultGateOpenings } from '../../utils/gateOpenings'
+import { Button } from '../ui/button'
 
 interface GateHandlesProps {
   gateId: string
@@ -11,16 +14,78 @@ interface GateHandlesProps {
   rotation: number
 }
 
+type GatePosition = { x: number; y: number; z: number }
+
 type DragMode = 'none' | 'move' | 'rotate'
+type InsertPosition = 'before' | 'after'
+
+interface InsertControlConfig {
+  direction: InsertPosition
+  midpoint: GatePosition
+  gateIndex: number
+  sequenceIndex: number
+}
 
 const RAYCASTER = new Raycaster()
 const HANDLE_OFFSET_Y = 1.5
+const INSERT_HANDLE_OFFSET_Y = 0.9
+const DELETE_HANDLE_OFFSET_Y = 0.35
 const DEGREES_PER_PIXEL = 1
+const FALLBACK_INSERT_DISTANCE = 3
+const HANDLE_BUTTON_CLASSNAME = 'pointer-events-auto flex size-11 items-center justify-center rounded-full border shadow-lg shadow-black/30 backdrop-blur supports-backdrop-filter:backdrop-blur-sm transition-colors select-none touch-none'
+
+const GATE_TYPE_OPTIONS: { type: GateType; label: string }[] = [
+  { type: 'start-finish', label: 'Start/Ziel' },
+  { type: 'standard', label: 'Standard' },
+  { type: 'h-gate', label: 'H-Gate' },
+  { type: 'asymmetric', label: 'Asym.' },
+  { type: 'dive', label: 'Dive' },
+  { type: 'double', label: 'Double' },
+  { type: 'ladder', label: 'Ladder' },
+  { type: 'flag', label: 'Flag' },
+]
+
+function getMidpoint(a: GatePosition, b: GatePosition): GatePosition {
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+    z: (a.z + b.z) / 2,
+  }
+}
+
+function clampPositionToField(position: GatePosition, fieldSize: { width: number; height: number }): GatePosition {
+  const halfWidth = fieldSize.width / 2
+  const halfHeight = fieldSize.height / 2
+
+  return {
+    x: Math.max(-halfWidth, Math.min(halfWidth, position.x)),
+    y: position.y,
+    z: Math.max(-halfHeight, Math.min(halfHeight, position.z)),
+  }
+}
+
+function getFallbackInsertPosition(
+  position: GatePosition,
+  rotation: number,
+  direction: InsertPosition,
+  fieldSize: { width: number; height: number },
+): GatePosition {
+  const radians = rotation * (Math.PI / 180)
+  const directionMultiplier = direction === 'before' ? -1 : 1
+
+  return clampPositionToField({
+    x: position.x + Math.sin(radians) * FALLBACK_INSERT_DISTANCE * directionMultiplier,
+    y: position.y,
+    z: position.z + Math.cos(radians) * FALLBACK_INSERT_DISTANCE * directionMultiplier,
+  }, fieldSize)
+}
 
 export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
   const { camera, gl, controls } = useThree()
   const modeRef = useRef<DragMode>('none')
   const [activeMode, setActiveMode] = useState<DragMode>('none')
+  const [activeInsertPosition, setActiveInsertPosition] = useState<InsertPosition | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   // Move refs
   const dragStartRef = useRef<{ x: number; z: number } | null>(null)
@@ -35,6 +100,11 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
   const commitGateDrag = useAppStore((state) => state.commitGateDrag)
   const setDraggingGate = useAppStore((state) => state.setDraggingGate)
   const fieldSize = useAppStore((state) => state.config.fieldSize)
+  const currentTrack = useAppStore((state) => state.currentTrack)
+  const selectedGateId = useAppStore((state) => state.selectedGateId)
+  const selectedGateIds = useAppStore((state) => state.selectedGateIds)
+  const insertGateAtIndex = useAppStore((state) => state.insertGateAtIndex)
+  const deleteSelectedGates = useAppStore((state) => state.deleteSelectedGates)
 
   // Stable refs for window listeners
   const gateIdRef = useRef(gateId)
@@ -47,6 +117,7 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
   const setGateRotationRef = useRef(setGateRotation)
   const commitRef = useRef(commitGateDrag)
   const setDraggingRef = useRef(setDraggingGate)
+  const draggingReleaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { gateIdRef.current = gateId }, [gateId])
   useEffect(() => { positionRef.current = position }, [position])
@@ -58,6 +129,14 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
   useEffect(() => { setGateRotationRef.current = setGateRotation }, [setGateRotation])
   useEffect(() => { commitRef.current = commitGateDrag }, [commitGateDrag])
   useEffect(() => { setDraggingRef.current = setDraggingGate }, [setDraggingGate])
+
+  const isSingleSelectedGate = selectedGateIds.length === 1 && selectedGateId === gateId
+  const gateSequence = useMemo(
+    () => currentTrack?.gateSequence.map((entry) => entry.gateId) ?? [],
+    [currentTrack?.gateSequence],
+  )
+  const selectedGateIndex = currentTrack?.gates.findIndex((gate) => gate.id === gateId) ?? -1
+  const selectedGate = selectedGateIndex >= 0 ? currentTrack?.gates[selectedGateIndex] : null
 
   const intersectGround = useCallback((clientX: number, clientY: number) => {
     const rect = glRef.current.domElement.getBoundingClientRect()
@@ -104,8 +183,13 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
       if (modeRef.current === 'none') return
       modeRef.current = 'none'
       setActiveMode('none')
-      setDraggingRef.current(false)
-
+      if (draggingReleaseTimeoutRef.current) {
+        clearTimeout(draggingReleaseTimeoutRef.current)
+      }
+      draggingReleaseTimeoutRef.current = setTimeout(() => {
+        setDraggingRef.current(false)
+      }, 0)
+      
       const ctrl = controlsRef.current
       if (ctrl && 'enabled' in ctrl) {
         ;(ctrl as { enabled: boolean }).enabled = true
@@ -119,14 +203,84 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
     return () => {
       window.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('pointerup', onPointerUp)
+      if (draggingReleaseTimeoutRef.current) {
+        clearTimeout(draggingReleaseTimeoutRef.current)
+      }
     }
   }, [intersectGround])
 
   const disableControls = useCallback(() => {
-    if (controls && 'enabled' in controls) {
-      ;(controls as { enabled: boolean }).enabled = false
+    const currentControls = controlsRef.current
+    if (currentControls && 'enabled' in currentControls) {
+      ;(currentControls as { enabled: boolean }).enabled = false
     }
-  }, [controls])
+  }, [])
+
+  const stopHtmlInteraction = useCallback((event: React.PointerEvent | React.MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if ('nativeEvent' in event && 'stopImmediatePropagation' in event.nativeEvent) {
+      event.nativeEvent.stopImmediatePropagation()
+    }
+  }, [])
+
+  const getInsertControlConfig = useCallback((direction: InsertPosition): InsertControlConfig | null => {
+    if (!currentTrack || !selectedGate || selectedGateIndex < 0) return null
+
+    const selectedSequenceIndex = direction === 'before'
+      ? gateSequence.indexOf(gateId)
+      : gateSequence.lastIndexOf(gateId)
+
+    const insertionSequenceIndex = direction === 'before'
+      ? Math.max(0, selectedSequenceIndex)
+      : selectedSequenceIndex >= 0
+        ? selectedSequenceIndex + 1
+        : currentTrack.gateSequence.length
+
+    const neighborSequenceIndex = direction === 'before'
+      ? selectedSequenceIndex - 1
+      : selectedSequenceIndex + 1
+    const neighborId = gateSequence[neighborSequenceIndex]
+    const neighborGate = neighborId
+      ? currentTrack.gates.find((gate) => gate.id === neighborId)
+      : null
+
+    return {
+      direction,
+      midpoint: neighborGate
+        ? getMidpoint(selectedGate.position, neighborGate.position)
+        : getFallbackInsertPosition(selectedGate.position, selectedGate.rotation, direction, currentTrack.fieldSize),
+      gateIndex: direction === 'before' ? selectedGateIndex : selectedGateIndex + 1,
+      sequenceIndex: insertionSequenceIndex,
+    }
+  }, [currentTrack, gateId, gateSequence, selectedGate, selectedGateIndex])
+
+  const handleInsertGate = useCallback((control: InsertControlConfig, type: GateType) => {
+    if (!currentTrack || !selectedGate) return
+    const id = crypto.randomUUID()
+
+    insertGateAtIndex(
+      {
+        id,
+        type,
+        position: control.midpoint,
+        rotation: selectedGate.rotation,
+        size: currentTrack.gateSize,
+        openings: createDefaultGateOpenings(type, currentTrack.gateSize),
+      },
+      control.gateIndex,
+      control.sequenceIndex,
+    )
+    setActiveInsertPosition(null)
+  }, [currentTrack, insertGateAtIndex, selectedGate])
+
+  const handleDeleteConfirm = useCallback(() => {
+    deleteSelectedGates()
+    setIsDeleteDialogOpen(false)
+  }, [deleteSelectedGates])
+
+  const beforeInsertControl = isSingleSelectedGate ? getInsertControlConfig('before') : null
+  const afterInsertControl = isSingleSelectedGate ? getInsertControlConfig('after') : null
 
   const handleMoveDown = useCallback(
     (e: React.PointerEvent) => {
@@ -138,6 +292,10 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
       modeRef.current = 'move'
       setActiveMode('move')
       setDraggingGate(true)
+      if (draggingReleaseTimeoutRef.current) {
+        clearTimeout(draggingReleaseTimeoutRef.current)
+        draggingReleaseTimeoutRef.current = null
+      }
 
       const hit = intersectGround(e.clientX, e.clientY)
       dragStartRef.current = { x: hit.x, z: hit.z }
@@ -156,6 +314,10 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
       modeRef.current = 'rotate'
       setActiveMode('rotate')
       setDraggingGate(true)
+      if (draggingReleaseTimeoutRef.current) {
+        clearTimeout(draggingReleaseTimeoutRef.current)
+        draggingReleaseTimeoutRef.current = null
+      }
 
       dragStartXRef.current = e.clientX
       startRotationRef.current = rotation
@@ -169,68 +331,194 @@ export function GateHandles({ gateId, position, rotation }: GateHandlesProps) {
       if (modeRef.current !== 'none') {
         modeRef.current = 'none'
         setDraggingGate(false)
-        if (controls && 'enabled' in controls) {
-          ;(controls as { enabled: boolean }).enabled = true
+        if (draggingReleaseTimeoutRef.current) {
+          clearTimeout(draggingReleaseTimeoutRef.current)
+          draggingReleaseTimeoutRef.current = null
+        }
+        const currentControls = controlsRef.current
+        if (currentControls && 'enabled' in currentControls) {
+          ;(currentControls as { enabled: boolean }).enabled = true
         }
       }
     }
-  }, [setDraggingGate, controls])
+  }, [setDraggingGate])
 
-  const buttonBase: React.CSSProperties = {
-    pointerEvents: 'auto',
-    width: 44,
-    height: 44,
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backdropFilter: 'blur(4px)',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-    transition: 'background-color 0.15s ease',
-    userSelect: 'none',
-    touchAction: 'none',
+  const renderInsertControl = (control: InsertControlConfig | null, label: string) => {
+    if (!control) return null
+
+    const isOpen = activeInsertPosition === control.direction
+
+    return (
+      <Html
+        key={control.direction}
+        position={[
+          control.midpoint.x,
+          control.midpoint.y + INSERT_HANDLE_OFFSET_Y,
+          control.midpoint.z,
+        ]}
+        center
+        distanceFactor={9}
+        style={{ pointerEvents: 'none' }}
+      >
+        <div className="relative flex flex-col items-center gap-2 pointer-events-auto">
+          {isOpen && (
+            <div
+              className="grid w-40 grid-cols-2 gap-1 rounded-xl border border-border bg-popover/95 p-2 text-xs shadow-xl shadow-black/35 backdrop-blur supports-backdrop-filter:backdrop-blur-sm"
+              onPointerDown={stopHtmlInteraction}
+              onClick={stopHtmlInteraction}
+            >
+              {GATE_TYPE_OPTIONS.map((option) => (
+                <Button
+                  key={option.type}
+                  variant="outline"
+                  size="xs"
+                  className="h-auto justify-start py-1.5"
+                  onPointerDown={stopHtmlInteraction}
+                  onClick={(event) => {
+                    stopHtmlInteraction(event)
+                    handleInsertGate(control, option.type)
+                  }}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          )}
+          <div className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground shadow-md shadow-black/20 backdrop-blur">
+            {label}
+          </div>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="rounded-full border-border bg-surface-elevated/95 text-primary shadow-lg shadow-black/30 backdrop-blur supports-backdrop-filter:backdrop-blur-sm hover:bg-surface-hover"
+            onPointerDown={stopHtmlInteraction}
+            onClick={(event) => {
+              stopHtmlInteraction(event)
+              setIsDeleteDialogOpen(false)
+              setActiveInsertPosition((current) => current === control.direction ? null : control.direction)
+            }}
+            aria-label={`Insert ${control.direction} ${gateId}`}
+          >
+            <Plus className="size-4" />
+          </Button>
+        </div>
+      </Html>
+    )
   }
 
   return (
-    <Html
-      position={[position.x, position.y + HANDLE_OFFSET_Y, position.z]}
-      center
-      distanceFactor={8}
-      style={{ pointerEvents: 'none' }}
-    >
-      <div style={{ display: 'flex', gap: 24, pointerEvents: 'none' }}>
-        {/* Move handle (left) */}
-        <div
-          onPointerDown={handleMoveDown}
-          style={{
-            ...buttonBase,
-            backgroundColor: activeMode === 'move'
-              ? 'rgba(96, 165, 250, 0.95)'
-              : 'rgba(15, 23, 42, 0.85)',
-            border: '2px solid rgba(96, 165, 250, 0.6)',
-            color: '#60a5fa',
-            cursor: activeMode === 'move' ? 'grabbing' : 'grab',
-          }}
-        >
-          <Move size={22} />
-        </div>
+    <>
+      {renderInsertControl(beforeInsertControl, 'Before')}
+      {renderInsertControl(afterInsertControl, 'After')}
 
-        {/* Rotate handle (right) */}
-        <div
-          onPointerDown={handleRotateDown}
-          style={{
-            ...buttonBase,
-            backgroundColor: activeMode === 'rotate'
-              ? 'rgba(251, 146, 60, 0.95)'
-              : 'rgba(15, 23, 42, 0.85)',
-            border: '2px solid rgba(251, 146, 60, 0.6)',
-            color: '#fb923c',
-            cursor: 'ew-resize',
-          }}
-        >
-          <RotateCw size={22} />
+      {isSingleSelectedGate && (
+        <>
+          <Html
+            position={[position.x, DELETE_HANDLE_OFFSET_Y, position.z]}
+            center
+            distanceFactor={9}
+            style={{ pointerEvents: 'none' }}
+          >
+            <Button
+              variant="destructive"
+              size="sm"
+              className="pointer-events-auto shadow-lg shadow-black/35"
+              onPointerDown={stopHtmlInteraction}
+              onClick={(event) => {
+                stopHtmlInteraction(event)
+                setActiveInsertPosition(null)
+                setIsDeleteDialogOpen(true)
+              }}
+            >
+              <Trash2 className="size-3.5" />
+              Delete gate
+            </Button>
+          </Html>
+
+          {isDeleteDialogOpen && (
+            <Html
+              position={[position.x, position.y + HANDLE_OFFSET_Y + 0.45, position.z]}
+              center
+              distanceFactor={10}
+              style={{ pointerEvents: 'none' }}
+            >
+              <div
+                className="pointer-events-auto w-64 rounded-xl border border-border bg-popover/95 p-3 text-sm text-popover-foreground shadow-xl shadow-black/35 backdrop-blur supports-backdrop-filter:backdrop-blur-sm"
+                onPointerDown={stopHtmlInteraction}
+                onClick={stopHtmlInteraction}
+              >
+                <div className="space-y-1">
+                  <p className="font-medium">Delete selected gate?</p>
+                  <p className="text-xs text-muted-foreground">
+                    This removes the selected gate from the course and clears its current selection.
+                  </p>
+                </div>
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onPointerDown={stopHtmlInteraction}
+                    onClick={(event) => {
+                      stopHtmlInteraction(event)
+                      setIsDeleteDialogOpen(false)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onPointerDown={stopHtmlInteraction}
+                    onClick={(event) => {
+                      stopHtmlInteraction(event)
+                      handleDeleteConfirm()
+                    }}
+                  >
+                    Delete gate
+                  </Button>
+                </div>
+              </div>
+            </Html>
+          )}
+        </>
+      )}
+
+      <Html
+        position={[position.x, position.y + HANDLE_OFFSET_Y, position.z]}
+        center
+        distanceFactor={8}
+        style={{ pointerEvents: 'none' }}
+      >
+        <div style={{ display: 'flex', gap: 24, pointerEvents: 'none' }}>
+          {/* Move handle (left) */}
+          <button
+            type="button"
+            aria-label={`Move ${gateId}`}
+            onPointerDown={handleMoveDown}
+            className={`${HANDLE_BUTTON_CLASSNAME} ${activeMode === 'move'
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-primary/40 bg-surface-elevated/95 text-primary hover:bg-surface-hover'
+            }`}
+            style={{ cursor: activeMode === 'move' ? 'grabbing' : 'grab' }}
+          >
+            <Move size={22} />
+          </button>
+
+          {/* Rotate handle (right) */}
+          <button
+            type="button"
+            aria-label={`Rotate ${gateId}`}
+            onPointerDown={handleRotateDown}
+            className={`${HANDLE_BUTTON_CLASSNAME} ${activeMode === 'rotate'
+              ? 'border-secondary bg-secondary text-secondary-foreground'
+              : 'border-border bg-surface-elevated/95 text-foreground hover:bg-surface-hover'
+            }`}
+            style={{ cursor: 'ew-resize' }}
+          >
+            <RotateCw size={22} />
+          </button>
         </div>
-      </div>
-    </Html>
+      </Html>
+    </>
   )
 }
