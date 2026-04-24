@@ -621,4 +621,31 @@ describe('calculateFlightPath', () => {
     expect(diveEnd.z).toBeCloseTo(diveGate.position.z, 5)
     expect(diveEnd.y).toBeCloseTo(insideY, 5)
   })
+
+  it('routes directly from a dive gate top entry to the nearest side exit opening', () => {
+    const startGate = createGate('start', 0, 0, 0)
+    const diveGate: Gate = {
+      id: 'dive-gate',
+      type: 'dive',
+      position: { x: 0, y: 0, z: 10 },
+      rotation: 0,
+      size: 1,
+      openings: createDefaultGateOpenings('dive', 1, 'dive-gate'),
+    }
+    const sequence: GateSequenceItem[] = [
+      { gateId: startGate.id, openingId: 'main', reverse: false },
+      { gateId: diveGate.id, openingId: 'entry-top', reverse: false },
+      { gateId: diveGate.id, openingId: diveGate.openings[1].id, reverse: false },
+    ]
+
+    const path = calculateFlightPath([startGate, diveGate], sequence)
+    const transitionFromTopToExit = path.sampledSegments[3]
+    const transitionEnd = transitionFromTopToExit[transitionFromTopToExit.length - 1]
+    const lowestPoint = Math.min(...transitionFromTopToExit.map((point) => point.y))
+
+    expect(transitionEnd.x).toBeCloseTo(-0.15, 5)
+    expect(transitionEnd.y).toBeCloseTo(GATE_BASE_HEIGHT / 2, 5)
+    expect(transitionEnd.z).toBeCloseTo(diveGate.position.z, 5)
+    expect(lowestPoint).toBeGreaterThanOrEqual(GATE_BASE_HEIGHT / 2 - 0.01)
+  })
 })

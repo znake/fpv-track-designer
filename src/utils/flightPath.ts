@@ -144,6 +144,11 @@ function getGateVisitCenterPoint(visit: GateVisit): Vector3 {
   )
 }
 
+function getGateOpeningWidthDirection(gate: Gate, opening: GateOpening): Vector3 {
+  const yawRad = ((gate.rotation + opening.rotation) * Math.PI) / 180
+  return new Vector3(Math.cos(yawRad), 0, Math.sin(yawRad)).normalize()
+}
+
 function getGatePassThroughOffset(opening: GateOpening): number {
   const defaultOffset = Math.min(opening.width, opening.height) * 0.375
   return opening.id === 'entry-top' ? Math.max(defaultOffset, DIVE_TOP_APPROACH_CLEARANCE) : defaultOffset
@@ -181,19 +186,20 @@ function curvePassesForbiddenZone(curve: CubicBezierCurve3, visit: GateVisit): b
 
 function curveReentersGateOpening(curve: CubicBezierCurve3, visit: GateVisit): boolean {
   const center = getGateVisitCenterPoint(visit)
-  const rad = ((visit.gate.rotation + visit.opening.rotation) * Math.PI) / 180
-  const cosR = Math.cos(rad)
-  const sinR = Math.sin(rad)
   const halfWidth = visit.opening.width / 2
+  const halfHeight = visit.opening.height / 2
+  const normal = getGateEntryDirection(visit.gate, visit.opening, visit.reverse)
+  const widthDirection = getGateOpeningWidthDirection(visit.gate, visit.opening)
+  const heightDirection = normalize(normal.clone().cross(widthDirection))
 
   for (let t = 0.2; t < 1; t += 0.03) {
     const point = curve.getPoint(t)
-    const dx = point.x - center.x
-    const dz = point.z - center.z
-    const localX = dx * cosR + dz * sinR
-    const localZ = -dx * sinR + dz * cosR
+    const offset = point.clone().sub(center)
+    const localX = offset.dot(widthDirection)
+    const localY = offset.dot(heightDirection)
+    const localZ = offset.dot(normal)
 
-    if (Math.abs(localX) < halfWidth && Math.abs(localZ) < MIN_CLEARANCE) {
+    if (Math.abs(localX) < halfWidth && Math.abs(localY) < halfHeight && Math.abs(localZ) < MIN_CLEARANCE) {
       return true
     }
   }
