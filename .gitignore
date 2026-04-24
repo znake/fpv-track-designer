@@ -25,5 +25,6 @@ dist-ssr
 
 # Local QA / browser automation artifacts
 .playwright-mcp/
+.sisyphus/
 qa-*.png
 flight-path-*.png
