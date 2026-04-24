@@ -10,9 +10,11 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
   const halfW = fieldSize.width / 2
   const halfH = fieldSize.height / 2
   const selectGate = useAppStore((state) => state.selectGate)
+  const isDraggingGate = useAppStore((state) => state.isDraggingGate)
 
   const handleGroundClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
+    if (isDraggingGate) return
     selectGate(null)
   }
 

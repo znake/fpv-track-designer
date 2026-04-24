@@ -9,8 +9,8 @@ export function useGateSelection(gateId: string) {
   const isSelected = selectedGateIds.includes(gateId)
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
-    if (isDraggingGate) return
     e.stopPropagation()
+    if (isDraggingGate) return
 
     const isAdditiveSelection = e.shiftKey || e.metaKey || e.ctrlKey
     selectGate(gateId, isAdditiveSelection)

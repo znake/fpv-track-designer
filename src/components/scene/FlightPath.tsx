@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import type { Gate } from '../../types'
+import type { Gate, GateSequenceItem } from '../../types'
 import { calculateFlightPath } from '../../utils/flightPath'
 import { Line } from '@react-three/drei'
 
 interface FlightPathProps {
   gates: Gate[]
-  gateSequence?: string[]
+  gateSequence?: GateSequenceItem[]
 }
 
 export function FlightPath({ gates, gateSequence }: FlightPathProps) {

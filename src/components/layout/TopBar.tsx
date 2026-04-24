@@ -30,6 +30,8 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
   const currentTrack = useAppStore((state) => state.currentTrack)
   const config = useAppStore((state) => state.config)
   const setTrack = useAppStore((state) => state.setTrack)
+  const setShowFlightPath = useAppStore((state) => state.setShowFlightPath)
+  const setShowOpeningLabels = useAppStore((state) => state.setShowOpeningLabels)
 
   const handleExport = () => {
     if (!currentTrack) return
@@ -109,6 +111,30 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
             Redo{future.length > 0 && ` (${future.length})`}
           </TooltipContent>
         </Tooltip>
+      </div>
+
+      <Separator orientation="vertical" className="h-6" />
+
+      {/* Center: View toggles */}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <label className="flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            className="size-3 accent-primary"
+            checked={config.showFlightPath}
+            onChange={(e) => setShowFlightPath(e.target.checked)}
+          />
+          <span>Flight Path</span>
+        </label>
+        <label className="flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            className="size-3 accent-primary"
+            checked={config.showOpeningLabels}
+            onChange={(e) => setShowOpeningLabels(e.target.checked)}
+          />
+          <span>Through Passes</span>
+        </label>
       </div>
 
       {/* Right: Track name + actions */}

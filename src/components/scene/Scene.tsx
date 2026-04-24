@@ -4,6 +4,7 @@ import { OrbitControls } from '@react-three/drei'
 import { MOUSE } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useAppStore } from '../../store'
+import { buildDefaultGateSequenceEntries } from '../../utils/gateSequence'
 import { Gate } from '../gates/Gate'
 import { FlightPath } from '../scene/FlightPath'
 import { Grid } from '../scene/Grid'
@@ -17,28 +18,29 @@ export function Scene() {
   const config = useAppStore((state) => state.config)
 
   const gateLabels = useMemo(() => {
-    if (!currentTrack) return new Map<string, string>()
+    if (!currentTrack) return new Map<string, Record<string, string>>()
 
-    const labels = new Map<string, number[]>()
+    const labelsByGate = new Map<string, Record<string, string>>()
     const sequence = currentTrack.gateSequence.length > 0
       ? currentTrack.gateSequence
-      : currentTrack.gates.map((gate) => gate.id)
+      : currentTrack.gates.flatMap(buildDefaultGateSequenceEntries)
 
-    sequence.forEach((gateId, index) => {
-      const numbers = labels.get(gateId) ?? []
-      numbers.push(index + 1)
-      labels.set(gateId, numbers)
-    })
+    for (const [index, entry] of sequence.entries()) {
+      const gateLabelMap = labelsByGate.get(entry.gateId) ?? {}
+      gateLabelMap[entry.openingId] = String(index + 1)
+      labelsByGate.set(entry.gateId, gateLabelMap)
+    }
 
     currentTrack.gates.forEach((gate, index) => {
-      if (!labels.has(gate.id)) {
-        labels.set(gate.id, [index + 1])
-      }
+      if (labelsByGate.has(gate.id)) return
+
+      const openingId = gate.openings[0]?.id
+      if (!openingId) return
+
+      labelsByGate.set(gate.id, { [openingId]: String(index + 1) })
     })
 
-    return new Map(
-      [...labels.entries()].map(([gateId, numbers]) => [gateId, numbers.join('\n')]),
-    )
+    return labelsByGate
   }, [currentTrack])
 
   return (
@@ -54,9 +56,13 @@ export function Scene() {
       {currentTrack && (
         <>
           {currentTrack.gates.map((gate) => (
-            <Gate key={gate.id} gate={gate} label={gateLabels.get(gate.id)} />
+            <Gate
+              key={gate.id}
+              gate={gate}
+              openingLabels={config.showOpeningLabels ? gateLabels.get(gate.id) : undefined}
+            />
           ))}
-          <FlightPath gates={currentTrack.gates} gateSequence={currentTrack.gateSequence} />
+          {config.showFlightPath && <FlightPath gates={currentTrack.gates} gateSequence={currentTrack.gateSequence} />}
         </>
       )}
 

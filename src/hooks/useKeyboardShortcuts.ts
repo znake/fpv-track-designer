@@ -13,7 +13,6 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
   const undo = useAppStore((s) => s.undo)
   const redo = useAppStore((s) => s.redo)
   const selectGate = useAppStore((s) => s.selectGate)
-  const setTrack = useAppStore((s) => s.setTrack)
   const moveGate = useAppStore((s) => s.moveGate)
   const selectedGateId = useAppStore((s) => s.selectedGateId)
 
