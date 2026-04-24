@@ -62,31 +62,31 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
   const tools = [
     {
       icon: Dice5,
-      label: 'Shuffle',
+      label: 'Mischen',
       shortcut: 'R',
       action: handleShuffle,
     },
     {
       icon: Save,
-      label: 'Save',
+      label: 'Speichern',
       shortcut: 'Ctrl+S',
       action: handleSaveClick,
     },
     {
       icon: FilePlus,
-      label: 'New Track',
+      label: 'Neue Strecke',
       shortcut: 'Ctrl+N',
       action: handleNew,
     },
     {
       icon: Settings2,
-      label: 'Settings',
+      label: 'Einstellungen',
       shortcut: '',
       action: handleSettingsClick,
     },
     {
       icon: GalleryVertical,
-      label: 'Gallery',
+      label: 'Galerie',
       shortcut: 'G',
       action: handleGalleryClick,
     },

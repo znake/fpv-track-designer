@@ -74,7 +74,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
       <div className="flex items-center gap-2">
         <Drone className="size-5 text-primary" />
         <span className="text-sm font-semibold tracking-tight">
-          FPV Track Designer
+          FPV-Track-Designer
         </span>
       </div>
 
@@ -94,7 +94,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            Undo{past.length > 0 && ` (${past.length})`}
+            Rückgängig{past.length > 0 && ` (${past.length})`}
           </TooltipContent>
         </Tooltip>
 
@@ -110,7 +110,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            Redo{future.length > 0 && ` (${future.length})`}
+            Wiederholen{future.length > 0 && ` (${future.length})`}
           </TooltipContent>
         </Tooltip>
       </div>
@@ -126,7 +126,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
             checked={config.showFlightPath}
             onChange={(e) => setShowFlightPath(e.target.checked)}
           />
-          <span>Flight Path</span>
+          <span>Flugbahn</span>
         </label>
         <label className="flex items-center gap-1.5">
           <input
@@ -135,7 +135,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
             checked={config.showOpeningLabels}
             onChange={(e) => setShowOpeningLabels(e.target.checked)}
           />
-          <span>Through Passes</span>
+          <span>Durchflüge</span>
         </label>
       </div>
 
@@ -171,7 +171,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
               />
             </label>
           </TooltipTrigger>
-          <TooltipContent>Import JSON</TooltipContent>
+          <TooltipContent>JSON importieren</TooltipContent>
         </Tooltip>
 
         {/* Export */}
@@ -181,7 +181,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
               <Download className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Export JSON</TooltipContent>
+          <TooltipContent>JSON exportieren</TooltipContent>
         </Tooltip>
 
         <Separator orientation="vertical" className="h-6" />
