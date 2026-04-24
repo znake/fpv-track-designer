@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { saveTrack, loadTrack, listTracks, deleteTrack, autoSave } from './storage'
 import type { Track, Config } from '../types'
+import { createDefaultGateOpenings } from './gateOpenings'
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -27,9 +28,9 @@ const createTestTrack = (overrides?: Partial<Track>): Track => ({
   id: 'test-track-id',
   name: 'Test Track',
   gates: [
-    { id: 'gate-1', type: 'standard', position: { x: 0, y: 0, z: 0 }, rotation: 0, size: 1 },
+    { id: 'gate-1', type: 'standard', position: { x: 0, y: 0, z: 0 }, rotation: 0, size: 1, openings: createDefaultGateOpenings('standard', 1) },
   ],
-  gateSequence: ['gate-1'],
+  gateSequence: [{ gateId: 'gate-1', openingId: 'main', reverse: false }],
   fieldSize: { width: 100, height: 100 },
   gateSize: 1,
   createdAt: '2024-01-01T00:00:00.000Z',
@@ -50,6 +51,8 @@ const createTestConfig = (): Config => ({
   },
   fieldSize: { width: 100, height: 100 },
   gateSize: 1,
+  showFlightPath: true,
+  showOpeningLabels: true,
 })
 
 describe('storage', () => {

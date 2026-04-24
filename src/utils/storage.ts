@@ -1,29 +1,18 @@
 import type { Track, Config } from '../types'
 import { serializeTrack, deserializeTrack } from '../schemas/track.schema'
+import { normalizeGates } from './gateOpenings'
+import { normalizeGateSequence } from './gateSequence'
 
 const STORAGE_KEY_PREFIX = 'fpv-track-'
 const TRACK_LIST_KEY = 'fpv-track-list'
 
-function normalizeTrackSequence(track: Track): Track {
-  const gateIds = new Set(track.gates.map((g) => g.id))
-  const source = Array.isArray(track.gateSequence) && track.gateSequence.length > 0
-    ? track.gateSequence
-    : track.gates.map((g) => g.id)
-
-  const normalized: string[] = []
-  for (const id of source) {
-    if (!gateIds.has(id)) continue
-    if (normalized.length > 0 && normalized[normalized.length - 1] === id) continue
-    normalized.push(id)
-  }
-
-  if (normalized.length > 1 && normalized[0] === normalized[normalized.length - 1]) {
-    normalized.pop()
-  }
+function normalizeTrackData(track: Track): Track {
+  const gates = normalizeGates(track.gates)
 
   return {
     ...track,
-    gateSequence: normalized.length > 0 ? normalized : track.gates.map((g) => g.id),
+    gates,
+    gateSequence: normalizeGateSequence(track.gateSequence, gates),
   }
 }
 
@@ -35,11 +24,10 @@ export interface SavedTrackInfo {
 
 export function saveTrack(track: Track, config: Config): void {
   try {
-    const normalizedTrack = normalizeTrackSequence(track)
+    const normalizedTrack = normalizeTrackData(track)
     const json = serializeTrack(normalizedTrack, config)
     localStorage.setItem(STORAGE_KEY_PREFIX + normalizedTrack.id, json)
 
-    // Update track list
     const list = listTracks()
     const existing = list.findIndex(t => t.id === normalizedTrack.id)
     const info: SavedTrackInfo = { id: normalizedTrack.id, name: normalizedTrack.name, updatedAt: normalizedTrack.updatedAt }
@@ -65,7 +53,7 @@ export function loadTrack(id: string): { track: Track; config: Config } | null {
   if ('error' in result) return null
   return {
     ...result,
-    track: normalizeTrackSequence(result.track),
+    track: normalizeTrackData(result.track),
   }
 }
 
