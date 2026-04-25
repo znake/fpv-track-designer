@@ -105,7 +105,7 @@ function App() {
               setSettingsOpen(true)
             }}
           />
-          <main className="relative min-w-0 flex-1 pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0">
+          <main className="relative min-w-0 flex-1 touch-none pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0">
             <Scene />
           </main>
         </div>
