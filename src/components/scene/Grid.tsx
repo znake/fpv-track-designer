@@ -79,7 +79,7 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
         <meshBasicMaterial
           color="#d9ead0"
           transparent
-          opacity={0.07}
+          opacity={0.035}
           depthWrite={false}
           toneMapped={false}
         />
