@@ -69,11 +69,14 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
   }
 
   return (
-    <header className="flex h-12 w-full shrink-0 items-center gap-2 border-b border-border bg-background/80 px-3 backdrop-blur-sm">
+    <header className="flex h-14 w-full shrink-0 items-center gap-1 border-b border-border bg-background/90 px-2 backdrop-blur-sm md:h-12 md:gap-2 md:px-3">
       {/* Left: Logo + Title */}
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <Drone className="size-5 text-primary" />
-        <span className="text-sm font-semibold tracking-tight">
+        <span className="text-sm font-semibold tracking-tight sm:hidden">
+          FPV
+        </span>
+        <span className="hidden text-sm font-semibold tracking-tight sm:inline">
           FPV-Track-Designer
         </span>
         <Badge variant="outline" className="hidden border-amber-500/40 bg-amber-500/10 px-1.5 py-0 text-[10px] font-medium text-amber-700 sm:inline-flex">
@@ -81,10 +84,10 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
         </Badge>
       </div>
 
-      <Separator orientation="vertical" className="h-6" />
+      <Separator orientation="vertical" className="hidden h-6 sm:block" />
 
       {/* Center: Undo/Redo */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 md:gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -118,10 +121,10 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
         </Tooltip>
       </div>
 
-      <Separator orientation="vertical" className="h-6" />
+      <Separator orientation="vertical" className="hidden h-6 md:block" />
 
       {/* Center: View toggles */}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="hidden items-center gap-3 text-xs text-muted-foreground md:flex">
         <label className="flex items-center gap-1.5">
           <input
             type="checkbox"
@@ -143,7 +146,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
       </div>
 
       {/* Right: Track name + actions */}
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex min-w-0 items-center gap-1 md:gap-2">
         <a
           href="https://fpvooe.com/"
           target="_blank"
@@ -156,7 +159,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
         {currentTrack && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant="secondary" className="max-w-48 truncate">
+              <Badge variant="secondary" className="hidden max-w-48 truncate md:inline-flex">
                 {currentTrack.name}
               </Badge>
             </TooltipTrigger>
@@ -164,7 +167,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
           </Tooltip>
         )}
 
-        <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="hidden h-6 sm:block" />
 
         {/* Import */}
         <Tooltip>
@@ -196,7 +199,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
           <TooltipContent>JSON exportieren</TooltipContent>
         </Tooltip>
 
-        <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="hidden h-6 sm:block" />
 
         {/* Help */}
         <Tooltip>
