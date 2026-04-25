@@ -30,6 +30,23 @@ import { TopBar } from './components/layout/TopBar'
 import { LeftToolPanel } from './components/layout/LeftToolPanel'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
+const FIRST_VISIT_COOKIE = 'fpv-track-designer-visited'
+const FIRST_VISIT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
+function hasFirstVisitCookie() {
+  if (typeof document === 'undefined') return true
+
+  return document.cookie
+    .split('; ')
+    .some((cookie) => cookie.startsWith(`${FIRST_VISIT_COOKIE}=`))
+}
+
+function setFirstVisitCookie() {
+  if (typeof document === 'undefined') return
+
+  document.cookie = `${FIRST_VISIT_COOKIE}=true; max-age=${FIRST_VISIT_COOKIE_MAX_AGE}; path=/; SameSite=Lax`
+}
+
 function App() {
   const currentTrack = useAppStore((state) => state.currentTrack)
   const setTrack = useAppStore((state) => state.setTrack)
@@ -59,6 +76,16 @@ function App() {
       setTrack(track)
     }
   }, [currentTrack, setTrack])
+
+  // Show help once for first-time visitors.
+  useEffect(() => {
+    if (hasFirstVisitCookie()) return
+
+    setFirstVisitCookie()
+    const timeoutId = window.setTimeout(() => setShortcutsOpen(true), 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [])
 
   return (
     <TooltipProvider>
