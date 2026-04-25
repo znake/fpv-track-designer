@@ -106,7 +106,7 @@ const shortcuts: ShortcutGroup[] = [
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="inline-flex items-center justify-center rounded-md bg-muted px-2 py-0.5 text-xs font-mono text-muted-foreground ring-1 ring-border">
+    <kbd className="inline-flex items-center justify-center rounded-md bg-muted px-2 py-0.5 font-mono text-xs whitespace-nowrap text-muted-foreground ring-1 ring-border">
       {children}
     </kbd>
   )
@@ -115,11 +115,11 @@ function Kbd({ children }: { children: React.ReactNode }) {
 function ShortcutKeys({ keys }: { keys: string[] }) {
   // Keys that contain special UI text (not keyboard keys) render as plain text
   if (keys.length === 1 && keys[0].includes(' ')) {
-    return <span className="shrink-0 text-xs text-muted-foreground">{keys[0]}</span>
+    return <span className="max-w-full text-right text-xs text-muted-foreground sm:max-w-48">{keys[0]}</span>
   }
 
   return (
-    <span className="flex shrink-0 items-center gap-1">
+    <span className="flex min-w-0 flex-wrap items-center justify-end gap-1">
       {keys.map((key, i) => (
         <Kbd key={i}>{key}</Kbd>
       ))}
@@ -133,8 +133,8 @@ export function KeyboardShortcutsDialog({
 }: KeyboardShortcutsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100dvw-2rem)] max-w-4xl overflow-hidden p-4 sm:w-[calc(100dvw-2rem)] sm:p-5">
+        <DialogHeader className="pr-10">
           <DialogTitle className="flex items-center gap-2">
             <CircleHelp className="size-5" />
             Hilfe
@@ -144,8 +144,8 @@ export function KeyboardShortcutsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(100dvh-10rem)] pr-4">
-          <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
+        <ScrollArea className="max-h-[calc(100dvh-10rem)] overflow-x-hidden pr-3 sm:pr-4">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-[1.15fr_1fr] lg:gap-6">
             <div className="rounded-xl border border-border bg-muted/30 p-4">
               <h3 className="text-sm font-semibold text-foreground">
                 Tore bearbeiten
@@ -160,12 +160,12 @@ export function KeyboardShortcutsDialog({
                 {helpSteps.map(({ title, description, Icon, accentClassName }) => (
                   <div
                     key={title}
-                    className="flex gap-3 rounded-lg border border-border bg-background/70 p-3"
+                    className="flex min-w-0 gap-3 rounded-lg border border-border bg-background/70 p-3"
                   >
                     <div className={`flex size-10 shrink-0 items-center justify-center rounded-full border ${accentClassName}`}>
                       <Icon className="size-5" />
                     </div>
-                    <div className="space-y-1">
+                    <div className="min-w-0 space-y-1">
                       <h4 className="text-sm font-medium text-foreground">{title}</h4>
                       <p className="text-sm text-muted-foreground">{description}</p>
                     </div>
@@ -174,7 +174,7 @@ export function KeyboardShortcutsDialog({
               </div>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid min-w-0 gap-4">
               {shortcuts.map((group) => (
                 <div key={group.category} className="rounded-xl border border-border bg-background/70 p-3">
                   <h3 className="text-sm font-semibold text-foreground">
@@ -184,7 +184,7 @@ export function KeyboardShortcutsDialog({
                     {group.shortcuts.map((shortcut, i) => (
                       <div
                         key={i}
-                        className="flex items-center justify-between gap-3 border-b border-border py-2 last:border-0"
+                        className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border py-2 last:border-0 sm:flex-nowrap sm:gap-3"
                       >
                         <span className="min-w-0 text-sm text-muted-foreground">
                           {shortcut.description}
