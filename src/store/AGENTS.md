@@ -33,6 +33,30 @@ const action = (payload) => set((state) => {
 })
 ```
 
+## DIRTY-STATE / UNSAVED-CHANGES FLOW
+`isTrackModified` (boolean) is the single source of truth for "the track has
+unsaved changes". It is:
+- Set `true` by every undoable mutation (`updateGate`, `moveGate`, `rotateGate`, `insertGateAtIndex`, `deleteSelectedGates`, `toggleGateDirection`, `moveGateSequenceEntry`, `duplicateGate`, `snapAllGatesToGrid`, `commitGateDrag`)
+- Reset to `false` by `setTrack`, `replaceTrack`, and `markTrackSaved` (after a successful localStorage save)
+- Tracked inside `TrackHistoryEntry` so undo/redo restores the dirty flag of the snapshot
+
+Destructive actions (Shuffle, Import JSON, Gallery Load, Gallery Duplicate,
+Apply Config) MUST be funnelled through `requestDestructiveAction(action,
+title, description)`. When `isTrackModified` is `true` the call stages the
+action in `pendingDestructiveAction` and the globally-mounted
+`UnsavedChangesDialog` (in `components/ui/UnsavedChangesDialog.tsx`) shows a
+3-button dialog:
+- **Abbrechen** → `cancelDestructiveAction()` clears the staged action
+- **Zuerst speichern** → `saveBeforeDestructiveAction()` opens `SaveTrackDialog`; on successful save `markTrackSaved()` runs the staged action automatically
+- **Verwerfen** → `confirmDestructiveAction()` runs the staged action immediately
+
+When `isTrackModified` is `false` `requestDestructiveAction` runs the action
+synchronously without showing the dialog.
+
+The global `SaveTrackDialog` is also store-driven via `isSaveDialogOpen`,
+`openSaveDialog()`, and `dismissSaveDialog()` – use those instead of holding
+a local `useState` boolean.
+
 ## NOTES
 - `trackSlice.ts` duplicates `moveGate`/`rotateGate` logic from `utils/gateOperations.ts`
 - `commitGateDrag()` pushes history without snapshotting (avoids undo stack pollution during drag)

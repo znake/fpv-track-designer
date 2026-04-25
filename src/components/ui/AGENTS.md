@@ -5,7 +5,7 @@
 ## STRUCTURE
 ```
 ui/
-├── GateConfigPanel.tsx    # Gate quantities, field size, gate size selector
+├── GateConfigPanel.tsx    # Gate quantities and field size settings
 ├── SaveTrackDialog.tsx    # Name + save track to localStorage
 ├── TrackGallery.tsx       # Saved tracks list with load/delete
 ├── KeyboardShortcutsDialog.tsx  # Keyboard shortcut reference

@@ -72,6 +72,16 @@ npm run test     # vitest --run
 npm run lint     # eslint .
 ```
 
+## COMMIT POLICY
+- **Sofort committen** nach jeder gröberen Änderung, sobald Tests durchgelaufen sind und ein Task als abgeschlossen gilt.
+- Trigger für einen Commit:
+  - Eine logische Einheit / ein Task ist fertig (Feature, Bugfix, Refactor-Schritt).
+  - `npm run test` und `npm run build` laufen ohne Fehler durch.
+  - `lsp_diagnostics` ist sauber auf den geänderten Dateien.
+- Nicht warten, bis sich mehrere Tasks anhäufen — lieber kleine, atomare Commits als ein großer Sammel-Commit.
+- Commit-Message kurz und im Stil des Repos halten; auf das *Warum* fokussieren, nicht nur auf das *Was*.
+- Niemals committen, wenn Tests/Build fehlschlagen oder der Stand bewusst kaputt ist.
+
 ## NOTES
 - `src/assets/hero.png`, `react.svg`, `vite.svg` — unused template assets
 - Chunk size warning (>500KB) from R3F+drei bundle — acceptable for MVP
