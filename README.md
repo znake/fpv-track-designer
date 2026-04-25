@@ -75,11 +75,24 @@ npm run test     # Vitest starten
 3. Neue Gates können relativ zu einem ausgewählten Gate eingefügt werden.
 4. Ausgewählte Gates lassen sich per Dialog oder Shortcut löschen.
 
+### Maussteuerung in der 3D-Ansicht
+
+Die Ansicht kann vollständig mit der Maus bedient werden:
+
+| Aktion | Mausbedienung |
+| --- | --- |
+| Ansicht drehen | Linke Maustaste gedrückt halten und ziehen |
+| Über die Strecke bewegen | Rechte Maustaste gedrückt halten und ziehen (draggen/pannen) |
+| Zoomen | Mausrad scrollen oder Mausrad/mittlere Maustaste gedrückt halten und nach oben/unten ziehen |
+| Kamerahöhe ändern | `Shift` gedrückt halten und mit linker Maustaste ziehen |
+
+Alternativ kann die Ansicht auch mit `Space + linke Maustaste ziehen` verschoben werden.
+
 ### Shortcuts
 
 | Aktion | Shortcut |
 | --- | --- |
-| Streke Shuffeln | `R` |
+| Strecke shuffeln | `R` |
 | Strecke speichern | `Cmd/Ctrl + S` |
 | Galerie öffnen | `G` |
 | Ansicht verschieben | `Space + linke Maustaste ziehen` |
