@@ -59,6 +59,14 @@ function getGateQuantityCandidate(candidate: Record<string, unknown>, gateType: 
   return typeof value === 'number' ? value : undefined
 }
 
+function hasGateQuantityCandidate(candidate: Record<string, unknown>, gateType: GateType): boolean {
+  if (gateType === 'double-h' && candidate.asymmetric !== undefined) {
+    return true
+  }
+
+  return candidate[gateType] !== undefined
+}
+
 function normalizeGateQuantities(quantities: Record<string, unknown>): Record<GateType, number> {
   const result = {} as Record<GateType, number>
 
@@ -191,6 +199,8 @@ function validateGateQuantities(quantities: unknown): ValidationError[] {
   }
 
   for (const gateType of VALID_GATE_TYPES) {
+    if (!hasGateQuantityCandidate(candidate, gateType)) continue
+
     const quantity = getGateQuantityCandidate(candidate, gateType)
     if (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity)) {
       errors.push({ field: `config.gateQuantities.${gateType}`, message: `Gate quantity for ${gateType} must be a non-negative integer` })

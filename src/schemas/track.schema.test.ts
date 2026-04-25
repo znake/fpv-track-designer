@@ -51,6 +51,33 @@ describe('track schema', () => {
     expect(result.track.gates[0].rotation).toBe(91.5999755859375)
   })
 
+  it('fills missing optional config display flags with defaults when importing legacy payloads', () => {
+    const legacyJson = JSON.stringify({
+      version: '1.0.0',
+      track: {
+        ...track,
+        gateSize: 1.5,
+        gates: track.gates.map((trackGate) => ({ ...trackGate, size: 1.5 })),
+      },
+      config: {
+        gateQuantities: {
+          ...config.gateQuantities,
+        },
+        fieldSize: config.fieldSize,
+      },
+    })
+
+    const result = deserializeTrack(legacyJson)
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+
+    expect(result.config.snapGatesToGrid).toBe(false)
+    expect(result.config.showGrid).toBe(false)
+    expect(result.config.showFlightPath).toBe(true)
+    expect(result.config.showOpeningLabels).toBe(true)
+  })
+
   it('rejects rotations outside the normalized degree range', () => {
     const invalidTrack = {
       ...track,
@@ -90,5 +117,55 @@ describe('track schema', () => {
     expect('gateSize' in result.track).toBe(false)
     expect('gateSize' in result.config).toBe(false)
     expect('size' in result.track.gates[0]).toBe(false)
+  })
+
+  it('loads legacy exports created before octagonal tunnel gate quantities existed', () => {
+    const legacyGateQuantities: Partial<Config['gateQuantities']> = { ...config.gateQuantities }
+    delete legacyGateQuantities['octagonal-tunnel']
+    const legacyJson = JSON.stringify({
+      version: '1.1.0',
+      track: {
+        ...track,
+        gateSize: 1,
+        gates: track.gates.map((gate) => ({ ...gate, size: 1 })),
+      },
+      config: {
+        ...config,
+        gateQuantities: legacyGateQuantities,
+        gateSize: 1,
+      },
+    })
+
+    const result = deserializeTrack(legacyJson)
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+
+    expect(result.config.gateQuantities['octagonal-tunnel']).toBe(0)
+    expect(result.config.gateQuantities.standard).toBe(1)
+  })
+
+  it('still rejects invalid legacy gate quantity values when the key is present', () => {
+    const legacyJson = JSON.stringify({
+      version: '1.1.0',
+      track,
+      config: {
+        ...config,
+        gateQuantities: {
+          ...config.gateQuantities,
+          'octagonal-tunnel': -1,
+        },
+      },
+    })
+
+    const result = deserializeTrack(legacyJson)
+
+    expect('error' in result).toBe(true)
+    if (!('error' in result)) return
+
+    expect(result.errors).toContainEqual({
+      field: 'config.gateQuantities.octagonal-tunnel',
+      message: 'Gate quantity for octagonal-tunnel must be a non-negative integer',
+    })
   })
 })
