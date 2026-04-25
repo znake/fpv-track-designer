@@ -38,12 +38,17 @@ function shouldInsertDoubleHMiddlePass(previous: GateSequenceItem | undefined, c
 
 function insertMissingDoubleHMiddlePasses(sequence: GateSequenceItem[], gateMap: Map<string, Gate>): GateSequenceItem[] {
   const expanded: GateSequenceItem[] = []
+  const gatesWithExistingMiddlePass = new Set(
+    sequence
+      .filter((entry) => entry.openingId === 'middle')
+      .map((entry) => entry.gateId),
+  )
 
   for (const item of sequence) {
     const previous = expanded[expanded.length - 1]
     const gate = gateMap.get(item.gateId)
 
-    if (shouldInsertDoubleHMiddlePass(previous, item, gate)) {
+    if (shouldInsertDoubleHMiddlePass(previous, item, gate) && !gatesWithExistingMiddlePass.has(item.gateId)) {
       const middleOpening = gate?.openings.find((opening) => opening.id === 'middle')
       if (middleOpening) {
         expanded.push({ gateId: item.gateId, openingId: middleOpening.id, reverse: Boolean(middleOpening.reverse) })

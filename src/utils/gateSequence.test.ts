@@ -86,6 +86,20 @@ describe('gateSequence', () => {
     ])
   })
 
+  it('does not duplicate middle pass for a manually ordered double-h lower-upper-middle sequence', () => {
+    const gate = createGate('double-h-custom-order', 'double-h')
+
+    expect(normalizeGateSequence([
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+      { gateId: gate.id, openingId: 'middle', reverse: false },
+    ], [gate])).toEqual([
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+      { gateId: gate.id, openingId: 'middle', reverse: false },
+    ])
+  })
+
   it('builds dive default sequence as entry-top then an exit side', () => {
     const gate = {
       ...createGate('dive-1', 'dive'),
