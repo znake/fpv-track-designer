@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { create } from 'zustand'
 import { createTrackSlice, type TrackSlice } from './trackSlice'
-import type { Track, Gate } from '../types'
+import type { Config, Track, Gate } from '../types'
 import { createDefaultGateOpenings } from '../utils/gateOpenings'
+import type { GenerationConfig } from '../utils/generationConfig'
 
 const createTestTrack = (gates: Gate[] = []): Track => ({
   id: 'test-track',
@@ -10,7 +11,6 @@ const createTestTrack = (gates: Gate[] = []): Track => ({
   gates,
   gateSequence: gates.map((gate) => ({ gateId: gate.id, openingId: gate.openings[0]?.id ?? 'main', reverse: false })),
   fieldSize: { width: 100, height: 100 },
-  gateSize: 1,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 })
@@ -20,13 +20,19 @@ const createTestGate = (id: string, overrides: Partial<Gate> = {}): Gate => ({
   type: 'standard',
   position: { x: 0, y: 0, z: 0 },
   rotation: 0,
-  size: 1,
-  openings: createDefaultGateOpenings('standard', 1),
+  openings: createDefaultGateOpenings('standard'),
   ...overrides,
 })
 
 const createTestStore = () => {
   return create<TrackSlice>()((set, get, store) => ({
+    ...createTrackSlice(set, get, store),
+  }))
+}
+
+const createSnapTestStore = (config: Pick<Config, 'snapGatesToGrid'>) => {
+  return create<TrackSlice & { config: Pick<Config, 'fieldSize' | 'snapGatesToGrid'> }>()((set, get, store) => ({
+    config: { fieldSize: { width: 100, height: 100 }, ...config },
     ...createTrackSlice(set, get, store),
   }))
 }
@@ -92,8 +98,122 @@ describe('TrackSlice - Undo/Redo', () => {
     store.getState().moveGate('gate-1', 'N', 1)
 
     const gate = store.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
-    expect(gate?.position.y).toBe(1)
+    expect(gate?.position.z).toBe(-1)
     expect(store.getState().past.length).toBe(1)
+  })
+
+  it('should clamp store gate movement to the field bounds', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: 49.5, y: 0, z: -49.5 } }),
+    ])
+    store.getState().setTrack(track)
+
+    expect(store.getState().currentTrack?.fieldSize).toEqual({ width: 100, height: 100 })
+    expect(store.getState().currentTrack?.gates[0]?.position).toEqual({ x: 49.5, y: 0, z: -49.5 })
+
+    store.getState().moveGate('gate-1', 'E', 10)
+    store.getState().moveGate('gate-1', 'N', 10)
+
+    const gate = store.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
+    expect(gate?.position).toEqual({ x: 50, y: 0, z: -50 })
+  })
+
+  it('should clamp selected gate movement to the field bounds', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: -49.5, y: 0, z: 49.5 } }),
+      createTestGate('gate-2', { position: { x: -48, y: 0, z: 48 } }),
+    ])
+    store.getState().setTrack(track)
+    expect(store.getState().currentTrack?.fieldSize).toEqual({ width: 100, height: 100 })
+    store.getState().setSelectedGates(['gate-1', 'gate-2'])
+
+    store.getState().moveSelectedGates('W', 10)
+    store.getState().moveSelectedGates('S', 10)
+
+    expect(store.getState().currentTrack?.gates.map((gate) => gate.position)).toEqual([
+      { x: -50, y: 0, z: 50 },
+      { x: -50, y: 0, z: 50 },
+    ])
+  })
+
+  it('should not position dragged gates below the playing field', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1'),
+    ])
+
+    store.getState().setTrack(track)
+    store.getState().setGatePosition('gate-1', { x: 0, y: -2, z: 0 })
+
+    const gate = store.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
+    expect(gate?.position.y).toBe(0)
+  })
+
+  it('should undo a committed drag to the pre-drag position', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1'),
+    ])
+
+    store.getState().setTrack(track)
+    store.getState().selectGate('gate-1')
+    store.getState().setGatePosition('gate-1', { x: 3, y: 2, z: 4 })
+    store.getState().setGatePosition('gate-1', { x: 4, y: 3, z: 5 })
+    store.getState().commitGateDrag()
+    store.getState().undo()
+
+    const gate = store.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
+    expect(gate?.position).toEqual({ x: 0, y: 0, z: 0 })
+    expect(store.getState().selectedGateId).toBe('gate-1')
+  })
+
+  it('should snap so adjacent gates touch edge-to-edge without overlap', () => {
+    // Gates are 1.2m wide, so the snap step must be 1.2,
+    // otherwise neighbouring gates overlap by ~0.2m as seen in user-reported screenshot.
+    const snapStore = createSnapTestStore({ snapGatesToGrid: true })
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: 0, y: 0, z: 0 } }),
+      createTestGate('gate-2'),
+    ])
+
+    snapStore.getState().setTrack(track)
+    // User drags gate-2 to x=1.1 (just past the right edge of gate-1)
+    snapStore.getState().setGatePosition('gate-2', { x: 1.1, y: 0, z: 0 })
+
+    const gate2 = snapStore.getState().currentTrack?.gates.find(g => g.id === 'gate-2')
+    // Gate width = 1.2 → centres must differ by exactly 1.2 to sit edge-to-edge
+    expect(gate2?.position.x).toBeCloseTo(1.2, 9)
+  })
+
+  it('should clamp vertical drag positions before snapping them to the active grid', () => {
+    const snapStore = createSnapTestStore({ snapGatesToGrid: true })
+    const track = createTestTrack([
+      createTestGate('gate-1'),
+    ])
+
+    snapStore.getState().setTrack(track)
+    snapStore.getState().setGatePosition('gate-1', { x: 0, y: -0.8, z: 0 })
+
+    const gate = snapStore.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
+    expect(gate?.position.y).toBe(0)
+  })
+
+  it('should align all gates when grid snapping is enabled', () => {
+    const snapStore = createSnapTestStore({ snapGatesToGrid: true })
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: 1.1, y: 0.8, z: -1.1 } }),
+      createTestGate('gate-2', { position: { x: 2.4, y: 2.2, z: 2.4 } }),
+    ])
+
+    snapStore.getState().setTrack(track)
+    snapStore.getState().snapAllGatesToGrid()
+
+    const positions = snapStore.getState().currentTrack?.gates.map((gate) => gate.position) ?? []
+    expect(positions[0].x).toBeCloseTo(1.2, 9)
+    expect(positions[0].y).toBeCloseTo(1.2, 9)
+    expect(positions[0].z).toBeCloseTo(-1.2, 9)
+    expect(positions[1].x).toBeCloseTo(2.4, 9)
+    expect(positions[1].y).toBeCloseTo(2.4, 9)
+    expect(positions[1].z).toBeCloseTo(2.4, 9)
+    expect(snapStore.getState().past.length).toBe(1)
   })
 
   it('should undo last gate move', () => {
@@ -106,7 +226,7 @@ describe('TrackSlice - Undo/Redo', () => {
     store.getState().undo()
 
     const gate = store.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
-    expect(gate?.position.y).toBe(0)
+    expect(gate?.position.z).toBe(0)
     expect(store.getState().future.length).toBe(1)
   })
 
@@ -121,7 +241,7 @@ describe('TrackSlice - Undo/Redo', () => {
     store.getState().redo()
 
     const gate = store.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
-    expect(gate?.position.y).toBe(1)
+    expect(gate?.position.z).toBe(-1)
   })
 
   it('should rotate gate clockwise', () => {
@@ -154,11 +274,10 @@ describe('TrackSlice - Undo/Redo', () => {
     ])
     store.getState().setTrack(track)
 
-    store.getState().updateGate('gate-1', { type: 'h-gate', size: 1.5 })
+    store.getState().updateGate('gate-1', { type: 'h-gate' })
 
     const gate = store.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
     expect(gate?.type).toBe('h-gate')
-    expect(gate?.size).toBe(1.5)
     expect(gate?.openings[0]?.id).toBe('lower')
   })
 
@@ -226,7 +345,7 @@ describe('TrackSlice - Undo/Redo', () => {
   it('should toggle visible opening direction even when the opening is not in the sequence', () => {
     const gate = createTestGate('gate-1', {
       type: 'double',
-      openings: createDefaultGateOpenings('double', 1),
+      openings: createDefaultGateOpenings('double'),
     })
     const track = createTestTrack([gate])
     track.gateSequence = [
@@ -247,11 +366,11 @@ describe('TrackSlice - Undo/Redo', () => {
   it('should move a gate sequence entry to a new number and shift the rest', () => {
     const firstDoubleGate = createTestGate('gate-1', {
       type: 'double',
-      openings: createDefaultGateOpenings('double', 1),
+      openings: createDefaultGateOpenings('double'),
     })
     const secondDoubleGate = createTestGate('gate-2', {
       type: 'double',
-      openings: createDefaultGateOpenings('double', 1),
+      openings: createDefaultGateOpenings('double'),
     })
     const track = createTestTrack([firstDoubleGate, secondDoubleGate])
     track.gateSequence = [
@@ -292,7 +411,7 @@ describe('TrackSlice - Undo/Redo', () => {
   it('should preserve an explicit double-h sequence order including middle when normalizing track', () => {
     const doubleHGate = createTestGate('double-h-1', {
       type: 'double-h',
-      openings: createDefaultGateOpenings('double-h', 1),
+      openings: createDefaultGateOpenings('double-h'),
     })
     const track = createTestTrack([doubleHGate])
     track.gateSequence = [
@@ -314,7 +433,7 @@ describe('TrackSlice - Undo/Redo', () => {
     const fillerGates = Array.from({ length: 7 }, (_, index) => createTestGate(`gate-${index + 1}`))
     const doubleHGate = createTestGate('double-h-1', {
       type: 'double-h',
-      openings: createDefaultGateOpenings('double-h', 1),
+      openings: createDefaultGateOpenings('double-h'),
     })
     const track = createTestTrack([...fillerGates, doubleHGate])
     track.gateSequence = [
@@ -364,8 +483,8 @@ describe('TrackSlice - Undo/Redo', () => {
     const gate1 = movedTrack?.gates.find((g) => g.id === 'gate-1')
     const gate2 = movedTrack?.gates.find((g) => g.id === 'gate-2')
 
-    expect(gate1?.position.y).toBe(1)
-    expect(gate2?.position.y).toBe(1)
+    expect(gate1?.position.z).toBe(-1)
+    expect(gate2?.position.z).toBe(-1)
   })
 
   it('should delete all selected gates', () => {
@@ -428,7 +547,7 @@ describe('TrackSlice - Undo/Redo', () => {
     store.getState().setTrack(track)
 
     store.getState().insertGateAtIndex(
-      { id: 'gate-3', type: 'h-gate', position: { x: 5, y: 0, z: 0 }, rotation: 30, size: 1, openings: createDefaultGateOpenings('h-gate', 1) },
+      { id: 'gate-3', type: 'h-gate', position: { x: 5, y: 0, z: 0 }, rotation: 30, openings: createDefaultGateOpenings('h-gate') },
       1,
       2,
     )
@@ -448,7 +567,7 @@ describe('TrackSlice - Undo/Redo', () => {
 
   it('should not insert a second start-finish gate', () => {
     const track = createTestTrack([
-      createTestGate('gate-1', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish', 1) }),
+      createTestGate('gate-1', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish') }),
       createTestGate('gate-2', { position: { x: 10, y: 0, z: 0 } }),
     ])
 
@@ -460,8 +579,7 @@ describe('TrackSlice - Undo/Redo', () => {
         type: 'start-finish',
         position: { x: 5, y: 0, z: 0 },
         rotation: 30,
-        size: 1,
-        openings: createDefaultGateOpenings('start-finish', 1),
+        openings: createDefaultGateOpenings('start-finish'),
       },
       1,
       1,
@@ -471,9 +589,9 @@ describe('TrackSlice - Undo/Redo', () => {
     expect(store.getState().past).toEqual([])
   })
 
-  it('should not insert a second flag gate', () => {
+  it('should insert multiple flag gates', () => {
     const track = createTestTrack([
-      createTestGate('gate-1', { type: 'flag', openings: createDefaultGateOpenings('flag', 1) }),
+      createTestGate('gate-1', { type: 'flag', openings: createDefaultGateOpenings('flag') }),
       createTestGate('gate-2', { position: { x: 10, y: 0, z: 0 } }),
     ])
 
@@ -485,22 +603,21 @@ describe('TrackSlice - Undo/Redo', () => {
         type: 'flag',
         position: { x: 5, y: 0, z: 0 },
         rotation: 30,
-        size: 1,
-        openings: createDefaultGateOpenings('flag', 1),
+        openings: createDefaultGateOpenings('flag'),
       },
       1,
       1,
     )
 
-    expect(store.getState().currentTrack?.gates.map((gate) => gate.id)).toEqual(['gate-1', 'gate-2'])
-    expect(store.getState().past).toEqual([])
+    expect(store.getState().currentTrack?.gates.map((gate) => gate.id)).toEqual(['gate-1', 'gate-3', 'gate-2'])
+    expect(store.getState().past.length).toBe(1)
   })
 
-  it('should not update another gate to an existing singleton gate type', () => {
+  it('should only block updates to an existing start-finish gate type', () => {
     const track = createTestTrack([
-      createTestGate('gate-1', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish', 1) }),
+      createTestGate('gate-1', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish') }),
       createTestGate('gate-2'),
-      createTestGate('gate-3', { type: 'flag', openings: createDefaultGateOpenings('flag', 1) }),
+      createTestGate('gate-3', { type: 'flag', openings: createDefaultGateOpenings('flag') }),
       createTestGate('gate-4'),
     ])
 
@@ -512,24 +629,24 @@ describe('TrackSlice - Undo/Redo', () => {
       'start-finish',
       'standard',
       'flag',
-      'standard',
+      'flag',
     ])
-    expect(store.getState().past).toEqual([])
+    expect(store.getState().past.length).toBe(1)
   })
 
-  it('should remove duplicate singleton gates when setting a track', () => {
+  it('should only remove duplicate start-finish gates when setting a track', () => {
     const track = createTestTrack([
-      createTestGate('gate-1', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish', 1) }),
-      createTestGate('gate-2', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish', 1) }),
-      createTestGate('gate-3', { type: 'flag', openings: createDefaultGateOpenings('flag', 1) }),
-      createTestGate('gate-4', { type: 'flag', openings: createDefaultGateOpenings('flag', 1) }),
+      createTestGate('gate-1', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish') }),
+      createTestGate('gate-2', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish') }),
+      createTestGate('gate-3', { type: 'flag', openings: createDefaultGateOpenings('flag') }),
+      createTestGate('gate-4', { type: 'flag', openings: createDefaultGateOpenings('flag') }),
       createTestGate('gate-5'),
     ])
 
     store.getState().setTrack(track)
 
-    expect(store.getState().currentTrack?.gates.map((gate) => gate.id)).toEqual(['gate-1', 'gate-3', 'gate-5'])
-    expect(store.getState().currentTrack?.gateSequence.map((entry) => entry.gateId)).toEqual(['gate-1', 'gate-3', 'gate-5'])
+    expect(store.getState().currentTrack?.gates.map((gate) => gate.id)).toEqual(['gate-1', 'gate-3', 'gate-4', 'gate-5'])
+    expect(store.getState().currentTrack?.gateSequence.map((entry) => entry.gateId)).toEqual(['gate-1', 'gate-3', 'gate-4', 'gate-5'])
   })
 
   it('should insert double gates as lower then upper sequence visits', () => {
@@ -546,8 +663,7 @@ describe('TrackSlice - Undo/Redo', () => {
         type: 'double',
         position: { x: 5, y: 0, z: 0 },
         rotation: 0,
-        size: 1,
-        openings: createDefaultGateOpenings('double', 1),
+        openings: createDefaultGateOpenings('double'),
       },
       1,
       1,
@@ -571,8 +687,7 @@ describe('TrackSlice - Undo/Redo', () => {
       type: 'h-gate' as const,
       position: { x: 5, y: 0, z: 0 },
       rotation: 30,
-      size: 1 as const,
-      openings: createDefaultGateOpenings('h-gate', 1),
+      openings: createDefaultGateOpenings('h-gate'),
     }
 
     store.getState().setTrack(track)
@@ -606,6 +721,102 @@ describe('TrackSlice - Undo/Redo', () => {
     expect(store.getState().selectedGateIds).toEqual(['gate-3'])
   })
 
+  it('should duplicate gate to the right and select it', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: 0, y: 0, z: 0 }, rotation: 0 }),
+      createTestGate('gate-2', { position: { x: 10, y: 0, z: 0 } }),
+    ])
+    store.getState().setTrack(track)
+    store.getState().selectGate('gate-1')
+
+    store.getState().duplicateGate('gate-1')
+
+    const gates = store.getState().currentTrack?.gates ?? []
+    expect(gates.length).toBe(3)
+    expect(gates[0].id).toBe('gate-1')
+    expect(gates[2].id).toBe('gate-2')
+    const duplicated = gates[1]
+    expect(duplicated.id).not.toBe('gate-1')
+    expect(duplicated.type).toBe('standard')
+    expect(duplicated.rotation).toBe(0)
+    expect(duplicated.position.x).toBeCloseTo(2.4)
+    expect(duplicated.position.y).toBe(0)
+    expect(duplicated.position.z).toBeCloseTo(0)
+    expect(store.getState().selectedGateId).toBe(duplicated.id)
+    expect(store.getState().selectedGateIds).toEqual([duplicated.id])
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('should respect rotation when duplicating gate', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: 0, y: 0, z: 0 }, rotation: 90 }),
+    ])
+    store.getState().setTrack(track)
+
+    store.getState().duplicateGate('gate-1')
+
+    const gates = store.getState().currentTrack?.gates ?? []
+    const duplicated = gates[1]
+    // rotation 90deg => right axis = (cos 90, -sin 90) = (0, -1) in (x, z)
+    expect(duplicated.position.x).toBeCloseTo(0)
+    expect(duplicated.position.z).toBeCloseTo(-2.4)
+  })
+
+  it('should insert duplicated gate sequence entries right after the source entries', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: 0, y: 0, z: 0 } }),
+      createTestGate('gate-2', { position: { x: 5, y: 0, z: 0 } }),
+    ])
+    store.getState().setTrack(track)
+
+    store.getState().duplicateGate('gate-1')
+
+    const sequence = store.getState().currentTrack?.gateSequence ?? []
+    const duplicatedId = store.getState().selectedGateId!
+    expect(sequence.map((entry) => entry.gateId)).toEqual(['gate-1', duplicatedId, 'gate-2'])
+  })
+
+  it('should not duplicate start-finish gate (singleton)', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { type: 'start-finish', openings: createDefaultGateOpenings('start-finish') }),
+    ])
+    store.getState().setTrack(track)
+
+    store.getState().duplicateGate('gate-1')
+
+    expect(store.getState().currentTrack?.gates.length).toBe(1)
+    expect(store.getState().past).toEqual([])
+  })
+
+  it('should clamp duplicated gate position to field bounds', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: 49.5, y: 0, z: 0 }, rotation: 0 }),
+    ])
+    store.getState().setTrack(track)
+
+    store.getState().duplicateGate('gate-1')
+
+    const gates = store.getState().currentTrack?.gates ?? []
+    expect(gates[1].position.x).toBeLessThanOrEqual(50)
+  })
+
+  it('should be undoable', () => {
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: 0, y: 0, z: 0 } }),
+    ])
+    store.getState().setTrack(track)
+
+    store.getState().duplicateGate('gate-1')
+    expect(store.getState().currentTrack?.gates.length).toBe(2)
+
+    store.getState().undo()
+    expect(store.getState().currentTrack?.gates.length).toBe(1)
+    expect(store.getState().currentTrack?.gates[0].id).toBe('gate-1')
+
+    store.getState().redo()
+    expect(store.getState().currentTrack?.gates.length).toBe(2)
+  })
+
   it('should limit history to 50 changes', () => {
     const track = createTestTrack([
       createTestGate('gate-1'),
@@ -635,5 +846,336 @@ describe('TrackSlice - Undo/Redo', () => {
     store.getState().redo()
 
     expect(store.getState().currentTrack).toEqual(track)
+  })
+})
+
+describe('TrackSlice - generationConfig and isTrackModified', () => {
+  const fixtureGenerationConfig: GenerationConfig = {
+    gateQuantities: {
+      'standard': 2,
+      'start-finish': 1,
+      'h-gate': 1,
+      'double-h': 1,
+      'dive': 1,
+      'double': 1,
+      'ladder': 1,
+      'flag': 1,
+      'octagonal-tunnel': 1,
+    },
+    fieldSize: { width: 30, height: 15 },
+  }
+
+  let store: ReturnType<typeof createTestStore>
+
+  beforeEach(() => {
+    store = createTestStore()
+  })
+
+  it('setTrack without generationConfig sets generationConfig to null and isTrackModified to false', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    expect(store.getState().generationConfig).toBeNull()
+    expect(store.getState().isTrackModified).toBe(false)
+  })
+
+  it('setTrack with explicit generationConfig stores it', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track, fixtureGenerationConfig)
+    expect(store.getState().generationConfig).toEqual(fixtureGenerationConfig)
+    expect(store.getState().isTrackModified).toBe(false)
+  })
+
+  it('setTrack always resets isTrackModified to false even after prior mutations', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    store.getState().moveGate('gate-1', 'N', 1)
+    expect(store.getState().isTrackModified).toBe(true)
+
+    const nextTrack = createTestTrack([createTestGate('gate-2')])
+    store.getState().setTrack(nextTrack)
+    expect(store.getState().isTrackModified).toBe(false)
+  })
+
+  it('replaceTrack clears both generationConfig and isTrackModified', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track, fixtureGenerationConfig)
+    store.getState().moveGate('gate-1', 'N', 1)
+    expect(store.getState().generationConfig).toEqual(fixtureGenerationConfig)
+    expect(store.getState().isTrackModified).toBe(true)
+
+    const loadedTrack = createTestTrack([createTestGate('gate-2')])
+    store.getState().replaceTrack(loadedTrack)
+    expect(store.getState().generationConfig).toBeNull()
+    expect(store.getState().isTrackModified).toBe(false)
+  })
+
+  it('moveGate sets isTrackModified to true', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    store.getState().moveGate('gate-1', 'N', 1)
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('commitGateDrag sets isTrackModified to true', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    store.getState().setGatePosition('gate-1', { x: 1, y: 0, z: 1 })
+    expect(store.getState().isTrackModified).toBe(false)
+    store.getState().commitGateDrag()
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('deleteSelectedGates sets isTrackModified to true', () => {
+    const track = createTestTrack([createTestGate('gate-1'), createTestGate('gate-2')])
+    store.getState().setTrack(track)
+    store.getState().setSelectedGates(['gate-1'])
+    store.getState().deleteSelectedGates()
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('toggleGateDirection sets isTrackModified to true', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    store.getState().toggleGateDirection('gate-1', 'main')
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('moveGateSequenceEntry sets isTrackModified to true', () => {
+    const track = createTestTrack([createTestGate('gate-1'), createTestGate('gate-2')])
+    store.getState().setTrack(track)
+    store.getState().moveGateSequenceEntry('gate-2', 'main', 2, 1)
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('insertGateAtIndex sets isTrackModified to true', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    store.getState().insertGateAtIndex(
+      {
+        id: 'gate-2',
+        type: 'standard',
+        position: { x: 5, y: 0, z: 0 },
+        rotation: 0,
+        openings: createDefaultGateOpenings('standard'),
+      },
+      1,
+      1,
+    )
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('rotateGate sets isTrackModified to true', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    store.getState().rotateGate('gate-1', true)
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('snapAllGatesToGrid sets isTrackModified to true', () => {
+    const snapStore = createSnapTestStore({ snapGatesToGrid: true })
+    const track = createTestTrack([createTestGate('gate-1', { position: { x: 1.1, y: 0, z: 0 } })])
+    snapStore.getState().setTrack(track)
+    snapStore.getState().snapAllGatesToGrid()
+    expect(snapStore.getState().isTrackModified).toBe(true)
+  })
+
+  it('updateGate sets isTrackModified to true', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    store.getState().updateGate('gate-1', { type: 'h-gate' })
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('moveSelectedGates sets isTrackModified to true', () => {
+    const track = createTestTrack([createTestGate('gate-1'), createTestGate('gate-2')])
+    store.getState().setTrack(track)
+    store.getState().setSelectedGates(['gate-1', 'gate-2'])
+    store.getState().moveSelectedGates('N', 1)
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('undo restores isTrackModified=false from history snapshot', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track, fixtureGenerationConfig)
+    expect(store.getState().isTrackModified).toBe(false)
+
+    store.getState().moveGate('gate-1', 'N', 1)
+    expect(store.getState().isTrackModified).toBe(true)
+
+    store.getState().undo()
+    expect(store.getState().isTrackModified).toBe(false)
+  })
+
+  it('redo restores isTrackModified=true from future snapshot', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    store.getState().moveGate('gate-1', 'N', 1)
+    store.getState().undo()
+    expect(store.getState().isTrackModified).toBe(false)
+
+    store.getState().redo()
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('selectGate does not flip isTrackModified after a fresh setTrack', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    store.getState().selectGate('gate-1')
+    expect(store.getState().isTrackModified).toBe(false)
+
+    store.getState().selectGate('gate-1', true)
+    expect(store.getState().isTrackModified).toBe(false)
+
+    store.getState().selectGate(null)
+    expect(store.getState().isTrackModified).toBe(false)
+  })
+
+  it('setGatePosition does not flip isTrackModified (drag-in-progress, transient)', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    store.getState().setTrack(track)
+    store.getState().setGatePosition('gate-1', { x: 1, y: 0, z: 1 })
+    expect(store.getState().isTrackModified).toBe(false)
+
+    store.getState().setGatePosition('gate-1', { x: 2, y: 0, z: 2 })
+    expect(store.getState().isTrackModified).toBe(false)
+  })
+
+  it('requestDestructiveAction runs immediately when the track is clean', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    let called = false
+
+    store.getState().setTrack(track)
+    store.getState().requestDestructiveAction(
+      () => {
+        called = true
+      },
+      'Titel',
+      'Beschreibung',
+    )
+
+    expect(called).toBe(true)
+    expect(store.getState().pendingDestructiveAction).toBeNull()
+  })
+
+  it('requestDestructiveAction stages the action when the track is modified', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    let called = false
+
+    store.getState().setTrack(track)
+    store.getState().moveGate('gate-1', 'N', 1)
+    store.getState().requestDestructiveAction(
+      () => {
+        called = true
+      },
+      'Titel',
+      'Beschreibung',
+    )
+
+    expect(called).toBe(false)
+    expect(store.getState().pendingDestructiveAction?.title).toBe('Titel')
+    expect(store.getState().pendingDestructiveAction?.description).toBe('Beschreibung')
+  })
+
+  it('cancelDestructiveAction discards a staged destructive action', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    let called = false
+
+    store.getState().setTrack(track)
+    store.getState().moveGate('gate-1', 'N', 1)
+    store.getState().requestDestructiveAction(
+      () => {
+        called = true
+      },
+      'Titel',
+      'Beschreibung',
+    )
+    store.getState().cancelDestructiveAction()
+
+    expect(called).toBe(false)
+    expect(store.getState().pendingDestructiveAction).toBeNull()
+  })
+
+  it('confirmDestructiveAction runs and clears a staged destructive action', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    let called = false
+
+    store.getState().setTrack(track)
+    store.getState().moveGate('gate-1', 'N', 1)
+    store.getState().requestDestructiveAction(
+      () => {
+        called = true
+      },
+      'Titel',
+      'Beschreibung',
+    )
+    store.getState().confirmDestructiveAction()
+
+    expect(called).toBe(true)
+    expect(store.getState().pendingDestructiveAction).toBeNull()
+  })
+
+  it('saveBeforeDestructiveAction opens save dialog while keeping the staged action', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    let called = false
+
+    store.getState().setTrack(track)
+    store.getState().moveGate('gate-1', 'N', 1)
+    store.getState().requestDestructiveAction(
+      () => {
+        called = true
+      },
+      'Titel',
+      'Beschreibung',
+    )
+    store.getState().saveBeforeDestructiveAction()
+
+    expect(called).toBe(false)
+    expect(store.getState().isSaveDialogOpen).toBe(true)
+    expect(store.getState().pendingDestructiveAction).not.toBeNull()
+  })
+
+  it('markTrackSaved clears dirty state and continues a staged destructive action', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    let called = false
+
+    store.getState().setTrack(track)
+    store.getState().moveGate('gate-1', 'N', 1)
+    expect(store.getState().isTrackModified).toBe(true)
+
+    store.getState().requestDestructiveAction(
+      () => {
+        called = true
+      },
+      'Titel',
+      'Beschreibung',
+    )
+    store.getState().saveBeforeDestructiveAction()
+    store.getState().markTrackSaved()
+
+    expect(called).toBe(true)
+    expect(store.getState().isTrackModified).toBe(false)
+    expect(store.getState().isSaveDialogOpen).toBe(false)
+    expect(store.getState().pendingDestructiveAction).toBeNull()
+  })
+
+  it('dismissSaveDialog cancels both the save dialog and the staged destructive action', () => {
+    const track = createTestTrack([createTestGate('gate-1')])
+    let called = false
+
+    store.getState().setTrack(track)
+    store.getState().moveGate('gate-1', 'N', 1)
+    store.getState().requestDestructiveAction(
+      () => {
+        called = true
+      },
+      'Titel',
+      'Beschreibung',
+    )
+    store.getState().saveBeforeDestructiveAction()
+    store.getState().dismissSaveDialog()
+
+    expect(called).toBe(false)
+    expect(store.getState().isSaveDialogOpen).toBe(false)
+    expect(store.getState().pendingDestructiveAction).toBeNull()
   })
 })

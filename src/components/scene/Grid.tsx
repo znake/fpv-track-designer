@@ -20,6 +20,8 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
   const watermarkSize = Math.max(6, Math.min(fieldSize.width / 5.2, fieldSize.height * 0.32))
   const selectGate = useAppStore((state) => state.selectGate)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
+  const showGrid = useAppStore((state) => state.config.showGrid)
+  const sectionSize = 5
 
   const handleGroundClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
@@ -40,39 +42,43 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
         <meshStandardMaterial color="#3d5c28" />
       </mesh>
 
-      {/* Field boundary - white line */}
-      <lineSegments position={[0, 0.02, 0]}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[new Float32Array([
-              -halfW, 0, -halfH,
-              halfW, 0, -halfH,
-              halfW, 0, -halfH,
-              halfW, 0, halfH,
-              halfW, 0, halfH,
-              -halfW, 0, halfH,
-              -halfW, 0, halfH,
-              -halfW, 0, -halfH,
-            ]), 3]}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial color="#ffffff" linewidth={2} />
-      </lineSegments>
+      {showGrid && (
+        <>
+          {/* Field boundary - white line */}
+          <lineSegments position={[0, 0.02, 0]}>
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                args={[new Float32Array([
+                  -halfW, 0, -halfH,
+                  halfW, 0, -halfH,
+                  halfW, 0, -halfH,
+                  halfW, 0, halfH,
+                  halfW, 0, halfH,
+                  -halfW, 0, halfH,
+                  -halfW, 0, halfH,
+                  -halfW, 0, -halfH,
+                ]), 3]}
+              />
+            </bufferGeometry>
+            <lineBasicMaterial color="#ffffff" linewidth={2} />
+          </lineSegments>
 
-      {/* Grid lines using drei Grid helper */}
-      <DreiGrid
-        position={[0, 0.01, 0]}
-        args={[fieldSize.width, fieldSize.height]}
-        cellSize={3}
-        cellThickness={0.5}
-        cellColor="#5a7a4a"
-        sectionSize={15}
-        sectionThickness={1}
-        sectionColor="#7a9a6a"
-        fadeDistance={200}
-        fadeStrength={1}
-      />
+          {/* Grid lines using drei Grid helper */}
+          <DreiGrid
+            position={[0, 0.01, 0]}
+            args={[fieldSize.width, fieldSize.height]}
+            cellSize={1}
+            cellThickness={0.5}
+            cellColor="#5a7a4a"
+            sectionSize={sectionSize}
+            sectionThickness={1}
+            sectionColor="#7a9a6a"
+            fadeDistance={200}
+            fadeStrength={1}
+          />
+        </>
+      )}
 
       {/* Subtle field branding */}
       <Text

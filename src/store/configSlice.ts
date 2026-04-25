@@ -6,7 +6,8 @@ export interface ConfigSlice {
   setConfig: (config: Config) => void
   setGateQuantity: (type: GateType, quantity: number) => void
   setFieldSize: (width: number, height: number) => void
-  setGateSize: (size: 0.75 | 1 | 1.5) => void
+  setSnapGatesToGrid: (value: boolean) => void
+  setShowGrid: (value: boolean) => void
   setShowFlightPath: (value: boolean) => void
   setShowOpeningLabels: (value: boolean) => void
   resetToDefault: () => void
@@ -22,9 +23,11 @@ export const defaultConfig: Config = {
     'double': 1,
     'ladder': 1,
     'flag': 1,
+    'octagonal-tunnel': 1,
   },
   fieldSize: { width: 30, height: 15 },
-  gateSize: 1,
+  snapGatesToGrid: false,
+  showGrid: false,
   showFlightPath: true,
   showOpeningLabels: true,
 }
@@ -41,8 +44,11 @@ export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> =
   setFieldSize: (width, height) => set((state) => ({
     config: { ...state.config, fieldSize: { width, height } },
   })),
-  setGateSize: (size) => set((state) => ({
-    config: { ...state.config, gateSize: size },
+  setSnapGatesToGrid: (value) => set((state) => ({
+    config: { ...state.config, snapGatesToGrid: value },
+  })),
+  setShowGrid: (value) => set((state) => ({
+    config: { ...state.config, showGrid: value },
   })),
   setShowFlightPath: (value) => set((state) => ({
     config: { ...state.config, showFlightPath: value },

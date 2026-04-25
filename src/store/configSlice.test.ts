@@ -13,13 +13,14 @@ describe('ConfigSlice - default settings', () => {
     expect(defaultConfig.fieldSize.height).toBe(15)
   })
 
-  it('defines double-h, dive, ladder and flag as 1 by default', () => {
+  it('defines double-h, dive, ladder, flag and octagonal tunnel as 1 by default', () => {
     const config = defaultConfig
 
     expect(config.gateQuantities['double-h']).toBe(1)
     expect(config.gateQuantities.dive).toBe(1)
     expect(config.gateQuantities.ladder).toBe(1)
     expect(config.gateQuantities.flag).toBe(1)
+    expect(config.gateQuantities['octagonal-tunnel']).toBe(1)
   })
 
   it('resets to defaults including required gate counts', () => {
@@ -36,6 +37,7 @@ describe('ConfigSlice - default settings', () => {
     expect(store.getState().config.gateQuantities.dive).toBe(1)
     expect(store.getState().config.gateQuantities.ladder).toBe(1)
     expect(store.getState().config.gateQuantities.flag).toBe(1)
+    expect(store.getState().config.gateQuantities['octagonal-tunnel']).toBe(1)
   })
 
   it('replaces config when loading a saved track', () => {
@@ -51,15 +53,17 @@ describe('ConfigSlice - default settings', () => {
         double: 0,
         ladder: 4,
         flag: 1,
+        'octagonal-tunnel': 2,
       },
       fieldSize: { width: 42, height: 24 },
-      gateSize: 1.5,
+      snapGatesToGrid: true,
       showFlightPath: false,
       showOpeningLabels: false,
+      showGrid: true,
     })
 
     expect(store.getState().config.fieldSize).toEqual({ width: 42, height: 24 })
-    expect(store.getState().config.gateSize).toBe(1.5)
+    expect(store.getState().config.snapGatesToGrid).toBe(true)
     expect(store.getState().config.showFlightPath).toBe(false)
     expect(store.getState().config.gateQuantities.ladder).toBe(4)
   })

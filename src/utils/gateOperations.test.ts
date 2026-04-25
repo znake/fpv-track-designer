@@ -8,8 +8,7 @@ const createTestGate = (overrides: Partial<Gate> = {}): Gate => ({
   type: 'standard',
   position: { x: 0, y: 2, z: 0 },
   rotation: 0,
-  size: 1,
-  openings: createDefaultGateOpenings('standard', 1),
+  openings: createDefaultGateOpenings('standard'),
   ...overrides,
 })
 
@@ -57,18 +56,18 @@ describe('rotateGate', () => {
 describe('moveGate', () => {
   const fieldSize = { width: 20, height: 15 }
 
-  it('moves gate N by 1 → y increases by 1', () => {
+  it('moves gate N by 1 → z decreases by 1', () => {
     const gate = createTestGate({ position: { x: 0, y: 2, z: 0 } })
     const result = moveGate(gate, 'N', 1, fieldSize)
-    expect(result.position.y).toBe(3)
+    expect(result.position.y).toBe(2)
     expect(result.position.x).toBe(0)
-    expect(result.position.z).toBe(0)
+    expect(result.position.z).toBe(-1)
   })
 
-  it('moves gate S by 1 → y decreases by 1', () => {
+  it('moves gate S by 1 → z increases by 1', () => {
     const gate = createTestGate({ position: { x: 0, y: 2, z: 0 } })
     const result = moveGate(gate, 'S', 1, fieldSize)
-    expect(result.position.y).toBe(1)
+    expect(result.position.z).toBe(1)
   })
 
   it('moves gate E by 1 → x increases by 1', () => {
@@ -86,16 +85,16 @@ describe('moveGate', () => {
   it('moves gate by custom distance', () => {
     const gate = createTestGate({ position: { x: 0, y: 2, z: 0 } })
     const result = moveGate(gate, 'N', 3, fieldSize)
-    expect(result.position.y).toBe(5)
+    expect(result.position.z).toBe(-3)
   })
 
-  it('clamps y to minimum 0.5 when moving S beyond bounds', () => {
-    const gate = createTestGate({ position: { x: 0, y: 0.5, z: 0 } })
-    const result = moveGate(gate, 'S', 1, fieldSize)
-    expect(result.position.y).toBe(0.5)
+  it('keeps y at the playing-field floor', () => {
+    const gate = createTestGate({ position: { x: 0, y: -1, z: 0 } })
+    const result = moveGate(gate, 'E', 1, fieldSize)
+    expect(result.position.y).toBe(0)
   })
 
-  it('clamps y to maximum 10 when moving N beyond bounds', () => {
+  it('allows gates to stay above the playing field', () => {
     const gate = createTestGate({ position: { x: 0, y: 10, z: 0 } })
     const result = moveGate(gate, 'N', 1, fieldSize)
     expect(result.position.y).toBe(10)
@@ -113,10 +112,10 @@ describe('moveGate', () => {
     expect(result.position.x).toBe(-10)
   })
 
-  it('clamps z to field height boundary when moving (z unchanged by N/S/E/W)', () => {
+  it('clamps z to field height boundary when moving N/S', () => {
     const gate = createTestGate({ position: { x: 0, y: 2, z: 7.5 } })
-    const result = moveGate(gate, 'N', 1, fieldSize)
-    expect(result.position.z).toBe(7.5) // z unchanged
+    const result = moveGate(gate, 'S', 1, fieldSize)
+    expect(result.position.z).toBe(7.5)
   })
 
   it('returns a new gate object without mutating original', () => {
@@ -124,5 +123,6 @@ describe('moveGate', () => {
     const result = moveGate(gate, 'N', 1, fieldSize)
     expect(result).not.toBe(gate)
     expect(gate.position.y).toBe(2)
+    expect(gate.position.z).toBe(0)
   })
 })

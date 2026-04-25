@@ -2,6 +2,10 @@ import type { Gate } from '../types'
 
 export type Direction = 'N' | 'S' | 'E' | 'W'
 
+function clampGateHeight(y: number): number {
+  return Math.max(0, y)
+}
+
 export function moveGate(
   gate: Gate,
   direction: Direction,
@@ -13,14 +17,14 @@ export function moveGate(
   const newPos = { ...gate.position }
 
   switch (direction) {
-    case 'N': newPos.y += distance; break
-    case 'S': newPos.y -= distance; break
+    case 'N': newPos.z -= distance; break
+    case 'S': newPos.z += distance; break
     case 'E': newPos.x += distance; break
     case 'W': newPos.x -= distance; break
   }
 
-  // Clamp to field bounds (y is height, x/z are horizontal)
-  newPos.y = Math.max(0.5, Math.min(10, newPos.y)) // Height range 0.5-10m
+  // Clamp to field bounds (y is vertical height, x/z are horizontal)
+  newPos.y = clampGateHeight(newPos.y)
   newPos.x = Math.max(-halfW, Math.min(halfW, newPos.x))
   newPos.z = Math.max(-halfH, Math.min(halfH, newPos.z))
 

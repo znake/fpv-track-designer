@@ -31,8 +31,19 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
   const config = useAppStore((state) => state.config)
   const replaceTrack = useAppStore((state) => state.replaceTrack)
   const setConfig = useAppStore((state) => state.setConfig)
+  const requestDestructiveAction = useAppStore((state) => state.requestDestructiveAction)
+  const setSnapGatesToGrid = useAppStore((state) => state.setSnapGatesToGrid)
+  const snapAllGatesToGrid = useAppStore((state) => state.snapAllGatesToGrid)
   const setShowFlightPath = useAppStore((state) => state.setShowFlightPath)
   const setShowOpeningLabels = useAppStore((state) => state.setShowOpeningLabels)
+  const setShowGrid = useAppStore((state) => state.setShowGrid)
+
+  const handleSnapGatesToGridChange = (enabled: boolean) => {
+    setSnapGatesToGrid(enabled)
+    if (enabled) {
+      snapAllGatesToGrid()
+    }
+  }
 
   const handleExport = () => {
     if (!currentTrack) return
@@ -48,24 +59,33 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
 
   const handleImport = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      try {
-        const json = event.target?.result as string
-        const result = deserializeTrack(json)
-        if ('error' in result) {
-          console.error('Import failed:', result.error)
-        } else {
-          setConfig(result.config)
-          replaceTrack(result.track)
-        }
-      } catch {
-        console.error('Failed to parse JSON file')
-      }
-    }
-    reader.readAsText(file)
     e.target.value = ''
+    if (!file) return
+    // Wrap the entire import (read + parse + apply) so the confirmation
+    // dialog is shown BEFORE the file is read when the track is dirty.
+    // The user's pick is discarded if they cancel.
+    requestDestructiveAction(
+      () => {
+        const reader = new FileReader()
+        reader.onload = (event) => {
+          try {
+            const json = event.target?.result as string
+            const result = deserializeTrack(json)
+            if ('error' in result) {
+              console.error('Import failed:', result.error)
+            } else {
+              setConfig(result.config)
+              replaceTrack(result.track)
+            }
+          } catch {
+            console.error('Failed to parse JSON file')
+          }
+        }
+        reader.readAsText(file)
+      },
+      'Aktuelle Strecke verwerfen?',
+      'Beim Import einer JSON-Datei wird die aktuelle Strecke ersetzt. Die ungespeicherten Änderungen gehen dabei verloren. Möchtest du sie zuerst speichern?',
+    )
   }
 
   return (
@@ -80,7 +100,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
           FPV-Track-Designer
         </span>
         <Badge variant="outline" className="hidden border-amber-500/40 bg-amber-500/10 px-1.5 py-0 text-[10px] font-medium text-amber-700 sm:inline-flex">
-          Alpha Version
+          Beta Version
         </Badge>
       </div>
 
@@ -125,36 +145,87 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
 
       {/* Center: View toggles */}
         <div className="hidden items-center gap-3 text-xs text-muted-foreground md:flex">
-        <label className="flex items-center gap-1.5">
-          <input
-            type="checkbox"
-            className="size-3 accent-primary"
-            checked={config.showFlightPath}
-            onChange={(e) => setShowFlightPath(e.target.checked)}
-          />
-          <span>Flugbahn</span>
-        </label>
-        <label className="flex items-center gap-1.5">
-          <input
-            type="checkbox"
-            className="size-3 accent-primary"
-            checked={config.showOpeningLabels}
-            onChange={(e) => setShowOpeningLabels(e.target.checked)}
-          />
-          <span>Durchflüge</span>
-        </label>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                className="size-3 accent-primary"
+                checked={config.showGrid}
+                onChange={(e) => setShowGrid(e.target.checked)}
+              />
+              <span>Grid anzeigen</span>
+            </label>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            Blendet das Boden-Grid mit 1m-Zellen und 5m-Markierungen ein. Standardmäßig deaktiviert für eine ruhige, grüne Fläche.
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                className="size-3 accent-primary"
+                checked={config.snapGatesToGrid}
+                onChange={(e) => handleSnapGatesToGridChange(e.target.checked)}
+              />
+              <span>Grid-Snap</span>
+            </label>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            Gates rasten auf einem festen Grid ein und drehen sich nur in 15°-Schritten – ideal, um eigene Gate-Kombinationen exakt auszurichten.
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                className="size-3 accent-primary"
+                checked={config.showFlightPath}
+                onChange={(e) => setShowFlightPath(e.target.checked)}
+              />
+              <span>Flugbahn</span>
+            </label>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            Zeigt die Ideallinie als Flugpfad durch alle Gates an, inklusive Richtungspfeilen, in welcher Reihenfolge der Track geflogen wird.
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                className="size-3 accent-primary"
+                checked={config.showOpeningLabels}
+                onChange={(e) => setShowOpeningLabels(e.target.checked)}
+              />
+              <span>Durchflüge</span>
+            </label>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            Markiert an jedem Gate die Reihenfolge der Durchflüge sowie die Einflug- und Ausflug-Seite – so siehst du auf einen Blick, wo du rein- und rauskommst.
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Right: Track name + actions */}
       <div className="ml-auto flex min-w-0 items-center gap-1 md:gap-2">
-        <a
-          href="https://fpvooe.com/"
-          target="_blank"
-          rel="noreferrer"
-          className="hidden rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary transition-colors hover:border-primary/40 hover:bg-primary/15 sm:inline-flex"
-        >
-          #fpvooe
-        </a>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <a
+              href="https://fpvooe.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary transition-colors hover:border-primary/40 hover:bg-primary/15 sm:inline-flex"
+            >
+              #fpvooe
+            </a>
+          </TooltipTrigger>
+          <TooltipContent>Zurück zu unserer Webseite (fpvooe.com)</TooltipContent>
+        </Tooltip>
 
         {currentTrack && (
           <Tooltip>
@@ -186,7 +257,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
               />
             </label>
           </TooltipTrigger>
-          <TooltipContent>JSON importieren</TooltipContent>
+          <TooltipContent className="max-w-xs">JSON importieren – lade eine Strecke, die du zuvor exportiert oder von einem anderen Piloten erhalten hast.</TooltipContent>
         </Tooltip>
 
         {/* Export */}
@@ -196,7 +267,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
               <Download className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>JSON exportieren</TooltipContent>
+          <TooltipContent className="max-w-xs">JSON exportieren – speichert die aktuell geladene Strecke als JSON-Datei zum Teilen oder Sichern.</TooltipContent>
         </Tooltip>
 
         <Separator orientation="vertical" className="hidden h-6 sm:block" />

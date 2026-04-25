@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Html } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { Vector2, Raycaster } from 'three'
-import { Move, Plus, RotateCw, Trash2 } from 'lucide-react'
-import type { GateSize, GateType } from '../../types'
+import { ArrowUpDown, Copy, Move, Plus, RotateCw, Trash2 } from 'lucide-react'
+import type { GateType } from '../../types'
 import { useAppStore } from '../../store'
 import { calculateFlightPath } from '../../utils/flightPath'
 import { Button } from '../ui/button'
@@ -13,12 +13,11 @@ interface GateHandlesProps {
   gateType: GateType
   position: { x: number; y: number; z: number }
   rotation: number
-  size: GateSize
 }
 
 type GatePosition = { x: number; y: number; z: number }
 
-type DragMode = 'none' | 'move' | 'rotate'
+type DragMode = 'none' | 'move' | 'elevate' | 'rotate'
 type InsertPosition = 'before' | 'after'
 
 interface InsertControlConfig {
@@ -37,6 +36,8 @@ const H_GATE_BACKREST_HEIGHT_MULTIPLIER = 1.85
 const HANDLE_CLEARANCE_ABOVE_GATE = 0.5
 const INSERT_HANDLE_OFFSET_Y = 0.9
 const DEGREES_PER_PIXEL = 1
+const ROTATION_SNAP_STEP_DEGREES = 15
+const METERS_PER_ELEVATION_PIXEL = 0.03
 const FALLBACK_INSERT_DISTANCE = 3
 const GATE_HANDLE_Z_INDEX_RANGE: [number, number] = [30, 0]
 const HANDLE_BUTTON_CLASSNAME = 'pointer-events-auto flex size-11 items-center justify-center rounded-full border shadow-lg shadow-black/30 backdrop-blur supports-backdrop-filter:backdrop-blur-sm transition-colors select-none touch-none'
@@ -92,8 +93,8 @@ function getFallbackInsertPosition(
   }, fieldSize)
 }
 
-function getGateTopOffset(gateType: GateType, size: GateSize): number {
-  const height = BASE_GATE_HEIGHT * size
+function getGateTopOffset(gateType: GateType): number {
+  const height = BASE_GATE_HEIGHT
   const topBarHalfThickness = POST_THICKNESS / 2
 
   switch (gateType) {
@@ -106,25 +107,31 @@ function getGateTopOffset(gateType: GateType, size: GateSize): number {
     case 'ladder':
       return height * 3 + topBarHalfThickness
     case 'start-finish':
-      return height + 0.375 * size
+      return height + 0.375
     case 'flag':
-      return FLAG_BASE_HEIGHT * size
+      return FLAG_BASE_HEIGHT
+    case 'octagonal-tunnel':
     case 'dive':
     case 'standard':
       return height + topBarHalfThickness
   }
 }
 
-export function GateHandles({ gateId, gateType, position, rotation, size }: GateHandlesProps) {
+export function GateHandles({ gateId, gateType, position, rotation }: GateHandlesProps) {
   const { camera, gl, controls } = useThree()
   const modeRef = useRef<DragMode>('none')
   const [activeMode, setActiveMode] = useState<DragMode>('none')
   const openDeleteDialog = useAppStore((state) => state.openDeleteDialog)
+  const duplicateGate = useAppStore((state) => state.duplicateGate)
   const closeDeleteDialog = useAppStore((state) => state.closeDeleteDialog)
 
   // Move refs
   const dragStartRef = useRef<{ x: number; z: number } | null>(null)
   const gateStartPosRef = useRef<{ x: number; z: number } | null>(null)
+
+  // Elevation refs
+  const elevationDragStartYRef = useRef(0)
+  const gateStartHeightRef = useRef(0)
 
   // Rotate refs
   const dragStartXRef = useRef(0)
@@ -135,6 +142,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
   const commitGateDrag = useAppStore((state) => state.commitGateDrag)
   const setDraggingGate = useAppStore((state) => state.setDraggingGate)
   const fieldSize = useAppStore((state) => state.config.fieldSize)
+  const snapGatesToGrid = useAppStore((state) => state.config.snapGatesToGrid)
   const currentTrack = useAppStore((state) => state.currentTrack)
   const selectedGateId = useAppStore((state) => state.selectedGateId)
   const selectedGateIds = useAppStore((state) => state.selectedGateIds)
@@ -151,6 +159,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
   const commitRef = useRef(commitGateDrag)
   const setDraggingRef = useRef(setDraggingGate)
   const draggingReleaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const snapGatesToGridRef = useRef(snapGatesToGrid)
 
   useEffect(() => { gateIdRef.current = gateId }, [gateId])
   useEffect(() => { positionRef.current = position }, [position])
@@ -162,6 +171,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
   useEffect(() => { setGateRotationRef.current = setGateRotation }, [setGateRotation])
   useEffect(() => { commitRef.current = commitGateDrag }, [commitGateDrag])
   useEffect(() => { setDraggingRef.current = setDraggingGate }, [setDraggingGate])
+  useEffect(() => { snapGatesToGridRef.current = snapGatesToGrid }, [snapGatesToGrid])
 
   const isSingleSelectedGate = selectedGateIds.length === 1 && selectedGateId === gateId
   const gateSequence = useMemo(
@@ -174,7 +184,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
   )
   const selectedGateIndex = currentTrack?.gates.findIndex((gate) => gate.id === gateId) ?? -1
   const selectedGate = selectedGateIndex >= 0 ? currentTrack?.gates[selectedGateIndex] : null
-  const moveRotateHandleY = position.y + getGateTopOffset(gateType, size) + HANDLE_CLEARANCE_ABOVE_GATE
+  const moveRotateHandleY = position.y + getGateTopOffset(gateType) + HANDLE_CLEARANCE_ABOVE_GATE
 
   const intersectGround = useCallback((clientX: number, clientY: number) => {
     const rect = glRef.current.domElement.getBoundingClientRect()
@@ -212,8 +222,20 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
 
       if (mode === 'rotate') {
         const dx = e.clientX - dragStartXRef.current
-        const newRotation = startRotationRef.current + dx * DEGREES_PER_PIXEL
+        const rawRotation = startRotationRef.current + dx * DEGREES_PER_PIXEL
+        const newRotation = snapGatesToGridRef.current
+          ? Math.round(rawRotation / ROTATION_SNAP_STEP_DEGREES) * ROTATION_SNAP_STEP_DEGREES
+          : rawRotation
         setGateRotationRef.current(gateIdRef.current, newRotation)
+      }
+
+      if (mode === 'elevate') {
+        const pointerDeltaY = elevationDragStartYRef.current - e.clientY
+        const y = Math.max(0, gateStartHeightRef.current + pointerDeltaY * METERS_PER_ELEVATION_PIXEL)
+        setGatePositionRef.current(gateIdRef.current, {
+          ...positionRef.current,
+          y,
+        })
       }
     }
 
@@ -365,6 +387,27 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
     [rotation, setDraggingGate, disableControls],
   )
 
+  const handleElevateDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      e.nativeEvent.stopImmediatePropagation()
+      disableControls()
+
+      modeRef.current = 'elevate'
+      setActiveMode('elevate')
+      setDraggingGate(true)
+      if (draggingReleaseTimeoutRef.current) {
+        clearTimeout(draggingReleaseTimeoutRef.current)
+        draggingReleaseTimeoutRef.current = null
+      }
+
+      elevationDragStartYRef.current = e.clientY
+      gateStartHeightRef.current = position.y
+    },
+    [position.y, setDraggingGate, disableControls],
+  )
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -449,6 +492,20 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
             <Move size={22} />
           </button>
 
+          {/* Elevation handle (middle) */}
+          <button
+            type="button"
+            aria-label={`${gateId} Höhe verstellen`}
+            onPointerDown={handleElevateDown}
+            className={`${HANDLE_BUTTON_CLASSNAME} ${activeMode === 'elevate'
+              ? 'border-accent bg-accent text-accent-foreground'
+              : 'border-accent/60 bg-surface-elevated/95 text-accent-foreground hover:bg-surface-hover'
+            }`}
+            style={{ cursor: 'ns-resize' }}
+          >
+            <ArrowUpDown size={22} />
+          </button>
+
           {/* Rotate handle (right) */}
           <button
             type="button"
@@ -462,6 +519,22 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
           >
             <RotateCw size={22} />
           </button>
+
+          {isSingleSelectedGate && (
+            <button
+              type="button"
+              aria-label={`${gateId} duplizieren`}
+              onPointerDown={stopHtmlInteraction}
+              onClick={(event) => {
+                stopHtmlInteraction(event)
+                closeDeleteDialog()
+                duplicateGate(gateId)
+              }}
+              className={`${HANDLE_BUTTON_CLASSNAME} border-border bg-surface-elevated/95 text-foreground hover:bg-surface-hover`}
+            >
+              <Copy size={22} />
+            </button>
+          )}
 
           {isSingleSelectedGate && (
             <button

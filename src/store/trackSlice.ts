@@ -1,12 +1,14 @@
 import type { StateCreator } from 'zustand'
+import type { Config } from '../types/config'
 import type { Track, Gate } from '../types'
 import { normalizeGates, recreateGateOpenings } from '../utils/gateOpenings'
 import { buildDefaultGateSequenceEntries, normalizeGateSequence } from '../utils/gateSequence'
+import type { GenerationConfig } from '../utils/generationConfig'
 
 const MAX_HISTORY = 50
 
 function isSingletonGateType(type: Gate['type']): boolean {
-  return type === 'start-finish' || type === 'flag'
+  return type === 'start-finish'
 }
 
 function hasSingletonGateConflict(gates: Gate[], type: Gate['type'], ignoredGateId?: string): boolean {
@@ -31,6 +33,7 @@ interface TrackHistoryEntry {
   track: Track
   selectedGateId: string | null
   selectedGateIds: string[]
+  isTrackModified: boolean
 }
 
 interface PendingGateInsertion {
@@ -46,6 +49,24 @@ interface SequenceEditorState {
   sourceSequenceNumber: number
 }
 
+export interface PendingDestructiveAction {
+  /**
+   * Callback executed when the user confirms ("Verwerfen") or after a
+   * successful save ("Zuerst speichern" → save → continue).
+   * The callback is responsible for performing the destructive operation
+   * itself (e.g. calling setTrack with a freshly generated track).
+   */
+  action: () => void
+  /** Localized dialog title (German) */
+  title: string
+  /** Localized dialog body (German) */
+  description: string
+}
+
+interface SnapGridState {
+  config?: Pick<Config, 'fieldSize' | 'snapGatesToGrid'>
+}
+
 export interface TrackSlice {
   currentTrack: Track | null
   selectedGateId: string | null
@@ -53,13 +74,41 @@ export interface TrackSlice {
   isDeleteDialogOpen: boolean
   pendingGateInsertion: PendingGateInsertion | null
   sequenceEditor: SequenceEditorState | null
+  dragHistoryEntry: TrackHistoryEntry | null
   past: TrackHistoryEntry[]
   future: TrackHistoryEntry[]
-  setTrack: (track: Track | null) => void
+  generationConfig: GenerationConfig | null
+  isTrackModified: boolean
+  pendingDestructiveAction: PendingDestructiveAction | null
+  isSaveDialogOpen: boolean
+  setTrack: (track: Track | null, generationConfig?: GenerationConfig | null) => void
   replaceTrack: (track: Track | null) => void
   syncCurrentTrack: (track: Track) => void
+  /**
+   * Guarded entry point for any action that overwrites the current track
+   * (shuffle, import JSON, gallery load, gallery duplicate, apply config).
+   * Runs `action` immediately when the track is clean; otherwise opens the
+   * UnsavedChangesDialog and stages `action` until the user resolves it.
+   */
+  requestDestructiveAction: (action: () => void, title: string, description: string) => void
+  /** User clicked "Verwerfen" – run staged action and clear it. */
+  confirmDestructiveAction: () => void
+  /** User clicked "Abbrechen" – discard staged action without running it. */
+  cancelDestructiveAction: () => void
+  /** User clicked "Zuerst speichern" – open SaveTrackDialog while keeping the staged action. */
+  saveBeforeDestructiveAction: () => void
+  /** Open the global SaveTrackDialog (Cmd+S, Speichern button). */
+  openSaveDialog: () => void
+  /** Cancel/close SaveTrackDialog – ALSO discards any staged destructive action. */
+  dismissSaveDialog: () => void
+  /**
+   * Called by SaveTrackDialog after a successful save. Clears the dirty flag,
+   * closes the save dialog, and runs any staged destructive action.
+   */
+  markTrackSaved: () => void
   updateGate: (gateId: string, updates: Partial<Gate>) => void
   setGatePosition: (gateId: string, position: { x: number; y: number; z: number }) => void
+  snapAllGatesToGrid: () => void
   commitGateDrag: () => void
   setGateRotation: (gateId: string, rotation: number) => void
   moveGate: (gateId: string, direction: 'N' | 'S' | 'E' | 'W', distance?: number) => void
@@ -68,6 +117,7 @@ export interface TrackSlice {
   selectGate: (gateId: string | null, additive?: boolean) => void
   setSelectedGates: (gateIds: string[]) => void
   insertGateAtIndex: (gate: Gate, gateIndex: number, sequenceIndex: number) => void
+  duplicateGate: (gateId: string) => void
   openGateInsertionDialog: (insertion: PendingGateInsertion) => void
   closeGateInsertionDialog: () => void
   deleteSelectedGates: () => void
@@ -93,13 +143,14 @@ function normalizeTrack(track: Track): Track {
   }
 }
 
-function createHistoryEntry(state: Pick<TrackSlice, 'currentTrack' | 'selectedGateId' | 'selectedGateIds'>): TrackHistoryEntry | null {
+function createHistoryEntry(state: Pick<TrackSlice, 'currentTrack' | 'selectedGateId' | 'selectedGateIds' | 'isTrackModified'>): TrackHistoryEntry | null {
   if (!state.currentTrack) return null
 
   return {
     track: state.currentTrack,
     selectedGateId: state.selectedGateId,
     selectedGateIds: state.selectedGateIds,
+    isTrackModified: state.isTrackModified,
   }
 }
 
@@ -122,6 +173,76 @@ function getSelectionState(track: Track, selectedGateId: string | null, selected
   }
 }
 
+// Gates have a base geometric width/height of 1.2m (see BASE_WIDTH in src/components/gates/*).
+// The snap step must match the actual gate footprint so gates align edge-to-edge
+// without gaps or overlap when manually composed side-by-side.
+const GATE_BASE_FOOTPRINT = 1.2
+
+function getSnapStep(): number {
+  return GATE_BASE_FOOTPRINT
+}
+
+function snapCoordinate(value: number): number {
+  const step = getSnapStep()
+  return Math.round(value / step) * step
+}
+
+function snapGatePosition(position: Gate['position']): Gate['position'] {
+  return {
+    ...position,
+    x: snapCoordinate(position.x),
+    y: snapCoordinate(position.y),
+    z: snapCoordinate(position.z),
+  }
+}
+
+function clampGateHeight(position: Gate['position']): Gate['position'] {
+  return {
+    ...position,
+    y: Math.max(0, position.y),
+  }
+}
+
+function clampGatePositionToField(position: Gate['position'], fieldSize: Config['fieldSize']): Gate['position'] {
+  const halfWidth = fieldSize.width / 2
+  const halfHeight = fieldSize.height / 2
+
+  return {
+    ...position,
+    x: Math.max(-halfWidth, Math.min(halfWidth, position.x)),
+    z: Math.max(-halfHeight, Math.min(halfHeight, position.z)),
+  }
+}
+
+function prepareGatePosition(
+  position: Gate['position'],
+  snapToGrid: boolean,
+  fieldSize: Config['fieldSize'],
+): Gate['position'] {
+  const clampedPosition = clampGateHeight(position)
+  const snappedPosition = snapToGrid ? snapGatePosition(clampedPosition) : clampedPosition
+  return clampGatePositionToField(snappedPosition, fieldSize)
+}
+
+function translateGatePosition(
+  position: Gate['position'],
+  delta: Partial<Gate['position']>,
+): Gate['position'] {
+  return {
+    x: position.x + (delta.x ?? 0),
+    y: position.y + (delta.y ?? 0),
+    z: position.z + (delta.z ?? 0),
+  }
+}
+
+function getActiveFieldSize(state: SnapGridState & Pick<TrackSlice, 'currentTrack'>): Config['fieldSize'] | null {
+  return state.currentTrack?.fieldSize ?? state.config?.fieldSize ?? null
+}
+
+function shouldSnapToGrid(state: SnapGridState): boolean {
+  return state.config?.snapGatesToGrid ?? false
+}
+
 function pushHistory(state: TrackSlice): { past: TrackHistoryEntry[]; future: TrackHistoryEntry[] } {
   if (!state.currentTrack) return { past: state.past, future: [] }
 
@@ -132,7 +253,7 @@ function pushHistory(state: TrackSlice): { past: TrackHistoryEntry[]; future: Tr
   return { past: newPast, future: [] }
 }
 
-export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (set) => ({
+export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], TrackSlice> = (set, get) => ({
   currentTrack: null,
   selectedGateId: null,
   selectedGateIds: [],
@@ -140,15 +261,23 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
   pendingGateInsertion: null,
   sequenceEditor: null,
   isDraggingGate: false,
+  dragHistoryEntry: null,
   past: [],
   future: [],
-  setTrack: (track) => set((state) => ({
+  generationConfig: null,
+  isTrackModified: false,
+  pendingDestructiveAction: null,
+  isSaveDialogOpen: false,
+  setTrack: (track, generationConfig) => set((state) => ({
     currentTrack: track ? normalizeTrack(track) : null,
     selectedGateId: null,
     selectedGateIds: [],
     isDeleteDialogOpen: false,
     pendingGateInsertion: null,
     sequenceEditor: null,
+    dragHistoryEntry: null,
+    generationConfig: generationConfig ?? null,
+    isTrackModified: false,
     ...pushHistory({ ...state, currentTrack: state.currentTrack }),
   })),
   replaceTrack: (track) => set({
@@ -158,8 +287,11 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
     isDeleteDialogOpen: false,
     pendingGateInsertion: null,
     sequenceEditor: null,
+    dragHistoryEntry: null,
     past: [],
     future: [],
+    generationConfig: null,
+    isTrackModified: false,
   }),
   syncCurrentTrack: (track) => set({
     currentTrack: normalizeTrack(track),
@@ -183,35 +315,63 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
             ...gate,
             ...updates,
             openings: updates.openings
-              ?? (updates.type || updates.size
-                ? recreateGateOpenings({ id: gate.id, type: updates.type ?? gate.type, size: updates.size ?? gate.size })
+              ?? (updates.type
+                ? recreateGateOpenings({ id: gate.id, type: updates.type })
                 : gate.openings),
           }
         }),
         updatedAt: new Date().toISOString(),
       }),
       ...history,
+      isTrackModified: true,
     }
   }),
   setGatePosition: (gateId, position) => set((state) => {
     if (!state.currentTrack) return state
+    const snapToGrid = shouldSnapToGrid(state)
+    const fieldSize = getActiveFieldSize(state)
+    if (!fieldSize) return state
+    const nextPosition = prepareGatePosition(position, snapToGrid, fieldSize)
+    const dragHistoryEntry = state.dragHistoryEntry ?? createHistoryEntry(state)
     return {
       currentTrack: {
         ...state.currentTrack,
         gates: state.currentTrack.gates.map((g) =>
-          g.id === gateId ? { ...g, position } : g,
+          g.id === gateId ? { ...g, position: nextPosition } : g,
         ),
       },
+      dragHistoryEntry,
+    }
+  }),
+  snapAllGatesToGrid: () => set((state) => {
+    if (!state.currentTrack) return state
+    if (!shouldSnapToGrid(state)) return state
+    const fieldSize = getActiveFieldSize(state)
+    if (!fieldSize) return state
+
+    const history = pushHistory(state)
+
+    return {
+      currentTrack: normalizeTrack({
+        ...state.currentTrack,
+        gates: state.currentTrack.gates.map((gate) => ({
+          ...gate,
+          position: prepareGatePosition(gate.position, true, fieldSize),
+        })),
+        updatedAt: new Date().toISOString(),
+      }),
+      ...history,
+      isTrackModified: true,
     }
   }),
   commitGateDrag: () => set((state) => {
     if (!state.currentTrack) return state
 
-    const entry = createHistoryEntry(state)
+    const entry = state.dragHistoryEntry
     if (!entry) return state
 
     const newPast = [...state.past, entry].slice(-MAX_HISTORY)
-    return { past: newPast, future: [] }
+    return { past: newPast, future: [], dragHistoryEntry: null, isTrackModified: true }
   }),
   setGateRotation: (gateId, rotation) => set((state) => {
     if (!state.currentTrack) return state
@@ -227,17 +387,23 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
   moveGate: (gateId, direction, distance = 1) => set((state) => {
     if (!state.currentTrack) return state
     const history = pushHistory(state)
-    const deltas = { N: { y: distance }, S: { y: -distance }, E: { x: distance }, W: { x: -distance } }
+    const deltas = { N: { z: -distance }, S: { z: distance }, E: { x: distance }, W: { x: -distance } }
     const delta = deltas[direction]
+    const snapToGrid = shouldSnapToGrid(state)
+    const fieldSize = getActiveFieldSize(state)
+    if (!fieldSize) return state
     return {
       currentTrack: normalizeTrack({
         ...state.currentTrack,
         gates: state.currentTrack.gates.map((g) =>
-          g.id === gateId ? { ...g, position: { ...g.position, ...delta } } : g,
+          g.id === gateId
+            ? { ...g, position: prepareGatePosition(translateGatePosition(g.position, delta), snapToGrid, fieldSize) }
+            : g,
         ),
         updatedAt: new Date().toISOString(),
       }),
       ...history,
+      isTrackModified: true,
     }
   }),
   moveSelectedGates: (direction, distance = 1) => set((state) => {
@@ -245,18 +411,24 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
 
     const history = pushHistory(state)
     const selectedIds = new Set(state.selectedGateIds)
-    const deltas = { N: { y: distance }, S: { y: -distance }, E: { x: distance }, W: { x: -distance } }
+    const deltas = { N: { z: -distance }, S: { z: distance }, E: { x: distance }, W: { x: -distance } }
     const delta = deltas[direction]
+    const snapToGrid = shouldSnapToGrid(state)
+    const fieldSize = getActiveFieldSize(state)
+    if (!fieldSize) return state
 
     return {
       currentTrack: normalizeTrack({
         ...state.currentTrack,
         gates: state.currentTrack.gates.map((g) =>
-          selectedIds.has(g.id) ? { ...g, position: { ...g.position, ...delta } } : g,
+          selectedIds.has(g.id)
+            ? { ...g, position: prepareGatePosition(translateGatePosition(g.position, delta), snapToGrid, fieldSize) }
+            : g,
         ),
         updatedAt: new Date().toISOString(),
       }),
       ...history,
+      isTrackModified: true,
     }
   }),
   rotateGate: (gateId, clockwise) => set((state) => {
@@ -273,6 +445,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
         updatedAt: new Date().toISOString(),
       }),
       ...history,
+      isTrackModified: true,
     }
   }),
   selectGate: (gateId, additive = false) => set((state) => {
@@ -341,6 +514,75 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       pendingGateInsertion: null,
       sequenceEditor: null,
       ...history,
+      isTrackModified: true,
+    }
+  }),
+  duplicateGate: (gateId) => set((state) => {
+    if (!state.currentTrack) return state
+
+    const sourceIndex = state.currentTrack.gates.findIndex((gate) => gate.id === gateId)
+    if (sourceIndex < 0) return state
+
+    const sourceGate = state.currentTrack.gates[sourceIndex]
+    if (hasSingletonGateConflict(state.currentTrack.gates, sourceGate.type)) return state
+
+    const fieldSize = getActiveFieldSize(state)
+    if (!fieldSize) return state
+
+    const radians = (sourceGate.rotation * Math.PI) / 180
+    // Place duplicated gate one full grid step (gate footprint) apart from the source
+    // so there's a visible gap rather than the duplicate touching the source edge-to-edge.
+    const step = GATE_BASE_FOOTPRINT * 2
+    const targetPosition = clampGatePositionToField(
+      {
+        x: sourceGate.position.x + Math.cos(radians) * step,
+        y: sourceGate.position.y,
+        z: sourceGate.position.z - Math.sin(radians) * step,
+      },
+      fieldSize,
+    )
+
+    const newId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+      ? crypto.randomUUID()
+      : `gate-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+
+    const duplicatedGate: Gate = {
+      ...sourceGate,
+      id: newId,
+      position: targetPosition,
+      openings: sourceGate.openings.map((opening) => ({
+        ...opening,
+        position: { ...opening.position },
+      })),
+    }
+
+    const history = pushHistory(state)
+    const normalizedGate = normalizeGates([duplicatedGate])[0]
+    const nextGates = [...state.currentTrack.gates]
+    nextGates.splice(sourceIndex + 1, 0, normalizedGate)
+
+    const nextSequence = [...state.currentTrack.gateSequence]
+    let lastSourceSeqIndex = -1
+    for (let i = 0; i < nextSequence.length; i++) {
+      if (nextSequence[i].gateId === gateId) lastSourceSeqIndex = i
+    }
+    const insertSeqIndex = lastSourceSeqIndex >= 0 ? lastSourceSeqIndex + 1 : nextSequence.length
+    nextSequence.splice(insertSeqIndex, 0, ...buildDefaultGateSequenceEntries(normalizedGate))
+
+    return {
+      currentTrack: normalizeTrack({
+        ...state.currentTrack,
+        gates: nextGates,
+        gateSequence: nextSequence,
+        updatedAt: new Date().toISOString(),
+      }),
+      selectedGateId: normalizedGate.id,
+      selectedGateIds: [normalizedGate.id],
+      isDeleteDialogOpen: false,
+      pendingGateInsertion: null,
+      sequenceEditor: null,
+      ...history,
+      isTrackModified: true,
     }
   }),
   openGateInsertionDialog: (insertion) => set({ pendingGateInsertion: insertion, isDeleteDialogOpen: false, sequenceEditor: null }),
@@ -364,6 +606,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       pendingGateInsertion: null,
       sequenceEditor: null,
       ...history,
+      isTrackModified: true,
     }
   }),
   openDeleteDialog: () => set((state) => {
@@ -412,6 +655,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
         updatedAt: new Date().toISOString(),
       }),
       ...history,
+      isTrackModified: true,
     }
   }),
   moveGateSequenceEntry: (gateId, openingId, fromSequenceNumber, toSequenceNumber) => set((state) => {
@@ -447,6 +691,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       }),
       sequenceEditor: null,
       ...history,
+      isTrackModified: true,
     }
   }),
   openSequenceEditor: (editor) => set({ sequenceEditor: editor, isDeleteDialogOpen: false, pendingGateInsertion: null }),
@@ -469,6 +714,8 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       isDeleteDialogOpen: false,
       pendingGateInsertion: null,
       sequenceEditor: null,
+      dragHistoryEntry: null,
+      isTrackModified: previousEntry.isTrackModified,
     }
   }),
   redo: () => set((state) => {
@@ -489,7 +736,35 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       isDeleteDialogOpen: false,
       pendingGateInsertion: null,
       sequenceEditor: null,
+      dragHistoryEntry: null,
+      isTrackModified: nextEntry.isTrackModified,
     }
   }),
+  requestDestructiveAction: (action, title, description) => {
+    if (!get().isTrackModified) {
+      action()
+      return
+    }
+    set({ pendingDestructiveAction: { action, title, description } })
+  },
+  confirmDestructiveAction: () => {
+    const pending = get().pendingDestructiveAction
+    if (!pending) return
+    set({ pendingDestructiveAction: null })
+    pending.action()
+  },
+  cancelDestructiveAction: () => set({ pendingDestructiveAction: null }),
+  saveBeforeDestructiveAction: () => set({ isSaveDialogOpen: true }),
+  openSaveDialog: () => set({ isSaveDialogOpen: true, pendingDestructiveAction: null }),
+  dismissSaveDialog: () => set({ isSaveDialogOpen: false, pendingDestructiveAction: null }),
+  markTrackSaved: () => {
+    const pending = get().pendingDestructiveAction
+    set({
+      isSaveDialogOpen: false,
+      isTrackModified: false,
+      pendingDestructiveAction: null,
+    })
+    if (pending) pending.action()
+  },
   setDraggingGate: (isDragging) => set({ isDraggingGate: isDragging }),
 })
