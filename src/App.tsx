@@ -89,11 +89,11 @@ function App() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen w-screen flex-col overflow-hidden">
+      <div className="flex h-dvh w-dvw flex-col overflow-hidden">
         <TopBar
           onShortcutsClick={() => setShortcutsOpen(true)}
         />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
           <LeftToolPanel
             onSaveClick={() => setSaveDialogOpen(true)}
             onGalleryClick={() => {
@@ -105,13 +105,13 @@ function App() {
               setSettingsOpen(true)
             }}
           />
-          <main className="relative flex-1">
+          <main className="relative min-w-0 flex-1 pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0">
             <Scene />
           </main>
         </div>
       </div>
       <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <SheetContent side="left" className="gap-0 p-0 sm:max-w-md">
+        <SheetContent side="left" className="w-[min(100dvw,28rem)] gap-0 p-0 sm:max-w-md">
           <SheetHeader className="pr-12">
             <SheetTitle>Strecken-Einstellungen</SheetTitle>
             <SheetDescription>
