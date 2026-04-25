@@ -7,7 +7,6 @@ import { GateOpeningIndicators } from './GateOpeningIndicators'
 interface GateComponentProps {
   position: { x: number; y: number; z: number }
   rotation: number
-  size: 0.75 | 1 | 1.5
   openings: GateOpening[]
   openingLabels?: Record<string, string>
   isSelected?: boolean
@@ -19,10 +18,9 @@ interface GateComponentProps {
 const POLE_THICKNESS = 0.06
 const BASE_HEIGHT = 2
 
-export function Flag({ position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
+export function Flag({ position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
-  const scale = size
-  const height = BASE_HEIGHT * scale
+  const height = BASE_HEIGHT
   const color = isSelected ? '#f87171' : '#ef4444'
   const emissiveColor = isSelected ? '#22d3ee' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
@@ -40,8 +38,8 @@ export function Flag({ position, rotation, size, openings, openingLabels, isSele
       </mesh>
 
       {/* Triangular flag */}
-      <mesh position={[0.15 * scale, height - 0.15 * scale, 0]} onClick={onClick}>
-        <boxGeometry args={[0.3 * scale, 0.2 * scale, 0.02]} />
+      <mesh position={[0.15, height - 0.15, 0]} onClick={onClick}>
+        <boxGeometry args={[0.3, 0.2, 0.02]} />
         <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
 

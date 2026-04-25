@@ -3,13 +3,23 @@ import { calculateFlightPath, DIVE_TOP_APPROACH_CLEARANCE, GATE_BASE_HEIGHT, GAT
 import type { Gate, GateSequenceItem } from '../types'
 import { createDefaultGateOpenings, getHGateBackrestSide } from './gateOpenings'
 
-const createGate = (id: string, x: number, y: number, z: number, size: Gate['size'] = 1): Gate => ({
+const createGate = (id: string, x: number, y: number, z: number): Gate => ({
   id,
   type: 'standard',
   position: { x, y, z },
   rotation: 0,
-  size,
-  openings: createDefaultGateOpenings('standard', size),
+  openings: createDefaultGateOpenings('standard'),
+})
+
+const createOctagonalTunnelGate = (id: string, x: number, z: number, reverse = false): Gate => ({
+  id,
+  type: 'octagonal-tunnel',
+  position: { x, y: 0, z },
+  rotation: 0,
+  openings: createDefaultGateOpenings('octagonal-tunnel').map((opening) => ({
+    ...opening,
+    reverse,
+  })),
 })
 
 describe('calculateFlightPath', () => {
@@ -235,6 +245,38 @@ describe('calculateFlightPath', () => {
     expect(firstSegment.every(point => Math.abs(point.x) < 0.00001)).toBe(true)
   })
 
+  it('passes through both octagonal tunnel ends when direction is normal', () => {
+    const gates = [
+      createOctagonalTunnelGate('tunnel-1', 0, 0),
+      createGate('g2', 0, 0, 10),
+    ]
+
+    const path = calculateFlightPath(gates)
+    const tunnelPass = path.sampledSegments[0]
+
+    expect(tunnelPass[0].x).toBeCloseTo(0, 5)
+    expect(tunnelPass[0].z).toBeCloseTo(-1.45, 5)
+    expect(tunnelPass[tunnelPass.length - 1].x).toBeCloseTo(0, 5)
+    expect(tunnelPass[tunnelPass.length - 1].z).toBeCloseTo(1.45, 5)
+    expect(tunnelPass.every(point => Math.abs(point.x) < 0.00001)).toBe(true)
+  })
+
+  it('passes through both octagonal tunnel ends when direction is reversed', () => {
+    const gates = [
+      createOctagonalTunnelGate('tunnel-1', 0, 0, true),
+      createGate('g2', 0, 0, 10),
+    ]
+
+    const path = calculateFlightPath(gates)
+    const tunnelPass = path.sampledSegments[0]
+
+    expect(tunnelPass[0].x).toBeCloseTo(0, 5)
+    expect(tunnelPass[0].z).toBeCloseTo(1.45, 5)
+    expect(tunnelPass[tunnelPass.length - 1].x).toBeCloseTo(0, 5)
+    expect(tunnelPass[tunnelPass.length - 1].z).toBeCloseTo(-1.45, 5)
+    expect(tunnelPass.every(point => Math.abs(point.x) < 0.00001)).toBe(true)
+  })
+
   it('reaches the next gate at its green entry anchor', () => {
     const gates = [
       createGate('g1', 0, 0, 0),
@@ -452,32 +494,13 @@ describe('calculateFlightPath', () => {
     expect(Math.abs(p0.z - firstGateEntry.z)).toBeLessThan(0.01)
   })
 
-  it('scales gate opening height with gate size', () => {
-    const gates = [
-      createGate('g1', 0, 0, 0, 0.75),
-      createGate('g2', 10, 0, 0, 1.5),
-    ]
-
-    const path = calculateFlightPath(gates)
-
-    const hasPointNearGateCenter = (gate: Gate) => path.sampledPoints.some((point) => (
-      Math.abs(point.x - gate.position.x) < 0.01
-      && Math.abs(point.z - gate.position.z) < 0.01
-      && Math.abs(point.y - (gate.position.y + (GATE_BASE_HEIGHT * gate.size) / 2)) < 0.01
-    ))
-
-    expect(hasPointNearGateCenter(gates[0])).toBe(true)
-    expect(hasPointNearGateCenter(gates[1])).toBe(true)
-  })
-
   it('keeps lower-to-upper double gate transitions outside the gate structure clearance', () => {
     const gate: Gate = {
       id: 'double-1',
       type: 'double',
       position: { x: 0, y: 0, z: 0 },
       rotation: 0,
-      size: 1,
-      openings: createDefaultGateOpenings('double', 1),
+      openings: createDefaultGateOpenings('double'),
     }
     const nextGate = createGate('g2', 8, 0, 0)
     const sequence: GateSequenceItem[] = [
@@ -499,8 +522,7 @@ describe('calculateFlightPath', () => {
       type: 'h-gate',
       position: { x: 0, y: 0, z: 0 },
       rotation: 0,
-      size: 1,
-      openings: createDefaultGateOpenings('h-gate', 1),
+      openings: createDefaultGateOpenings('h-gate'),
     }
     const nextGate = createGate('g2', 8, 0, 0)
     const sequence: GateSequenceItem[] = [
@@ -536,8 +558,7 @@ describe('calculateFlightPath', () => {
       type: 'h-gate',
       position: { x: 0, y: 0, z: 0 },
       rotation: 90,
-      size: 1,
-      openings: createDefaultGateOpenings('h-gate', 1),
+      openings: createDefaultGateOpenings('h-gate'),
     }
     const nextGate = createGate('g2', 8, 0, 0)
     const sequence: GateSequenceItem[] = [
@@ -563,8 +584,7 @@ describe('calculateFlightPath', () => {
       type: 'double-h',
       position: { x: 0, y: 0, z: 0 },
       rotation: 0,
-      size: 1,
-      openings: createDefaultGateOpenings('double-h', 1),
+      openings: createDefaultGateOpenings('double-h'),
     }
     const nextGate = createGate('g2', 8, 0, 0)
     const sequence: GateSequenceItem[] = [
@@ -598,8 +618,7 @@ describe('calculateFlightPath', () => {
       type: 'dive',
       position: { x: 0, y: 0, z: 10 },
       rotation: 0,
-      size: 1,
-      openings: createDefaultGateOpenings('dive', 1, 'dive-gate'),
+      openings: createDefaultGateOpenings('dive', 'dive-gate'),
     }
     const sequence: GateSequenceItem[] = [
       { gateId: startGate.id, openingId: 'main', reverse: false },
@@ -610,7 +629,7 @@ describe('calculateFlightPath', () => {
     const path = calculateFlightPath([startGate, diveGate], sequence)
     const transitionToDive = path.sampledSegments[1]
     const diveThroughTop = path.sampledSegments[2]
-    const topY = diveGate.position.y + GATE_BASE_HEIGHT * diveGate.size
+    const topY = diveGate.position.y + GATE_BASE_HEIGHT
     const approachY = topY + DIVE_TOP_APPROACH_CLEARANCE
     const insideY = topY - DIVE_TOP_APPROACH_CLEARANCE
     const transitionEnd = transitionToDive[transitionToDive.length - 1]
@@ -633,8 +652,7 @@ describe('calculateFlightPath', () => {
       type: 'dive',
       position: { x: 0, y: 0, z: 10 },
       rotation: 0,
-      size: 1,
-      openings: createDefaultGateOpenings('dive', 1, 'dive-gate'),
+      openings: createDefaultGateOpenings('dive', 'dive-gate'),
     }
     const sequence: GateSequenceItem[] = [
       { gateId: startGate.id, openingId: 'main', reverse: false },

@@ -7,7 +7,6 @@ import { GateOpeningIndicators } from './GateOpeningIndicators'
 interface GateComponentProps {
   position: { x: number; y: number; z: number }
   rotation: number
-  size: 0.75 | 1 | 1.5
   openings: GateOpening[]
   openingLabels?: Record<string, string>
   isSelected?: boolean
@@ -19,10 +18,9 @@ interface GateComponentProps {
 const POST_THICKNESS = 0.06
 const BASE_SIZE = 1.2
 
-export function DiveGate({ position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
+export function DiveGate({ position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
-  const scale = size
-  const s = BASE_SIZE * scale
+  const s = BASE_SIZE
   const half = s / 2
   const color = isSelected ? '#f472b6' : '#ec4899'
   const emissiveColor = isSelected ? '#22d3ee' : '#000000'

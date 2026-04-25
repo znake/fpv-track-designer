@@ -1,12 +1,13 @@
 import type { GateType } from '@/types'
 
 export const gateTypeOptions: { type: GateType; label: string }[] = [
-  { type: 'start-finish', label: 'Start/Ziel-Tor' },
-  { type: 'standard', label: 'Standard-Tor' },
-  { type: 'h-gate', label: 'H-Tor' },
-  { type: 'double-h', label: 'Doppel-H-Tor' },
-  { type: 'dive', label: 'Dive-Tor' },
-  { type: 'double', label: 'Doppeltor' },
-  { type: 'ladder', label: 'Leitertor' },
-  { type: 'flag', label: 'Flaggen-Tor' },
+  { type: 'start-finish', label: 'Start/Ziel-Gate' },
+  { type: 'standard', label: 'Standard-Gate' },
+  { type: 'h-gate', label: 'h-Gate' },
+  { type: 'double-h', label: 'Doppel-h-Gate' },
+  { type: 'dive', label: 'Dive-Gate' },
+  { type: 'double', label: 'Doppel-Gate' },
+  { type: 'ladder', label: 'Leiter-Gate' },
+  { type: 'flag', label: 'Flaggen-Gate' },
+  { type: 'octagonal-tunnel', label: 'Tunnel' },
 ]

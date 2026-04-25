@@ -1,0 +1,69 @@
+import type { ThreeEvent } from '@react-three/fiber'
+import type { Group } from 'three'
+import { useRef } from 'react'
+import type { GateOpening } from '../../types'
+import { GateOpeningIndicators } from './GateOpeningIndicators'
+
+interface GateComponentProps {
+  position: { x: number; y: number; z: number }
+  rotation: number
+  openings: GateOpening[]
+  openingLabels?: Record<string, string>
+  isSelected?: boolean
+  onClick?: (e: ThreeEvent<MouseEvent>) => void
+  onOpeningClick?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
+  onOpeningLabelClick?: (openingId: string, sequenceNumber: number, e: ThreeEvent<MouseEvent>) => void
+}
+
+const BASE_DIAMETER = 1.2
+const POST_THICKNESS = 0.06
+const OCTAGON_SEGMENTS = 8
+const ANGLE_OFFSET = Math.PI / OCTAGON_SEGMENTS
+
+export function OctagonalTunnelGate({ position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
+  const groupRef = useRef<Group>(null)
+  const diameter = BASE_DIAMETER
+  const radius = diameter / 2
+  const centerY = radius
+  const tunnelLength = 2
+  const color = isSelected ? '#38bdf8' : '#0891b2'
+  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const emissiveIntensity = isSelected ? 0.8 : 0
+  const vertices = Array.from({ length: OCTAGON_SEGMENTS }, (_, index) => {
+    const angle = ANGLE_OFFSET + (index * 2 * Math.PI) / OCTAGON_SEGMENTS
+    return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }
+  })
+
+  return (
+    <group
+      ref={groupRef}
+      position={[position.x, position.y, position.z]}
+      rotation-y={(rotation * Math.PI) / 180}
+    >
+      {vertices.map((start, index) => {
+        const end = vertices[(index + 1) % vertices.length]
+        const edgeLength = Math.hypot(end.x - start.x, end.y - start.y)
+        const edgeAngle = Math.atan2(end.y - start.y, end.x - start.x)
+
+        return (
+          <mesh
+            key={`octagonal-tunnel-edge-${index}`}
+            position={[(start.x + end.x) / 2, centerY + (start.y + end.y) / 2, 0]}
+            rotation-z={edgeAngle}
+            onClick={onClick}
+          >
+            <boxGeometry args={[edgeLength + POST_THICKNESS, POST_THICKNESS, tunnelLength]} />
+            <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          </mesh>
+        )
+      })}
+
+      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} />
+
+      {/* Mirrored exit-side indicator at the back of the tunnel — same opening.id so direction toggle and label edits stay in sync */}
+      <group position={[0, 0, tunnelLength]}>
+        <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} />
+      </group>
+    </group>
+  )
+}

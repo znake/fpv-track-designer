@@ -7,7 +7,6 @@ import { GateOpeningIndicators } from './GateOpeningIndicators'
 interface GateComponentProps {
   position: { x: number; y: number; z: number }
   rotation: number
-  size: 0.75 | 1 | 1.5
   openings: GateOpening[]
   openingLabels?: Record<string, string>
   isSelected?: boolean
@@ -20,11 +19,10 @@ const POST_THICKNESS = 0.06
 const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
 
-export function StandardGate({ position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
+export function StandardGate({ position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
-  const scale = size
-  const width = BASE_WIDTH * scale
-  const height = BASE_HEIGHT * scale
+  const width = BASE_WIDTH
+  const height = BASE_HEIGHT
   const color = isSelected ? '#60a5fa' : '#3b82f6'
   const emissiveColor = isSelected ? '#22d3ee' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0

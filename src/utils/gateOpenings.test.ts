@@ -4,7 +4,7 @@ import { createDefaultGateOpenings, normalizeGate } from './gateOpenings'
 
 describe('createDefaultGateOpenings', () => {
   it('creates a single side-pass opening for flags', () => {
-    const openings = createDefaultGateOpenings('flag', 1)
+    const openings = createDefaultGateOpenings('flag')
 
     expect(openings).toHaveLength(1)
     expect(openings.map((opening) => opening.id)).toEqual(['main'])
@@ -12,8 +12,22 @@ describe('createDefaultGateOpenings', () => {
     expect(openings[0].position.x).toBe(-0.45)
   })
 
+  it('creates one front entry opening for octagonal tunnel gates', () => {
+    const openings = createDefaultGateOpenings('octagonal-tunnel')
+
+    expect(openings).toHaveLength(1)
+    expect(openings[0]).toMatchObject({
+      id: 'main',
+      position: { x: 0, z: -1 },
+      rotation: 0,
+    })
+    expect(openings[0].position.y).toBeCloseTo(0.6, 9)
+    expect(openings[0].width).toBeCloseTo(1.2, 9)
+    expect(openings[0].height).toBeCloseTo(1.2, 9)
+  })
+
   it('creates top and bottom openings for double gates', () => {
-    const openings = createDefaultGateOpenings('double', 1)
+    const openings = createDefaultGateOpenings('double')
 
     expect(openings).toHaveLength(2)
     expect(openings.map((opening) => opening.id)).toEqual(['lower', 'upper'])
@@ -21,7 +35,7 @@ describe('createDefaultGateOpenings', () => {
   })
 
   it('creates three ladder-like openings for double-h gates', () => {
-    const openings = createDefaultGateOpenings('double-h', 1)
+    const openings = createDefaultGateOpenings('double-h')
 
     expect(openings).toHaveLength(3)
     expect(openings.map((opening) => opening.id)).toEqual(['lower', 'middle', 'upper'])
@@ -30,7 +44,7 @@ describe('createDefaultGateOpenings', () => {
   })
 
   it('creates a lower fly-through and backrest pass for h-gates', () => {
-    const openings = createDefaultGateOpenings('h-gate', 1)
+    const openings = createDefaultGateOpenings('h-gate')
 
     expect(openings).toHaveLength(2)
     expect(openings.map((opening) => opening.id)).toEqual(['lower', 'backrest-pass'])
@@ -40,14 +54,14 @@ describe('createDefaultGateOpenings', () => {
   })
 
   it('centers h-gate backrest pass above the lower opening', () => {
-    const openings = createDefaultGateOpenings('h-gate', 1)
+    const openings = createDefaultGateOpenings('h-gate')
     const backrestPass = openings.find((opening) => opening.id === 'backrest-pass')
 
     expect(backrestPass?.position.x).toBe(0)
   })
 
   it('aligns h-gate entry and exit sides across both openings', () => {
-    const openings = createDefaultGateOpenings('h-gate', 1)
+    const openings = createDefaultGateOpenings('h-gate')
     const lower = openings.find((opening) => opening.id === 'lower')
     const backrestPass = openings.find((opening) => opening.id === 'backrest-pass')
 
@@ -55,7 +69,7 @@ describe('createDefaultGateOpenings', () => {
   })
 
   it('creates a dive gate with a top entry and one random side exit', () => {
-    const openings = createDefaultGateOpenings('dive', 1, 'stable-gate-id')
+    const openings = createDefaultGateOpenings('dive', 'stable-gate-id')
 
     expect(openings).toHaveLength(2)
     expect(openings[0].id).toBe('entry-top')
@@ -65,30 +79,30 @@ describe('createDefaultGateOpenings', () => {
   })
 
   it('uses deterministic dive exit side for the same gate id', () => {
-    const a = createDefaultGateOpenings('dive', 1, 'same-id')
-    const b = createDefaultGateOpenings('dive', 1, 'same-id')
+    const a = createDefaultGateOpenings('dive', 'same-id')
+    const b = createDefaultGateOpenings('dive', 'same-id')
 
     expect(a).toEqual(b)
     expect(a[1].id).toEqual(b[1].id)
   })
 
   it('orients dive side exits with green inside and red outside', () => {
-    expect(createDefaultGateOpenings('dive', 1, 'd')[1]).toMatchObject({
+    expect(createDefaultGateOpenings('dive', 'd')[1]).toMatchObject({
       id: 'exit-front',
       position: { x: 0, y: 0.6, z: -0.6 },
       rotation: 180,
     })
-    expect(createDefaultGateOpenings('dive', 1, 'e')[1]).toMatchObject({
+    expect(createDefaultGateOpenings('dive', 'e')[1]).toMatchObject({
       id: 'exit-back',
       position: { x: 0, y: 0.6, z: 0.6 },
       rotation: 0,
     })
-    expect(createDefaultGateOpenings('dive', 1, 'f')[1]).toMatchObject({
+    expect(createDefaultGateOpenings('dive', 'f')[1]).toMatchObject({
       id: 'exit-left',
       position: { x: -0.6, y: 0.6, z: 0 },
       rotation: 270,
     })
-    expect(createDefaultGateOpenings('dive', 1, 'g')[1]).toMatchObject({
+    expect(createDefaultGateOpenings('dive', 'g')[1]).toMatchObject({
       id: 'exit-right',
       position: { x: 0.6, y: 0.6, z: 0 },
       rotation: 90,
@@ -101,7 +115,6 @@ describe('createDefaultGateOpenings', () => {
       type: 'dive',
       position: { x: 0, y: 0, z: 0 },
       rotation: 0,
-      size: 1,
       openings: [
         {
           id: 'main',
@@ -125,7 +138,6 @@ describe('createDefaultGateOpenings', () => {
       type: 'double-h',
       position: { x: 0, y: 0, z: 0 },
       rotation: 0,
-      size: 1,
       openings: [
         {
           id: 'lower',

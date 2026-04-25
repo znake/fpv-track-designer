@@ -9,7 +9,6 @@ interface GateComponentProps {
   gateId: string
   position: { x: number; y: number; z: number }
   rotation: number
-  size: 0.75 | 1 | 1.5
   openings: GateOpening[]
   openingLabels?: Record<string, string>
   isSelected?: boolean
@@ -23,11 +22,10 @@ const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
 const BACKREST_HEIGHT_MULTIPLIER = 1.85
 
-export function HGate({ gateId, position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
+export function HGate({ gateId, position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
-  const scale = size
-  const width = BASE_WIDTH * scale
-  const height = BASE_HEIGHT * scale
+  const width = BASE_WIDTH
+  const height = BASE_HEIGHT
   const backrestHeight = height * BACKREST_HEIGHT_MULTIPLIER
   const backrestSide = getHGateBackrestSide(gateId)
   const backrestX = backrestSide * width / 2

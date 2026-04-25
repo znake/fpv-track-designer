@@ -1,4 +1,4 @@
-import type { Gate, GateOpening, GateSize, GateType } from '../types'
+import type { Gate, GateOpening, GateType } from '../types'
 
 const BASE_WIDTH = 1.2
 const BASE_HEIGHT = 1.2
@@ -57,10 +57,10 @@ export function getHGateBackrestSide(gateId: string): -1 | 1 {
   return hash % 2 === 0 ? -1 : 1
 }
 
-function createHGateOpenings(size: GateSize): GateOpening[] {
-  const width = BASE_WIDTH * size
-  const height = BASE_HEIGHT * size
-  const stackOffset = STACK_DISTANCE * size
+function createHGateOpenings(): GateOpening[] {
+  const width = BASE_WIDTH
+  const height = BASE_HEIGHT
+  const stackOffset = STACK_DISTANCE
 
   return [
     createOpening('lower', 0, height / 2, 0, width, height),
@@ -68,10 +68,10 @@ function createHGateOpenings(size: GateSize): GateOpening[] {
   ]
 }
 
-function createDoubleHGateOpenings(size: GateSize): GateOpening[] {
-  const width = BASE_WIDTH * size
-  const height = BASE_HEIGHT * size
-  const stackOffset = STACK_DISTANCE * size
+function createDoubleHGateOpenings(): GateOpening[] {
+  const width = BASE_WIDTH
+  const height = BASE_HEIGHT
+  const stackOffset = STACK_DISTANCE
 
   return [
     createOpening('lower', 0, height / 2, 0, width, height),
@@ -80,10 +80,10 @@ function createDoubleHGateOpenings(size: GateSize): GateOpening[] {
   ]
 }
 
-function createDiveOpenings(size: GateSize, gateId?: string): GateOpening[] {
-  const width = BASE_WIDTH * size
-  const height = BASE_HEIGHT * size
-  const half = size * BASE_WIDTH * 0.5
+function createDiveOpenings(gateId?: string): GateOpening[] {
+  const width = BASE_WIDTH
+  const height = BASE_HEIGHT
+  const half = BASE_WIDTH * 0.5
   const entryTopOpening = createOpening('entry-top', 0, height, 0, width, height, 0, 90)
   const side = getDiveExitSide(gateId)
 
@@ -114,8 +114,8 @@ function createDiveOpenings(size: GateSize, gateId?: string): GateOpening[] {
   ]
 }
 
-function normalizeHGateOpenings(gate: Pick<Gate, 'size'> & { openings?: GateOpening[] }): GateOpening[] {
-  const defaultOpenings = createHGateOpenings(gate.size)
+function normalizeHGateOpenings(gate: { openings?: GateOpening[] }): GateOpening[] {
+  const defaultOpenings = createHGateOpenings()
 
   if (!gate.openings || gate.openings.length === 0) {
     return defaultOpenings
@@ -131,8 +131,8 @@ function normalizeHGateOpenings(gate: Pick<Gate, 'size'> & { openings?: GateOpen
   }))
 }
 
-function normalizeDoubleHGateOpenings(gate: Pick<Gate, 'size'> & { openings?: GateOpening[] }): GateOpening[] {
-  const defaultOpenings = createDoubleHGateOpenings(gate.size)
+function normalizeDoubleHGateOpenings(gate: { openings?: GateOpening[] }): GateOpening[] {
+  const defaultOpenings = createDoubleHGateOpenings()
 
   if (!gate.openings || gate.openings.length === 0) {
     return defaultOpenings
@@ -160,8 +160,8 @@ function normalizeDoubleHGateOpenings(gate: Pick<Gate, 'size'> & { openings?: Ga
   })
 }
 
-function normalizeDiveGateOpenings(gate: Pick<Gate, 'id' | 'size'> & { openings?: GateOpening[] }): GateOpening[] {
-  const defaultOpenings = createDiveOpenings(gate.size, gate.id)
+function normalizeDiveGateOpenings(gate: Pick<Gate, 'id'> & { openings?: GateOpening[] }): GateOpening[] {
+  const defaultOpenings = createDiveOpenings(gate.id)
 
   if (!gate.openings || gate.openings.length === 0) {
     return defaultOpenings
@@ -193,14 +193,14 @@ function normalizeDiveGateOpenings(gate: Pick<Gate, 'id' | 'size'> & { openings?
   }))
 }
 
-export function createDefaultGateOpenings(type: GateType, size: GateSize, gateId?: string): GateOpening[] {
-  const width = BASE_WIDTH * size
-  const height = BASE_HEIGHT * size
-  const stackOffset = STACK_DISTANCE * size
+export function createDefaultGateOpenings(type: GateType, gateId?: string): GateOpening[] {
+  const width = BASE_WIDTH
+  const height = BASE_HEIGHT
+  const stackOffset = STACK_DISTANCE
 
   switch (type) {
     case 'h-gate':
-      return createHGateOpenings(size)
+      return createHGateOpenings()
     case 'double':
       return [
         createOpening('lower', 0, height / 2, 0, width, height),
@@ -213,15 +213,17 @@ export function createDefaultGateOpenings(type: GateType, size: GateSize, gateId
         createOpening('upper', 0, stackOffset * 2 + height / 2, 0, width, height),
       ]
     case 'double-h':
-      return createDoubleHGateOpenings(size)
+      return createDoubleHGateOpenings()
     case 'flag':
       return [
-        createOpening('main', -0.45 * size, 1.1 * size, 0, 0.8 * size, 1.6 * size),
+        createOpening('main', -0.45, 1.1, 0, 0.8, 1.6),
       ]
+    case 'octagonal-tunnel':
+      return [createOpening('main', 0, height / 2, -1, width, height)]
     case 'standard':
       return [createOpening('main', 0, height / 2, 0, width, height)]
     case 'dive':
-      return createDiveOpenings(size, gateId)
+      return createDiveOpenings(gateId)
     case 'start-finish':
     default:
       return [createOpening('main', 0, height / 2, 0, width, height)]
@@ -229,17 +231,20 @@ export function createDefaultGateOpenings(type: GateType, size: GateSize, gateId
 }
 
 export function normalizeGate(gate: GateLike): Gate {
+  const gateWithoutLegacySize = { ...gate }
+  delete (gateWithoutLegacySize as GateLike & { size?: unknown }).size
+
   return {
-    ...gate,
-    openings: gate.type === 'h-gate'
+    ...gateWithoutLegacySize,
+    openings: gateWithoutLegacySize.type === 'h-gate'
       ? normalizeHGateOpenings(gate)
-      : gate.type === 'double-h'
+      : gateWithoutLegacySize.type === 'double-h'
       ? normalizeDoubleHGateOpenings(gate)
-      : gate.type === 'dive'
+      : gateWithoutLegacySize.type === 'dive'
       ? normalizeDiveGateOpenings(gate)
-      : gate.openings && gate.openings.length > 0
-      ? gate.openings
-      : createDefaultGateOpenings(gate.type, gate.size, gate.id),
+      : gateWithoutLegacySize.openings && gateWithoutLegacySize.openings.length > 0
+      ? gateWithoutLegacySize.openings
+      : createDefaultGateOpenings(gateWithoutLegacySize.type, gateWithoutLegacySize.id),
   }
 }
 
@@ -247,8 +252,8 @@ export function normalizeGates(gates: GateLike[]): Gate[] {
   return gates.map(normalizeGate)
 }
 
-export function recreateGateOpenings(gate: Pick<Gate, 'type' | 'size'> & { id?: string }): GateOpening[] {
-  return createDefaultGateOpenings(gate.type, gate.size, gate.id)
+export function recreateGateOpenings(gate: Pick<Gate, 'type'> & { id?: string }): GateOpening[] {
+  return createDefaultGateOpenings(gate.type, gate.id)
 }
 
 export function getPrimaryOpeningId(gate: Pick<Gate, 'openings'>): string {

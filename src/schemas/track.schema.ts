@@ -4,7 +4,7 @@ import type { GateSequenceItem, Track } from '../types/track'
 import { normalizeGates } from '../utils/gateOpenings'
 import { normalizeGateSequence } from '../utils/gateSequence'
 
-export const SCHEMA_VERSION = '1.1.0'
+export const SCHEMA_VERSION = '1.2.0'
 
 export interface TrackExportSchema {
   version: string
@@ -14,14 +14,14 @@ export interface TrackExportSchema {
     gates: Gate[]
     gateSequence?: Array<string | GateSequenceItem>
     fieldSize: { width: number; height: number }
-    gateSize: 0.75 | 1 | 1.5
     createdAt: string
     updatedAt: string
   }
   config: {
     gateQuantities: Record<GateType, number>
     fieldSize: { width: number; height: number }
-    gateSize: 0.75 | 1 | 1.5
+    snapGatesToGrid?: boolean
+    showGrid?: boolean
     showFlightPath?: boolean
     showOpeningLabels?: boolean
   }
@@ -36,8 +36,11 @@ const LEGACY_GATE_TYPE_MAP = {
   asymmetric: 'double-h' as const,
 } as const
 
-const VALID_GATE_TYPES: GateType[] = ['standard', 'h-gate', 'double-h', 'dive', 'double', 'ladder', 'start-finish', 'flag']
-const VALID_GATE_SIZES = [0.75, 1, 1.5] as const
+const VALID_GATE_TYPES: GateType[] = ['standard', 'h-gate', 'double-h', 'dive', 'double', 'ladder', 'start-finish', 'flag', 'octagonal-tunnel']
+
+function isValidGateRotation(rotation: unknown): rotation is number {
+  return typeof rotation === 'number' && Number.isFinite(rotation) && rotation >= 0 && rotation < 360
+}
 
 function normalizeGateType(type: unknown): GateType | null {
   if (typeof type !== 'string') return null
@@ -134,12 +137,8 @@ function validateGate(gate: unknown, index: number): ValidationError[] {
     }
   }
 
-  if (typeof candidate.rotation !== 'number' || candidate.rotation < 0 || candidate.rotation > 330 || candidate.rotation % 30 !== 0) {
-    errors.push({ field: `track.gates[${index}].rotation`, message: 'Rotation must be a number between 0-330 in 30deg steps' })
-  }
-
-  if (!VALID_GATE_SIZES.includes(candidate.size as typeof VALID_GATE_SIZES[number])) {
-    errors.push({ field: `track.gates[${index}].size`, message: `Gate size must be one of: ${VALID_GATE_SIZES.join(', ')}` })
+  if (!isValidGateRotation(candidate.rotation)) {
+    errors.push({ field: `track.gates[${index}].rotation`, message: 'Rotation must be a finite number between 0 and less than 360 degrees' })
   }
 
   if (candidate.openings !== undefined) {
@@ -316,10 +315,6 @@ export function validateTrack(data: unknown): { valid: boolean; errors: Validati
 
     errors.push(...validateFieldSize(track.fieldSize, 'track.fieldSize'))
 
-    if (!VALID_GATE_SIZES.includes(track.gateSize as typeof VALID_GATE_SIZES[number])) {
-      errors.push({ field: 'track.gateSize', message: `Track gate size must be one of: ${VALID_GATE_SIZES.join(', ')}` })
-    }
-
     if (typeof track.createdAt !== 'string') {
       errors.push({ field: 'track.createdAt', message: 'CreatedAt must be an ISO date string' })
     }
@@ -336,10 +331,8 @@ export function validateTrack(data: unknown): { valid: boolean; errors: Validati
     errors.push(...validateGateQuantities(config.gateQuantities))
     errors.push(...validateFieldSize(config.fieldSize, 'config.fieldSize'))
 
-    if (!VALID_GATE_SIZES.includes(config.gateSize as typeof VALID_GATE_SIZES[number])) {
-      errors.push({ field: 'config.gateSize', message: `Config gateSize must be one of: ${VALID_GATE_SIZES.join(', ')}` })
-    }
-
+    errors.push(...validateBooleanFlag(config.snapGatesToGrid, 'config.snapGatesToGrid'))
+    errors.push(...validateBooleanFlag(config.showGrid, 'config.showGrid'))
     errors.push(...validateBooleanFlag(config.showFlightPath, 'config.showFlightPath'))
     errors.push(...validateBooleanFlag(config.showOpeningLabels, 'config.showOpeningLabels'))
   }
@@ -356,14 +349,14 @@ export function serializeTrack(track: Track, config: Config): string {
       gates: track.gates,
       gateSequence: track.gateSequence,
       fieldSize: track.fieldSize,
-      gateSize: track.gateSize,
       createdAt: track.createdAt,
       updatedAt: track.updatedAt,
     },
     config: {
       gateQuantities: config.gateQuantities,
       fieldSize: config.fieldSize,
-      gateSize: config.gateSize,
+      snapGatesToGrid: config.snapGatesToGrid,
+      showGrid: config.showGrid,
       showFlightPath: config.showFlightPath,
       showOpeningLabels: config.showOpeningLabels,
     },
@@ -400,14 +393,14 @@ export function deserializeTrack(jsonString: string): { track: Track; config: Co
       gates,
       gateSequence: normalizeGateSequence(data.track.gateSequence, gates),
       fieldSize: data.track.fieldSize,
-      gateSize: data.track.gateSize,
       createdAt: data.track.createdAt,
       updatedAt: data.track.updatedAt,
     },
     config: {
       gateQuantities: normalizeGateQuantities(data.config.gateQuantities),
       fieldSize: data.config.fieldSize,
-      gateSize: data.config.gateSize,
+      snapGatesToGrid: data.config.snapGatesToGrid ?? false,
+      showGrid: data.config.showGrid ?? false,
       showFlightPath: data.config.showFlightPath ?? true,
       showOpeningLabels: data.config.showOpeningLabels ?? true,
     },

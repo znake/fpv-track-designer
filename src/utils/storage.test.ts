@@ -28,11 +28,10 @@ const createTestTrack = (overrides?: Partial<Track>): Track => ({
   id: 'test-track-id',
   name: 'Test Track',
   gates: [
-    { id: 'gate-1', type: 'standard', position: { x: 0, y: 0, z: 0 }, rotation: 0, size: 1, openings: createDefaultGateOpenings('standard', 1) },
+    { id: 'gate-1', type: 'standard', position: { x: 0, y: 0, z: 0 }, rotation: 0, openings: createDefaultGateOpenings('standard') },
   ],
   gateSequence: [{ gateId: 'gate-1', openingId: 'main', reverse: false }],
   fieldSize: { width: 100, height: 100 },
-  gateSize: 1,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
   ...overrides,
@@ -48,11 +47,13 @@ const createTestConfig = (): Config => ({
     ladder: 1,
     'start-finish': 1,
     flag: 1,
+    'octagonal-tunnel': 1,
   },
   fieldSize: { width: 100, height: 100 },
-  gateSize: 1,
+  snapGatesToGrid: false,
   showFlightPath: true,
   showOpeningLabels: true,
+  showGrid: false,
 })
 
 describe('storage', () => {

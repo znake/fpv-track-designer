@@ -124,8 +124,7 @@ export function generateTrack(config: Config): Track {
       type: sf as GateType,
       position: { x: startX, y: 0, z: startZ },
       rotation: 0,
-      size: config.gateSize,
-      openings: createDefaultGateOpenings(sf as GateType, config.gateSize, id),
+      openings: createDefaultGateOpenings(sf as GateType, id),
     })
   }
 
@@ -140,8 +139,7 @@ export function generateTrack(config: Config): Track {
         type,
         position,
         rotation: Math.floor(Math.random() * 12) * 30, // 0-330 in 30deg steps
-        size: config.gateSize,
-        openings: createDefaultGateOpenings(type, config.gateSize, id),
+        openings: createDefaultGateOpenings(type, id),
       }
       if (!isTooClose(gate, gates)) {
         gates.push(gate)
@@ -166,7 +164,6 @@ export function generateTrack(config: Config): Track {
     gates: ordered,
     gateSequence: buildFallbackGateSequence(ordered),
     fieldSize: config.fieldSize,
-    gateSize: config.gateSize,
     createdAt: now,
     updatedAt: now,
   }

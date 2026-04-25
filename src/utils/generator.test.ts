@@ -12,11 +12,13 @@ const createTestConfig = (overrides: Partial<Config> = {}): Config => ({
     double: 1,
     ladder: 1,
     flag: 0,
+    'octagonal-tunnel': 1,
   },
   fieldSize: { width: 50, height: 50 },
-  gateSize: 1,
+  snapGatesToGrid: false,
   showFlightPath: true,
   showOpeningLabels: true,
+  showGrid: false,
   ...overrides,
 })
 
@@ -109,15 +111,6 @@ describe('generateTrack', () => {
     expect(typeof track.id).toBe('string')
   })
 
-  it('sets gate size from config', () => {
-    const config = createTestConfig({ gateSize: 1.5 })
-    const track = generateTrack(config)
-
-    for (const gate of track.gates) {
-      expect(gate.size).toBe(1.5)
-    }
-  })
-
   it('sets field size from config on the track', () => {
     const config = createTestConfig({ fieldSize: { width: 30, height: 20 } })
     const track = generateTrack(config)
@@ -163,11 +156,13 @@ const config: Config = {
         double: 0,
         ladder: 0,
         flag: 0,
+        'octagonal-tunnel': 0,
   },
   fieldSize: { width: 50, height: 50 },
-  gateSize: 1,
+  snapGatesToGrid: false,
   showFlightPath: true,
   showOpeningLabels: true,
+  showGrid: false,
 }
 
     const track = generateTrack(config)
@@ -220,6 +215,7 @@ const config: Config = {
         double: 1,
         ladder: 0,
         flag: 0,
+        'octagonal-tunnel': 0,
       },
     })
 
@@ -244,6 +240,7 @@ const config: Config = {
         double: 0,
         ladder: 0,
         flag: 0,
+        'octagonal-tunnel': 0,
       },
     })
 
@@ -268,6 +265,7 @@ const config: Config = {
         double: 0,
         ladder: 1,
         flag: 0,
+        'octagonal-tunnel': 0,
       },
     })
 
@@ -279,6 +277,30 @@ const config: Config = {
       { gateId: ladderGate.id, openingId: 'lower', reverse: false },
       { gateId: ladderGate.id, openingId: 'middle', reverse: false },
       { gateId: ladderGate.id, openingId: 'upper', reverse: false },
+    ])
+  })
+
+  it('adds octagonal tunnel gates to the default sequence with one main opening', () => {
+    const config = createTestConfig({
+      gateQuantities: {
+        'start-finish': 0,
+        standard: 0,
+        'h-gate': 0,
+        'double-h': 0,
+        dive: 0,
+        double: 0,
+        ladder: 0,
+        flag: 0,
+        'octagonal-tunnel': 1,
+      },
+    })
+
+    const track = generateTrack(config)
+    const tunnelGate = track.gates[0]
+
+    expect(tunnelGate.type).toBe('octagonal-tunnel')
+    expect(track.gateSequence).toEqual([
+      { gateId: tunnelGate.id, openingId: 'main', reverse: false },
     ])
   })
 })

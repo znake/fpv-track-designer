@@ -11,6 +11,7 @@ import { DoubleGate } from './DoubleGate'
 import { LadderGate } from './LadderGate'
 import { StartFinishGate } from './StartFinishGate'
 import { Flag } from './Flag'
+import { OctagonalTunnelGate } from './OctagonalTunnelGate'
 import { GateHandles } from './GateHandles'
 
 interface GateProps {
@@ -59,7 +60,6 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProp
   const commonProps = {
     position: gate.position,
     rotation: gate.rotation,
-    size: gate.size,
     openings: showOpeningLabels ? gate.openings : [],
     openingLabels: showOpeningLabels ? openingLabels : undefined,
     isSelected,
@@ -91,6 +91,9 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProp
     case 'flag':
       gateComponent = <Flag {...commonProps} />
       break
+    case 'octagonal-tunnel':
+      gateComponent = <OctagonalTunnelGate {...commonProps} />
+      break
     case 'standard':
     default:
       gateComponent = <StandardGate {...commonProps} />
@@ -106,7 +109,6 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProp
           gateType={gate.type}
           position={gate.position}
           rotation={gate.rotation}
-          size={gate.size}
         />
       )}
     </group>

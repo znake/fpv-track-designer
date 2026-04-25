@@ -9,8 +9,7 @@ function createGate(id: string, type: Gate['type']): Gate {
     type,
     position: { x: 0, y: 0, z: 0 },
     rotation: 0,
-    size: 1,
-    openings: createDefaultGateOpenings(type, 1, id),
+    openings: createDefaultGateOpenings(type, id),
   }
 }
 
@@ -131,10 +130,18 @@ describe('gateSequence', () => {
     ])
   })
 
+  it('builds octagonal tunnel default sequence as one main pass', () => {
+    const gate = createGate('octagonal-tunnel-1', 'octagonal-tunnel')
+
+    expect(buildDefaultGateSequenceEntries(gate)).toEqual([
+      { gateId: gate.id, openingId: 'main', reverse: false },
+    ])
+  })
+
   it('uses opening reverse flags when building default sequence entries', () => {
     const gate = {
       ...createGate('standard-1', 'standard'),
-      openings: createDefaultGateOpenings('standard', 1).map((opening) => ({
+      openings: createDefaultGateOpenings('standard').map((opening) => ({
         ...opening,
         reverse: true,
       })),

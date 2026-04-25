@@ -15,6 +15,7 @@ export const DIVE_TOP_APPROACH_CLEARANCE = 0.5
 export const GATE_STRUCTURE_CLEARANCE = 0.5
 const GATE_AVOIDANCE_SIDE_MARGIN = GATE_STRUCTURE_CLEARANCE
 const GATE_AVOIDANCE_FRONT_MARGIN = 0.25
+const OCTAGONAL_TUNNEL_HALF_LENGTH_FACTOR = 1
 
 export interface PathSegment {
   from: { x: number; y: number; z: number }
@@ -155,13 +156,40 @@ function getGatePassThroughOffset(opening: GateOpening): number {
   return opening.id === 'entry-top' ? Math.max(defaultOffset, DIVE_TOP_APPROACH_CLEARANCE) : defaultOffset
 }
 
+function isOctagonalTunnelVisit(visit: GateVisit): boolean {
+  return visit.gate.type === 'octagonal-tunnel' && visit.opening.id === 'main'
+}
+
+function getOctagonalTunnelPortalPoint(visit: GateVisit, localZ: number, outsideDirection: Vector3): Vector3 {
+  const rotatedPosition = rotateLocalVector(0, localZ, visit.gate.rotation)
+  const openingOffset = outsideDirection.multiplyScalar(getGatePassThroughOffset(visit.opening))
+
+  return new Vector3(
+    visit.gate.position.x + rotatedPosition.x,
+    visit.gate.position.y + visit.opening.position.y,
+    visit.gate.position.z + rotatedPosition.z,
+  ).add(openingOffset)
+}
+
 function getGateEntryPoint(visit: GateVisit): Vector3 {
+  if (isOctagonalTunnelVisit(visit)) {
+    const entryDirection = getGateEntryDirection(visit.gate, visit.opening, visit.reverse)
+    const entryLocalZ = visit.reverse ? OCTAGONAL_TUNNEL_HALF_LENGTH_FACTOR : -OCTAGONAL_TUNNEL_HALF_LENGTH_FACTOR
+    return getOctagonalTunnelPortalPoint(visit, entryLocalZ, entryDirection)
+  }
+
   const center = getGateVisitCenterPoint(visit)
   const offset = getGateEntryDirection(visit.gate, visit.opening, visit.reverse).multiplyScalar(getGatePassThroughOffset(visit.opening))
   return center.add(offset)
 }
 
 function getGateExitPoint(visit: GateVisit): Vector3 {
+  if (isOctagonalTunnelVisit(visit)) {
+    const exitDirection = getGateExitDirection(visit.gate, visit.opening, visit.reverse)
+    const exitLocalZ = visit.reverse ? -OCTAGONAL_TUNNEL_HALF_LENGTH_FACTOR : OCTAGONAL_TUNNEL_HALF_LENGTH_FACTOR
+    return getOctagonalTunnelPortalPoint(visit, exitLocalZ, exitDirection)
+  }
+
   const center = getGateVisitCenterPoint(visit)
   const offset = getGateExitDirection(visit.gate, visit.opening, visit.reverse).multiplyScalar(getGatePassThroughOffset(visit.opening))
   return center.add(offset)

@@ -8,7 +8,6 @@ import { GateOpeningIndicators } from './GateOpeningIndicators'
 interface GateComponentProps {
   position: { x: number; y: number; z: number }
   rotation: number
-  size: 0.75 | 1 | 1.5
   openings: GateOpening[]
   openingLabels?: Record<string, string>
   isSelected?: boolean
@@ -25,16 +24,15 @@ const PANEL_HEIGHT = 0.25
 const PANEL_DEPTH = 0.02
 const PANEL_TEXT = 'Start'
 
-export function StartFinishGate({ position, rotation, size, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
+export function StartFinishGate({ position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
-  const scale = size
-  const width = BASE_WIDTH * scale
-  const height = BASE_HEIGHT * scale
+  const width = BASE_WIDTH
+  const height = BASE_HEIGHT
   const accentColor = '#f9fafb'
   const textColor = '#111827'
   const emissiveColor = isSelected ? '#22d3ee' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
-  const panelY = height + 0.25 * scale
+  const panelY = height + 0.25
   const panelTextZ = PANEL_DEPTH / 2 + 0.006
 
   return (
@@ -64,15 +62,15 @@ export function StartFinishGate({ position, rotation, size, openings, openingLab
 
       {/* Start panel on top */}
       <mesh position={[0, panelY, 0]} onClick={onClick}>
-        <boxGeometry args={[PANEL_WIDTH * scale, PANEL_HEIGHT * scale, PANEL_DEPTH]} />
+        <boxGeometry args={[PANEL_WIDTH, PANEL_HEIGHT, PANEL_DEPTH]} />
         <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
 
       <Text
         position={[0, panelY, panelTextZ]}
         color={textColor}
-        fontSize={0.13 * scale}
-        maxWidth={PANEL_WIDTH * scale * 0.86}
+        fontSize={0.13}
+        maxWidth={PANEL_WIDTH * 0.86}
         anchorX="center"
         anchorY="middle"
         onClick={onClick}
@@ -84,8 +82,8 @@ export function StartFinishGate({ position, rotation, size, openings, openingLab
         position={[0, panelY, -panelTextZ]}
         rotation-y={Math.PI}
         color={textColor}
-        fontSize={0.13 * scale}
-        maxWidth={PANEL_WIDTH * scale * 0.86}
+        fontSize={0.13}
+        maxWidth={PANEL_WIDTH * 0.86}
         anchorX="center"
         anchorY="middle"
         onClick={onClick}
