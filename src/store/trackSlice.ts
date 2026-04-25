@@ -117,7 +117,6 @@ export interface TrackSlice {
   selectGate: (gateId: string | null, additive?: boolean) => void
   setSelectedGates: (gateIds: string[]) => void
   insertGateAtIndex: (gate: Gate, gateIndex: number, sequenceIndex: number) => void
-  duplicateGate: (gateId: string) => void
   openGateInsertionDialog: (insertion: PendingGateInsertion) => void
   closeGateInsertionDialog: () => void
   deleteSelectedGates: () => void
@@ -500,74 +499,6 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
 
     nextGates.splice(clampedGateIndex, 0, normalizedGate)
     nextSequence.splice(clampedSequenceIndex, 0, ...buildDefaultGateSequenceEntries(normalizedGate))
-
-    return {
-      currentTrack: normalizeTrack({
-        ...state.currentTrack,
-        gates: nextGates,
-        gateSequence: nextSequence,
-        updatedAt: new Date().toISOString(),
-      }),
-      selectedGateId: normalizedGate.id,
-      selectedGateIds: [normalizedGate.id],
-      isDeleteDialogOpen: false,
-      pendingGateInsertion: null,
-      sequenceEditor: null,
-      ...history,
-      isTrackModified: true,
-    }
-  }),
-  duplicateGate: (gateId) => set((state) => {
-    if (!state.currentTrack) return state
-
-    const sourceIndex = state.currentTrack.gates.findIndex((gate) => gate.id === gateId)
-    if (sourceIndex < 0) return state
-
-    const sourceGate = state.currentTrack.gates[sourceIndex]
-    if (hasSingletonGateConflict(state.currentTrack.gates, sourceGate.type)) return state
-
-    const fieldSize = getActiveFieldSize(state)
-    if (!fieldSize) return state
-
-    const radians = (sourceGate.rotation * Math.PI) / 180
-    // Place duplicated gate one full grid step (gate footprint) apart from the source
-    // so there's a visible gap rather than the duplicate touching the source edge-to-edge.
-    const step = GATE_BASE_FOOTPRINT * 2
-    const targetPosition = clampGatePositionToField(
-      {
-        x: sourceGate.position.x + Math.cos(radians) * step,
-        y: sourceGate.position.y,
-        z: sourceGate.position.z - Math.sin(radians) * step,
-      },
-      fieldSize,
-    )
-
-    const newId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
-      ? crypto.randomUUID()
-      : `gate-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-
-    const duplicatedGate: Gate = {
-      ...sourceGate,
-      id: newId,
-      position: targetPosition,
-      openings: sourceGate.openings.map((opening) => ({
-        ...opening,
-        position: { ...opening.position },
-      })),
-    }
-
-    const history = pushHistory(state)
-    const normalizedGate = normalizeGates([duplicatedGate])[0]
-    const nextGates = [...state.currentTrack.gates]
-    nextGates.splice(sourceIndex + 1, 0, normalizedGate)
-
-    const nextSequence = [...state.currentTrack.gateSequence]
-    let lastSourceSeqIndex = -1
-    for (let i = 0; i < nextSequence.length; i++) {
-      if (nextSequence[i].gateId === gateId) lastSourceSeqIndex = i
-    }
-    const insertSeqIndex = lastSourceSeqIndex >= 0 ? lastSourceSeqIndex + 1 : nextSequence.length
-    nextSequence.splice(insertSeqIndex, 0, ...buildDefaultGateSequenceEntries(normalizedGate))
 
     return {
       currentTrack: normalizeTrack({

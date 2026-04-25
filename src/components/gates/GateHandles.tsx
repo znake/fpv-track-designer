@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Html } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { Vector2, Raycaster } from 'three'
-import { ArrowUpDown, Copy, Move, Plus, RotateCw, Trash2 } from 'lucide-react'
+import { ArrowUpDown, Move, Plus, RotateCw, Trash2 } from 'lucide-react'
 import type { GateType } from '../../types'
 import { useAppStore } from '../../store'
 import { calculateFlightPath } from '../../utils/flightPath'
@@ -122,7 +122,6 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
   const modeRef = useRef<DragMode>('none')
   const [activeMode, setActiveMode] = useState<DragMode>('none')
   const openDeleteDialog = useAppStore((state) => state.openDeleteDialog)
-  const duplicateGate = useAppStore((state) => state.duplicateGate)
   const closeDeleteDialog = useAppStore((state) => state.closeDeleteDialog)
 
   // Move refs
@@ -519,22 +518,6 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
           >
             <RotateCw size={22} />
           </button>
-
-          {isSingleSelectedGate && (
-            <button
-              type="button"
-              aria-label={`${gateId} duplizieren`}
-              onPointerDown={stopHtmlInteraction}
-              onClick={(event) => {
-                stopHtmlInteraction(event)
-                closeDeleteDialog()
-                duplicateGate(gateId)
-              }}
-              className={`${HANDLE_BUTTON_CLASSNAME} border-border bg-surface-elevated/95 text-foreground hover:bg-surface-hover`}
-            >
-              <Copy size={22} />
-            </button>
-          )}
 
           {isSingleSelectedGate && (
             <button
