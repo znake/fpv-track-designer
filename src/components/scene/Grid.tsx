@@ -2,6 +2,14 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { Grid as DreiGrid, Text } from '@react-three/drei'
 import { useAppStore } from '../../store'
 
+function isCameraTouchGesture(e: ThreeEvent<MouseEvent>) {
+  const target = e.nativeEvent.target
+  if (!(target instanceof HTMLElement)) return false
+
+  const canvas = target.closest('canvas')
+  return canvas?.dataset.cameraTouchGesturing === 'true'
+}
+
 interface GridProps {
   fieldSize?: { width: number; height: number }
 }
@@ -15,7 +23,7 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
 
   const handleGroundClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
-    if (isDraggingGate) return
+    if (isDraggingGate || isCameraTouchGesture(e)) return
     selectGate(null)
   }
 

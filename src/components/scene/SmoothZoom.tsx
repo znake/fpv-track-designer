@@ -11,7 +11,7 @@ interface SmoothZoomProps {
 }
 
 /**
- * Stepless smooth zoom via mouse wheel.
+ * Stepless smooth zoom via mouse wheel, middle drag and mobile pinch.
  *
  * Disables OrbitControls' built-in zoom and instead interpolates
  * the camera distance frame-by-frame for a fluid, continuous feel.
@@ -57,8 +57,61 @@ export function SmoothZoom({
 
     let isMiddleZooming = false
     let lastY = 0
+    let previousPinchDistance: number | null = null
+    let touchGestureResetTimeout: number | null = null
+    const touchPointers = new Map<number, { x: number; y: number }>()
+
+    const setTouchGesturing = (isGesturing: boolean) => {
+      if (touchGestureResetTimeout !== null) {
+        window.clearTimeout(touchGestureResetTimeout)
+        touchGestureResetTimeout = null
+      }
+
+      canvas.dataset.cameraTouchGesturing = isGesturing ? 'true' : 'false'
+      if (!isGesturing) {
+        touchGestureResetTimeout = window.setTimeout(() => {
+          canvas.dataset.cameraTouchGesturing = 'false'
+          touchGestureResetTimeout = null
+        }, 250)
+      }
+    }
+
+    const getPinchDistance = () => {
+      const [first, second] = Array.from(touchPointers.values())
+      if (!first || !second) return null
+
+      return Math.hypot(second.x - first.x, second.y - first.y)
+    }
+
+    const stopTouchZoom = () => {
+      previousPinchDistance = null
+      if (touchPointers.size === 0) {
+        const controls = controlsRef.current
+        if (controls) {
+          controls.enabled = true
+        }
+      }
+      setTouchGesturing(false)
+    }
 
     const handlePointerDown = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+        if (touchPointers.size === 2) {
+          e.preventDefault()
+          e.stopPropagation()
+          previousPinchDistance = getPinchDistance()
+          setTouchGesturing(true)
+
+          const controls = controlsRef.current
+          if (controls) {
+            controls.enabled = false
+          }
+        }
+        return
+      }
+
       if (e.button !== 1) return
       isMiddleZooming = true
       lastY = e.clientY
@@ -66,6 +119,26 @@ export function SmoothZoom({
     }
 
     const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        if (!touchPointers.has(e.pointerId)) return
+
+        touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        if (touchPointers.size !== 2 || previousPinchDistance === null) return
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        const nextPinchDistance = getPinchDistance()
+        const controls = controlsRef.current
+        if (!controls || nextPinchDistance === null || nextPinchDistance <= 0) return
+
+        const currentDist = camera.position.distanceTo(controls.target)
+        const factor = currentDist * (previousPinchDistance / nextPinchDistance)
+        previousPinchDistance = nextPinchDistance
+        targetDistRef.current = MathUtils.clamp(factor, minDistance, maxDistance)
+        return
+      }
+
       if (!isMiddleZooming) return
 
       const controls = controlsRef.current
@@ -80,22 +153,44 @@ export function SmoothZoom({
       targetDistRef.current = MathUtils.clamp(factor, minDistance, maxDistance)
     }
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        touchPointers.delete(e.pointerId)
+        if (touchPointers.size < 2) {
+          stopTouchZoom()
+        } else {
+          previousPinchDistance = getPinchDistance()
+        }
+        return
+      }
+
       if (!isMiddleZooming) return
       isMiddleZooming = false
       canvas.style.cursor = ''
+    }
+
+    const handlePointerCancel = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
+
+      touchPointers.delete(e.pointerId)
+      stopTouchZoom()
     }
 
     canvas.addEventListener('wheel', handleWheel, { passive: false })
     canvas.addEventListener('pointerdown', handlePointerDown)
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerCancel)
 
     return () => {
       canvas.removeEventListener('wheel', handleWheel)
       canvas.removeEventListener('pointerdown', handlePointerDown)
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerCancel)
+      if (touchGestureResetTimeout !== null) {
+        window.clearTimeout(touchGestureResetTimeout)
+      }
     }
   }, [camera, gl, controlsRef, minDistance, maxDistance])
   // Smoothly interpolate camera distance every frame

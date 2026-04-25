@@ -46,7 +46,7 @@ export function Scene() {
   return (
     <Canvas
       camera={{ position: [0, 30, 30], fov: 50, near: 0.1, far: 1000 }}
-      style={{ width: '100%', height: '100%' }}
+      style={{ width: '100%', height: '100%', touchAction: 'none' }}
     >
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 20, 10]} intensity={1} castShadow />
