@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { CircleHelp, Move, Plus, RotateCw } from 'lucide-react'
+import { ArrowRightLeft, CircleHelp, Move, Plus, RotateCw } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -43,6 +43,20 @@ const helpSteps: HelpStep[] = [
     accentClassName: 'text-secondary border-secondary/40 bg-secondary/10',
   },
   {
+    title: 'Einflugseite wechseln',
+    description:
+      'Beim ausgewählten Tor die jeweilige Öffnung anklicken (grün/rot) und die Richtung per Klick umdrehen. Die grüne Seite zeigt dann die neue Einflugseite.',
+    Icon: ArrowRightLeft,
+    accentClassName: 'text-primary border-primary/40 bg-primary/10',
+  },
+  {
+    title: 'Durchflugreihenfolge anpassen',
+    description:
+      'Die Durchflugnummer einer Öffnung anklicken, dann im kleinen Feld eine neue Position zwischen 1 und der Gesamtzahl der Durchflüge eintragen.',
+    Icon: Move,
+    accentClassName: 'text-secondary border-secondary/40 bg-secondary/10',
+  },
+  {
     title: 'Tor hinzufügen',
     description: 'Tor anklicken, bei dem davor oder danach ein neues Tor eingefügt werden soll. Dann auf das Plus-Symbol klicken und den Tortyp auswählen.',
     Icon: Plus,
@@ -63,6 +77,8 @@ const shortcuts: ShortcutGroup[] = [
     shortcuts: [
       { description: 'Galerie öffnen', keys: ['G'] },
       { description: 'Ansicht verschieben', keys: ['Space + linke Maustaste ziehen'] },
+      { description: 'Mobile Ansicht verschieben', keys: ['Zwei Finger ziehen'] },
+      { description: 'Mobile Ansicht zoomen', keys: ['Zwei Finger auf-/zuziehen'] },
       { description: 'Kamerahöhe ändern', keys: ['Shift + linke Maustaste ziehen'] },
       { description: 'Tor abwählen / Dialoge schließen', keys: ['Escape'] },
     ],
@@ -113,7 +129,7 @@ export function KeyboardShortcutsDialog({
 }: KeyboardShortcutsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(calc(100vw-2rem),72rem)] max-w-none sm:max-w-none">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] w-[min(calc(100vw-1rem),72rem)] max-w-none sm:max-w-none">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CircleHelp className="size-5" />
@@ -121,7 +137,7 @@ export function KeyboardShortcutsDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[34rem] pr-4">
+        <ScrollArea className="max-h-[calc(100dvh-7rem)] pr-4">
           <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
             <div className="rounded-xl border border-border bg-muted/30 p-4">
               <h3 className="text-sm font-semibold text-foreground">
@@ -129,6 +145,9 @@ export function KeyboardShortcutsDialog({
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Wähle zuerst ein Tor in der Strecke aus. Danach erscheinen direkt am Tor die passenden Werkzeuge.
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Einstellungen wie Feldgröße, Anzahl/Größe der Gates und Anzeigeoptionen findest du über das Zahnrad in der Werkzeugleiste.
               </p>
               <div className="mt-4 grid gap-3">
                 {helpSteps.map(({ title, description, Icon, accentClassName }) => (

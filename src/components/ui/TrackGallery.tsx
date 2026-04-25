@@ -127,7 +127,7 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="left" className="w-96 sm:max-w-md">
+        <SheetContent side="left" className="w-[min(100dvw,24rem)] sm:max-w-md">
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle>Strecken-Galerie</SheetTitle>
           <Button
@@ -142,7 +142,7 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
 
         <Separator />
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="min-h-0 flex-1 pr-4">
           {tracks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Ghost className="mb-3 size-10 text-muted-foreground/40" />
@@ -182,12 +182,12 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="grid gap-2 sm:flex sm:items-center">
                         <Button
                           variant="default"
                           size="sm"
                           onClick={() => handleLoad(t.id)}
-                          className="flex-1"
+                          className="sm:flex-1"
                         >
                           <Play />
                           Laden
@@ -196,6 +196,7 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDuplicateClick(t)}
+                          className="w-full sm:w-auto"
                         >
                           <Copy />
                           Duplizieren
@@ -204,6 +205,7 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDeleteClick(t)}
+                          className="w-full sm:w-auto"
                         >
                           <Trash2 />
                           Löschen
