@@ -32,13 +32,11 @@ const createMockTrack = (id: string): Track => ({
       type: 'standard',
       position: { x: 0, y: 0, z: 0 },
       rotation: 0,
-      size: 1,
-      openings: createDefaultGateOpenings('standard', 1),
+      openings: createDefaultGateOpenings('standard'),
     },
   ],
   gateSequence: [{ gateId: `${id}-gate`, openingId: 'main', reverse: false }],
   fieldSize: { width: 30, height: 15 },
-  gateSize: 1,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
 })
@@ -65,7 +63,7 @@ describe('LeftToolPanel', () => {
 
     renderPanel()
 
-    const shuffleButton = screen.getByRole('button', { name: 'Mischen' })
+    const shuffleButton = screen.getByRole('button', { name: 'Shuffle' })
 
     fireEvent.click(shuffleButton)
     expect(generateTrackMock).toHaveBeenCalledTimes(1)
@@ -78,7 +76,7 @@ describe('LeftToolPanel', () => {
 
     const buttonNames = screen.getAllByRole('button').map((button) => button.getAttribute('aria-label'))
 
-    expect(buttonNames).toEqual(['Mischen', 'Speichern', 'Galerie', 'Einstellungen'])
+    expect(buttonNames).toEqual(['Shuffle', 'Speichern', 'Galerie', 'Einstellungen'])
     expect(screen.queryByRole('button', { name: 'Neue Strecke' })).toBeNull()
   })
 })

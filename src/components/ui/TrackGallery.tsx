@@ -35,6 +35,7 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
   const currentTrack = useAppStore((state) => state.currentTrack)
   const replaceTrack = useAppStore((state) => state.replaceTrack)
   const setConfig = useAppStore((state) => state.setConfig)
+  const requestDestructiveAction = useAppStore((state) => state.requestDestructiveAction)
   const [tracks, setTracks] = useState<SavedTrackInfo[]>(() => listTracks())
   const [trackToDelete, setTrackToDelete] = useState<SavedTrackInfo | null>(null)
   const [trackToDuplicate, setTrackToDuplicate] = useState<SavedTrackInfo | null>(null)
@@ -54,13 +55,19 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
   }, [refreshTracks])
 
   const handleLoad = (id: string) => {
-    const result = loadTrack(id)
-    if (result) {
-      setConfig(result.config)
-      replaceTrack(result.track)
-      onOpenChange(false)
-    }
-    refreshTracks()
+    requestDestructiveAction(
+      () => {
+        const result = loadTrack(id)
+        if (result) {
+          setConfig(result.config)
+          replaceTrack(result.track)
+          onOpenChange(false)
+        }
+        refreshTracks()
+      },
+      'Aktuelle Strecke verwerfen?',
+      'Beim Laden einer gespeicherten Strecke wird die aktuelle Strecke ersetzt. Die ungespeicherten Änderungen gehen dabei verloren. Möchtest du sie zuerst speichern?',
+    )
   }
 
   const handleDeleteClick = (track: SavedTrackInfo) => {
@@ -112,14 +119,23 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
       updatedAt: now,
     }
 
+    // Persist the duplicate to localStorage immediately so it appears in the
+    // gallery list even if the user cancels switching to it.
     saveTrack(copiedTrack, saved.config)
-    setConfig(saved.config)
-    replaceTrack(copiedTrack)
     window.dispatchEvent(new CustomEvent('track-saved'))
     setTrackToDuplicate(null)
     setDuplicateName('')
-    onOpenChange(false)
     refreshTracks()
+
+    requestDestructiveAction(
+      () => {
+        setConfig(saved.config)
+        replaceTrack(copiedTrack)
+        onOpenChange(false)
+      },
+      'Aktuelle Strecke verwerfen?',
+      'Nach dem Duplizieren wird zur Kopie gewechselt und die aktuelle Strecke ersetzt. Die ungespeicherten Änderungen gehen dabei verloren. Möchtest du sie zuerst speichern?',
+    )
   }
 
   const refresh = refreshTracks

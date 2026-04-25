@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react'
 import { Dice5, Save, Settings2, GalleryVertical } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { generateTrack } from '@/utils/generator'
+import { extractGenerationConfig } from '@/utils/generationConfig'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -24,13 +25,17 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
 }) => {
   const config = useAppStore((state) => state.config)
   const setTrack = useAppStore((state) => state.setTrack)
+  const requestDestructiveAction = useAppStore((state) => state.requestDestructiveAction)
 
   const [saveOpen, setSaveOpen] = useState(false)
 
   const handleShuffle = useCallback(() => {
-    const track = generateTrack(config)
-    setTrack(track)
-  }, [config, setTrack])
+    requestDestructiveAction(
+      () => setTrack(generateTrack(config), extractGenerationConfig(config)),
+      'Aktuelle Strecke verwerfen?',
+      'Die aktuelle Strecke enthält ungespeicherte Änderungen, die beim Shuffle verloren gehen. Möchtest du sie zuerst speichern?',
+    )
+  }, [config, requestDestructiveAction, setTrack])
 
   const handleSaveClick = useCallback(() => {
     if (onSaveClick) {
@@ -48,11 +53,19 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
     onSettingsClick?.()
   }, [onSettingsClick])
 
-  const primaryTools = [
+  const primaryTools: Array<{
+    icon: typeof Dice5
+    label: string
+    shortcut: string
+    description?: string
+    action: () => void
+  }> = [
     {
       icon: Dice5,
-      label: 'Mischen',
+      label: 'Shuffle',
       shortcut: 'R',
+      description:
+        'Ordnet alle Gates neu an – basierend auf den Settings wird ein neuer Track zufällig generiert.',
       action: handleShuffle,
     },
     {
@@ -79,7 +92,7 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
     <>
       <aside className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(3.75rem+env(safe-area-inset-bottom))] shrink-0 items-start justify-center border-t border-border bg-surface/95 px-3 pt-2 pb-[env(safe-area-inset-bottom)] shadow-2xl shadow-black/30 backdrop-blur-md transition-all duration-200 ease-out md:static md:h-auto md:w-12 md:flex-col md:items-center md:justify-start md:border-t-0 md:border-r md:bg-surface md:px-0 md:py-2 md:shadow-none md:backdrop-blur-none">
         <div className="flex w-full max-w-sm items-center justify-around gap-2 md:w-auto md:flex-col md:justify-start md:gap-1">
-          {primaryTools.map(({ icon: Icon, label, shortcut, action }) => (
+          {primaryTools.map(({ icon: Icon, label, shortcut, description, action }) => (
             <Tooltip key={label}>
               <TooltipTrigger asChild>
                 <Button
@@ -93,8 +106,15 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
                   <Icon className="size-5 md:size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="hidden md:block">
-                {label}{shortcut && ` (${shortcut})`}
+              <TooltipContent side="right" className="hidden max-w-xs md:block">
+                <div className="font-medium">
+                  {label}{shortcut && ` (${shortcut})`}
+                </div>
+                {description && (
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {description}
+                  </div>
+                )}
               </TooltipContent>
             </Tooltip>
           ))}

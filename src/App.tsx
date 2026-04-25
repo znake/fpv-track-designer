@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from './store'
 import { generateTrack } from './utils/generator'
+import { extractGenerationConfig } from './utils/generationConfig'
 import { createDefaultGateOpenings } from './utils/gateOpenings'
 import { gateTypeOptions } from './utils/gateTypeOptions'
 import { defaultConfig } from './store/configSlice'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import type { GateType } from './types'
 import { SaveTrackDialog } from './components/ui/SaveTrackDialog'
+import { UnsavedChangesDialog } from './components/ui/UnsavedChangesDialog'
 import { TrackGallery } from './components/ui/TrackGallery'
 import { KeyboardShortcutsDialog } from './components/ui/KeyboardShortcutsDialog'
 import { Button } from './components/ui/button'
@@ -30,6 +32,7 @@ import {
 import { ScrollArea } from './components/ui/scroll-area'
 import { Separator } from './components/ui/separator'
 import { GateConfigPanel } from './components/ui/GateConfigPanel'
+import { ApplyConfigFooter } from './components/ui/ApplyConfigFooter'
 import { Scene } from './components/scene/Scene'
 import { TopBar } from './components/layout/TopBar'
 import { LeftToolPanel } from './components/layout/LeftToolPanel'
@@ -65,8 +68,11 @@ function App() {
   const sequenceEditor = useAppStore((state) => state.sequenceEditor)
   const closeSequenceEditor = useAppStore((state) => state.closeSequenceEditor)
   const moveGateSequenceEntry = useAppStore((state) => state.moveGateSequenceEntry)
+  const requestDestructiveAction = useAppStore((state) => state.requestDestructiveAction)
+  const openSaveDialog = useAppStore((state) => state.openSaveDialog)
 
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  // SaveTrackDialog is now globally controlled via store (isSaveDialogOpen).
+  // We keep the gallery/shortcuts/settings sheet state local.
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -74,10 +80,17 @@ function App() {
     editorKey: null,
     value: '',
   })
+  const sequenceInputRef = useRef<HTMLInputElement>(null)
 
   useKeyboardShortcuts({
-    onSave: () => setSaveDialogOpen(true),
-    onShuffle: () => setTrack(generateTrack(config)),
+    onSave: () => openSaveDialog(),
+    onShuffle: () => {
+      requestDestructiveAction(
+        () => setTrack(generateTrack(config), extractGenerationConfig(config)),
+        'Aktuelle Strecke verwerfen?',
+        'Die aktuelle Strecke enthält ungespeicherte Änderungen, die beim Shuffle verloren gehen. Möchtest du sie zuerst speichern?',
+      )
+    },
     onOpenGallery: () => {
       setSettingsOpen(false)
       setGalleryOpen(true)
@@ -88,7 +101,7 @@ function App() {
   useEffect(() => {
     if (!currentTrack) {
       const track = generateTrack(defaultConfig)
-      setTrack(track)
+      setTrack(track, extractGenerationConfig(defaultConfig))
     }
   }, [currentTrack, setTrack])
 
@@ -102,9 +115,23 @@ function App() {
     return () => window.clearTimeout(timeoutId)
   }, [])
 
+  // Mark current value when sequence editor opens, so the user can directly overwrite it.
+  useEffect(() => {
+    if (!sequenceEditor) return
+
+    const frame = requestAnimationFrame(() => {
+      const input = sequenceInputRef.current
+      if (!input) return
+      input.focus()
+      input.select()
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [sequenceEditor])
+
   const singletonGateTypes = new Set<GateType>(
     currentTrack?.gates
-      .filter((gate) => gate.type === 'start-finish' || gate.type === 'flag')
+      .filter((gate) => gate.type === 'start-finish')
       .map((gate) => gate.type) ?? [],
   )
 
@@ -118,8 +145,7 @@ function App() {
         type,
         position: pendingGateInsertion.position,
         rotation: pendingGateInsertion.rotation,
-        size: currentTrack.gateSize,
-        openings: createDefaultGateOpenings(type, currentTrack.gateSize, id),
+        openings: createDefaultGateOpenings(type, id),
       },
       pendingGateInsertion.gateIndex,
       pendingGateInsertion.sequenceIndex,
@@ -177,7 +203,7 @@ function App() {
         />
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <LeftToolPanel
-            onSaveClick={() => setSaveDialogOpen(true)}
+            onSaveClick={() => openSaveDialog()}
             onGalleryClick={() => {
               setSettingsOpen(false)
               setGalleryOpen(true)
@@ -193,22 +219,24 @@ function App() {
         </div>
       </div>
       <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <SheetContent side="left" className="w-[min(100dvw,28rem)] gap-0 p-0 sm:max-w-md">
+        <SheetContent side="left" className="flex w-[min(100dvw,28rem)] flex-col gap-0 p-0 sm:max-w-md">
           <SheetHeader className="pr-12">
             <SheetTitle>Strecken-Einstellungen</SheetTitle>
             <SheetDescription>
-              Passe Toranzahl, Feldmaße und Torgröße an oder setze die Standardeinstellungen zurück.
+              Passe Gate-Anzahl und Feldmaße an oder setze die Standardeinstellungen zurück.
             </SheetDescription>
           </SheetHeader>
           <Separator />
-          <ScrollArea className="flex-1">
+          <ScrollArea className="min-h-0 flex-1">
             <div className="p-4">
               <GateConfigPanel />
             </div>
           </ScrollArea>
+          <ApplyConfigFooter />
         </SheetContent>
       </Sheet>
-      <SaveTrackDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen} />
+      <SaveTrackDialog />
+      <UnsavedChangesDialog />
       <TrackGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <Dialog open={pendingGateInsertion !== null} onOpenChange={(open) => {
@@ -216,9 +244,9 @@ function App() {
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tor einfügen</DialogTitle>
+            <DialogTitle>Gate einfügen</DialogTitle>
             <DialogDescription>
-              Wähle den Tortyp aus. Das neue Tor wird an der berechneten Position in die Durchflugreihenfolge eingefügt.
+              Wähle den Gate-Typ aus. Das neue Gate wird an der berechneten Position in die Durchflugreihenfolge eingefügt.
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -266,13 +294,14 @@ function App() {
               <Label htmlFor="sequence-number">Durchflugnummer</Label>
               <Input
                 id="sequence-number"
+                ref={sequenceInputRef}
                 value={sequenceValue}
                 onChange={(event) => setSequenceDraft({
                   editorKey: sequenceEditorKey,
                   value: event.target.value,
                 })}
+                onFocus={(event) => event.currentTarget.select()}
                 inputMode="numeric"
-                autoFocus
               />
               {sequenceInputError && <p className="text-xs text-destructive">{sequenceInputError}</p>}
             </div>
@@ -302,9 +331,9 @@ function App() {
             }}
           >
             <DialogHeader>
-              <DialogTitle>Ausgewähltes Tor löschen?</DialogTitle>
+              <DialogTitle>Ausgewähltes Gate löschen?</DialogTitle>
               <DialogDescription>
-                Dadurch wird das ausgewählte Tor aus der Strecke entfernt und die aktuelle Auswahl gelöscht.
+                Dadurch wird das ausgewählte Gate aus der Strecke entfernt und die aktuelle Auswahl gelöscht.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">
@@ -316,7 +345,7 @@ function App() {
                 Abbrechen
               </Button>
               <Button type="submit" variant="destructive" autoFocus>
-                Tor löschen
+                Gate löschen
               </Button>
             </DialogFooter>
           </form>

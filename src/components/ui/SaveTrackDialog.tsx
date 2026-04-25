@@ -15,21 +15,52 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 
 interface SaveTrackDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  /**
+   * When provided, the dialog is fully controlled by the parent (legacy
+   * usage in `LeftToolPanel.tsx` fallback path). When omitted, the dialog
+   * binds to the global store state (`isSaveDialogOpen`) and dispatches
+   * `openSaveDialog` / `dismissSaveDialog` / `markTrackSaved` actions –
+   * which is the production wiring used by `App.tsx`.
+   */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export const SaveTrackDialog: FC<SaveTrackDialogProps> = ({ open, onOpenChange }) => {
+export const SaveTrackDialog: FC<SaveTrackDialogProps> = ({ open: openProp, onOpenChange }) => {
   const currentTrack = useAppStore((state) => state.currentTrack)
   const syncCurrentTrack = useAppStore((state) => state.syncCurrentTrack)
   const config = useAppStore((state) => state.config)
+  const storeOpen = useAppStore((state) => state.isSaveDialogOpen)
+  const dismissSaveDialog = useAppStore((state) => state.dismissSaveDialog)
+  const markTrackSaved = useAppStore((state) => state.markTrackSaved)
+
+  const isControlled = openProp !== undefined
+  const open = isControlled ? openProp : storeOpen
+
   const [name, setName] = useState(currentTrack?.name ?? '')
+
+  // React-recommended "adjust state when a prop changes" pattern: sync the
+  // input value to the active track whenever the dialog transitions to open.
+  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open && currentTrack) {
+      setName(currentTrack.name)
+    }
+  }
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen && currentTrack) {
       setName(currentTrack.name)
     }
-    onOpenChange(newOpen)
+    if (isControlled) {
+      onOpenChange?.(newOpen)
+      return
+    }
+    if (!newOpen) {
+      dismissSaveDialog()
+    }
   }
 
   const handleSave = () => {
@@ -39,7 +70,14 @@ export const SaveTrackDialog: FC<SaveTrackDialogProps> = ({ open, onOpenChange }
     saveTrack(updated, config)
     syncCurrentTrack(updated)
     window.dispatchEvent(new CustomEvent('track-saved'))
-    onOpenChange(false)
+    if (isControlled) {
+      onOpenChange?.(false)
+      return
+    }
+    // markTrackSaved() clears the dirty flag, closes this dialog, and
+    // automatically continues any pending destructive action that was
+    // staged via the "Zuerst speichern" path of UnsavedChangesDialog.
+    markTrackSaved()
   }
 
   return (
