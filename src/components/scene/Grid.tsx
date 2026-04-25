@@ -1,5 +1,5 @@
 import type { ThreeEvent } from '@react-three/fiber'
-import { Grid as DreiGrid } from '@react-three/drei'
+import { Grid as DreiGrid, Text } from '@react-three/drei'
 import { useAppStore } from '../../store'
 
 interface GridProps {
@@ -9,6 +9,7 @@ interface GridProps {
 export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
   const halfW = fieldSize.width / 2
   const halfH = fieldSize.height / 2
+  const watermarkSize = Math.max(6, Math.min(fieldSize.width / 5.2, fieldSize.height * 0.32))
   const selectGate = useAppStore((state) => state.selectGate)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
 
@@ -64,6 +65,25 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
         fadeDistance={200}
         fadeStrength={1}
       />
+
+      {/* Subtle field branding */}
+      <Text
+        position={[0, 0.025, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={watermarkSize}
+        anchorX="center"
+        anchorY="middle"
+        renderOrder={1}
+      >
+        #FPVOOE
+        <meshBasicMaterial
+          color="#d9ead0"
+          transparent
+          opacity={0.07}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </Text>
 
     </group>
   )

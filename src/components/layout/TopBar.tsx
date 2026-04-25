@@ -76,6 +76,9 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
         <span className="text-sm font-semibold tracking-tight">
           FPV-Track-Designer
         </span>
+        <Badge variant="outline" className="hidden border-amber-500/40 bg-amber-500/10 px-1.5 py-0 text-[10px] font-medium text-amber-700 sm:inline-flex">
+          Alpha Version
+        </Badge>
       </div>
 
       <Separator orientation="vertical" className="h-6" />
@@ -141,6 +144,15 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
 
       {/* Right: Track name + actions */}
       <div className="ml-auto flex items-center gap-2">
+        <a
+          href="https://fpvooe.com/"
+          target="_blank"
+          rel="noreferrer"
+          className="hidden rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary transition-colors hover:border-primary/40 hover:bg-primary/15 sm:inline-flex"
+        >
+          #fpvooe
+        </a>
+
         {currentTrack && (
           <Tooltip>
             <TooltipTrigger asChild>
