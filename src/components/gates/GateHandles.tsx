@@ -6,7 +6,6 @@ import { Move, Plus, RotateCw, Trash2 } from 'lucide-react'
 import type { GateSize, GateType } from '../../types'
 import { useAppStore } from '../../store'
 import { calculateFlightPath } from '../../utils/flightPath'
-import { createDefaultGateOpenings } from '../../utils/gateOpenings'
 import { Button } from '../ui/button'
 
 interface GateHandlesProps {
@@ -37,25 +36,9 @@ const POST_THICKNESS = 0.06
 const H_GATE_BACKREST_HEIGHT_MULTIPLIER = 1.85
 const HANDLE_CLEARANCE_ABOVE_GATE = 0.5
 const INSERT_HANDLE_OFFSET_Y = 0.9
-const DELETE_HANDLE_OFFSET_Y = 0.35
 const DEGREES_PER_PIXEL = 1
 const FALLBACK_INSERT_DISTANCE = 3
 const HANDLE_BUTTON_CLASSNAME = 'pointer-events-auto flex size-11 items-center justify-center rounded-full border shadow-lg shadow-black/30 backdrop-blur supports-backdrop-filter:backdrop-blur-sm transition-colors select-none touch-none'
-
-const GATE_TYPE_OPTIONS: { type: GateType; label: string }[] = [
-  { type: 'start-finish', label: 'Start/Ziel-Tor' },
-  { type: 'standard', label: 'Standard-Tor' },
-  { type: 'h-gate', label: 'H-Tor' },
-  { type: 'double-h', label: 'Doppel-H-Tor' },
-  { type: 'dive', label: 'Dive-Tor' },
-  { type: 'double', label: 'Doppeltor' },
-  { type: 'ladder', label: 'Leitertor' },
-  { type: 'flag', label: 'Flaggen-Tor' },
-]
-
-function isSingletonGateType(type: GateType): boolean {
-  return type === 'start-finish' || type === 'flag'
-}
 
 function getMidpoint(a: GatePosition, b: GatePosition): GatePosition {
   return {
@@ -135,7 +118,6 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
   const { camera, gl, controls } = useThree()
   const modeRef = useRef<DragMode>('none')
   const [activeMode, setActiveMode] = useState<DragMode>('none')
-  const [activeInsertPosition, setActiveInsertPosition] = useState<InsertPosition | null>(null)
   const openDeleteDialog = useAppStore((state) => state.openDeleteDialog)
   const closeDeleteDialog = useAppStore((state) => state.closeDeleteDialog)
 
@@ -155,19 +137,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
   const currentTrack = useAppStore((state) => state.currentTrack)
   const selectedGateId = useAppStore((state) => state.selectedGateId)
   const selectedGateIds = useAppStore((state) => state.selectedGateIds)
-  const insertGateAtIndex = useAppStore((state) => state.insertGateAtIndex)
-  const unavailableSingletonGateTypes = useMemo(() => {
-    const gateTypes = new Set<GateType>()
-
-    currentTrack?.gates.forEach((gate) => {
-      if (isSingletonGateType(gate.type)) {
-        gateTypes.add(gate.type)
-      }
-    })
-
-    return gateTypes
-  }, [currentTrack?.gates])
-
+  const openGateInsertionDialog = useAppStore((state) => state.openGateInsertionDialog)
   // Stable refs for window listeners
   const gateIdRef = useRef(gateId)
   const positionRef = useRef(position)
@@ -338,26 +308,15 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
     }
   }, [currentTrack, flightPath?.sampledLegs, gateId, gateSequence, selectedGate, selectedGateIndex])
 
-  const handleInsertGate = useCallback((control: InsertControlConfig, type: GateType) => {
+  const handleOpenInsertDialog = useCallback((control: InsertControlConfig) => {
     if (!currentTrack || !selectedGate) return
-    if (unavailableSingletonGateTypes.has(type)) return
-
-    const id = crypto.randomUUID()
-
-    insertGateAtIndex(
-      {
-        id,
-        type,
-        position: control.insertPosition,
-        rotation: selectedGate.rotation,
-        size: currentTrack.gateSize,
-        openings: createDefaultGateOpenings(type, currentTrack.gateSize, id),
-      },
-      control.gateIndex,
-      control.sequenceIndex,
-    )
-    setActiveInsertPosition(null)
-  }, [currentTrack, insertGateAtIndex, selectedGate, unavailableSingletonGateTypes])
+    openGateInsertionDialog({
+      gateIndex: control.gateIndex,
+      sequenceIndex: control.sequenceIndex,
+      position: control.insertPosition,
+      rotation: selectedGate.rotation,
+    })
+  }, [currentTrack, openGateInsertionDialog, selectedGate])
 
   const beforeInsertControl = isSingleSelectedGate ? getInsertControlConfig('before') : null
   const afterInsertControl = isSingleSelectedGate ? getInsertControlConfig('after') : null
@@ -426,8 +385,6 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
   const renderInsertControl = (control: InsertControlConfig | null, label: string) => {
     if (!control) return null
 
-    const isOpen = activeInsertPosition === control.direction
-
     return (
       <Html
         key={control.direction}
@@ -441,39 +398,6 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
         style={{ pointerEvents: 'none' }}
       >
         <div className="relative flex flex-col items-center gap-2 pointer-events-auto">
-          {isOpen && (
-            <div
-              className="grid w-40 grid-cols-2 gap-1 rounded-xl border border-border bg-popover/95 p-2 text-xs shadow-xl shadow-black/35 backdrop-blur supports-backdrop-filter:backdrop-blur-sm"
-              onPointerDown={stopHtmlInteraction}
-              onClick={stopHtmlInteraction}
-            >
-              {GATE_TYPE_OPTIONS.map((option) => {
-                const isGateTypeDisabled = unavailableSingletonGateTypes.has(option.type)
-
-                return (
-                  <Button
-                    key={option.type}
-                    variant="outline"
-                    size="xs"
-                    className="h-auto justify-start py-1.5"
-                    onPointerDown={stopHtmlInteraction}
-                    disabled={isGateTypeDisabled}
-                    onClick={(event) => {
-                      if (isGateTypeDisabled) {
-                        stopHtmlInteraction(event)
-                        return
-                      }
-
-                      stopHtmlInteraction(event)
-                      handleInsertGate(control, option.type)
-                    }}
-                  >
-                    {option.label}
-                  </Button>
-                )
-              })}
-            </div>
-          )}
           <div className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground shadow-md shadow-black/20 backdrop-blur">
             {label}
           </div>
@@ -485,7 +409,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
             onClick={(event) => {
               stopHtmlInteraction(event)
               closeDeleteDialog()
-              setActiveInsertPosition((current) => current === control.direction ? null : control.direction)
+              handleOpenInsertDialog(control)
             }}
             aria-label={`${gateId} ${control.direction === 'before' ? 'vorher' : 'nachher'} einfügen`}
           >
@@ -500,30 +424,6 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
     <>
       {renderInsertControl(beforeInsertControl, 'Vorher')}
       {renderInsertControl(afterInsertControl, 'Nachher')}
-
-      {isSingleSelectedGate && (
-        <Html
-          position={[position.x, DELETE_HANDLE_OFFSET_Y, position.z]}
-          center
-          distanceFactor={9}
-          style={{ pointerEvents: 'none' }}
-        >
-          <Button
-            variant="destructive"
-            size="sm"
-            className="pointer-events-auto shadow-lg shadow-black/35"
-            onPointerDown={stopHtmlInteraction}
-            onClick={(event) => {
-              stopHtmlInteraction(event)
-              setActiveInsertPosition(null)
-              openDeleteDialog()
-            }}
-          >
-            <Trash2 className="size-3.5" />
-            Tor löschen
-          </Button>
-        </Html>
-      )}
 
       <Html
         position={[position.x, moveRotateHandleY, position.z]}
@@ -559,6 +459,21 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
           >
             <RotateCw size={22} />
           </button>
+
+          {isSingleSelectedGate && (
+            <button
+              type="button"
+              aria-label={`${gateId} löschen`}
+              onPointerDown={stopHtmlInteraction}
+              onClick={(event) => {
+                stopHtmlInteraction(event)
+                openDeleteDialog()
+              }}
+              className={`${HANDLE_BUTTON_CLASSNAME} border-destructive/60 bg-destructive text-destructive-foreground hover:bg-destructive/90`}
+            >
+              <Trash2 size={22} />
+            </button>
+          )}
         </div>
       </Html>
     </>

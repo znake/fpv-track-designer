@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from './store'
 import { generateTrack } from './utils/generator'
+import { createDefaultGateOpenings } from './utils/gateOpenings'
+import { gateTypeOptions } from './utils/gateTypeOptions'
 import { defaultConfig } from './store/configSlice'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import type { GateType } from './types'
 import { SaveTrackDialog } from './components/ui/SaveTrackDialog'
 import { TrackGallery } from './components/ui/TrackGallery'
 import { KeyboardShortcutsDialog } from './components/ui/KeyboardShortcutsDialog'
 import { Button } from './components/ui/button'
+import { Input } from './components/ui/input'
+import { Label } from './components/ui/label'
 import {
   Dialog,
   DialogContent,
@@ -54,11 +59,21 @@ function App() {
   const isDeleteDialogOpen = useAppStore((state) => state.isDeleteDialogOpen)
   const closeDeleteDialog = useAppStore((state) => state.closeDeleteDialog)
   const deleteSelectedGates = useAppStore((state) => state.deleteSelectedGates)
+  const pendingGateInsertion = useAppStore((state) => state.pendingGateInsertion)
+  const closeGateInsertionDialog = useAppStore((state) => state.closeGateInsertionDialog)
+  const insertGateAtIndex = useAppStore((state) => state.insertGateAtIndex)
+  const sequenceEditor = useAppStore((state) => state.sequenceEditor)
+  const closeSequenceEditor = useAppStore((state) => state.closeSequenceEditor)
+  const moveGateSequenceEntry = useAppStore((state) => state.moveGateSequenceEntry)
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [sequenceDraft, setSequenceDraft] = useState<{ editorKey: string | null; value: string }>({
+    editorKey: null,
+    value: '',
+  })
 
   useKeyboardShortcuts({
     onSave: () => setSaveDialogOpen(true),
@@ -86,6 +101,73 @@ function App() {
 
     return () => window.clearTimeout(timeoutId)
   }, [])
+
+  const singletonGateTypes = new Set<GateType>(
+    currentTrack?.gates
+      .filter((gate) => gate.type === 'start-finish' || gate.type === 'flag')
+      .map((gate) => gate.type) ?? [],
+  )
+
+  const handleInsertGate = (type: GateType) => {
+    if (!currentTrack || !pendingGateInsertion || singletonGateTypes.has(type)) return
+
+    const id = crypto.randomUUID()
+    insertGateAtIndex(
+      {
+        id,
+        type,
+        position: pendingGateInsertion.position,
+        rotation: pendingGateInsertion.rotation,
+        size: currentTrack.gateSize,
+        openings: createDefaultGateOpenings(type, currentTrack.gateSize, id),
+      },
+      pendingGateInsertion.gateIndex,
+      pendingGateInsertion.sequenceIndex,
+    )
+    closeGateInsertionDialog()
+  }
+
+  const sequenceEditorKey = sequenceEditor
+    ? `${sequenceEditor.gateId}:${sequenceEditor.openingId}:${sequenceEditor.sourceSequenceNumber}`
+    : null
+  const sequenceValue = sequenceEditorKey && sequenceDraft.editorKey === sequenceEditorKey
+    ? sequenceDraft.value
+    : String(sequenceEditor?.sourceSequenceNumber ?? '')
+  const sequenceLength = currentTrack?.gateSequence.length ?? 0
+  const nextSequenceNumber = Number(sequenceValue.trim())
+  const sequenceInputError = (() => {
+    if (!sequenceEditor || sequenceValue.trim().length === 0) {
+      return 'Bitte eine Zahl eingeben.'
+    }
+
+    if (!Number.isInteger(nextSequenceNumber)) {
+      return 'Bitte eine ganze Zahl eingeben.'
+    }
+
+    if (nextSequenceNumber < 1 || nextSequenceNumber > sequenceLength) {
+      return `Bitte eine Nummer zwischen 1 und ${sequenceLength} wählen.`
+    }
+
+    return null
+  })()
+
+  const handleSequenceSubmit = () => {
+    if (!sequenceEditor || sequenceInputError) return
+
+    moveGateSequenceEntry(
+      sequenceEditor.gateId,
+      sequenceEditor.openingId,
+      sequenceEditor.sourceSequenceNumber,
+      nextSequenceNumber,
+    )
+    setSequenceDraft({ editorKey: null, value: '' })
+    closeSequenceEditor()
+  }
+
+  const closeSequenceDialog = () => {
+    setSequenceDraft({ editorKey: null, value: '' })
+    closeSequenceEditor()
+  }
 
   return (
     <TooltipProvider>
@@ -129,6 +211,82 @@ function App() {
       <SaveTrackDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen} />
       <TrackGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <Dialog open={pendingGateInsertion !== null} onOpenChange={(open) => {
+        if (!open) closeGateInsertionDialog()
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tor einfügen</DialogTitle>
+            <DialogDescription>
+              Wähle den Tortyp aus. Das neue Tor wird an der berechneten Position in die Durchflugreihenfolge eingefügt.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {gateTypeOptions.map((option) => {
+              const disabled = singletonGateTypes.has(option.type)
+
+              return (
+                <Button
+                  key={option.type}
+                  type="button"
+                  variant="outline"
+                  className="h-auto justify-start py-3 text-left"
+                  disabled={disabled}
+                  onClick={() => handleInsertGate(option.type)}
+                >
+                  {option.label}
+                </Button>
+              )
+            })}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeGateInsertionDialog}>
+              Abbrechen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={sequenceEditor !== null} onOpenChange={(open) => {
+        if (!open) closeSequenceDialog()
+      }}>
+        <DialogContent>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              handleSequenceSubmit()
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Durchflugnummer ändern</DialogTitle>
+              <DialogDescription>
+                Neue Position in der Durchflugreihenfolge zwischen 1 und {sequenceLength} eingeben.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 py-4">
+              <Label htmlFor="sequence-number">Durchflugnummer</Label>
+              <Input
+                id="sequence-number"
+                value={sequenceValue}
+                onChange={(event) => setSequenceDraft({
+                  editorKey: sequenceEditorKey,
+                  value: event.target.value,
+                })}
+                inputMode="numeric"
+                autoFocus
+              />
+              {sequenceInputError && <p className="text-xs text-destructive">{sequenceInputError}</p>}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeSequenceDialog}>
+                Abbrechen
+              </Button>
+              <Button type="submit" disabled={Boolean(sequenceInputError)}>
+                Übernehmen
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={isDeleteDialogOpen}
         onOpenChange={(open) => {

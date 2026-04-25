@@ -33,11 +33,26 @@ interface TrackHistoryEntry {
   selectedGateIds: string[]
 }
 
+interface PendingGateInsertion {
+  gateIndex: number
+  sequenceIndex: number
+  position: { x: number; y: number; z: number }
+  rotation: number
+}
+
+interface SequenceEditorState {
+  gateId: string
+  openingId: string
+  sourceSequenceNumber: number
+}
+
 export interface TrackSlice {
   currentTrack: Track | null
   selectedGateId: string | null
   selectedGateIds: string[]
   isDeleteDialogOpen: boolean
+  pendingGateInsertion: PendingGateInsertion | null
+  sequenceEditor: SequenceEditorState | null
   past: TrackHistoryEntry[]
   future: TrackHistoryEntry[]
   setTrack: (track: Track | null) => void
@@ -53,8 +68,12 @@ export interface TrackSlice {
   selectGate: (gateId: string | null, additive?: boolean) => void
   setSelectedGates: (gateIds: string[]) => void
   insertGateAtIndex: (gate: Gate, gateIndex: number, sequenceIndex: number) => void
+  openGateInsertionDialog: (insertion: PendingGateInsertion) => void
+  closeGateInsertionDialog: () => void
   deleteSelectedGates: () => void
   toggleGateDirection: (gateId: string, openingId: string) => void
+  openSequenceEditor: (editor: SequenceEditorState) => void
+  closeSequenceEditor: () => void
   openDeleteDialog: () => void
   closeDeleteDialog: () => void
   moveGateSequenceEntry: (gateId: string, openingId: string, fromSequenceNumber: number, toSequenceNumber: number) => void
@@ -118,6 +137,8 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
   selectedGateId: null,
   selectedGateIds: [],
   isDeleteDialogOpen: false,
+  pendingGateInsertion: null,
+  sequenceEditor: null,
   isDraggingGate: false,
   past: [],
   future: [],
@@ -126,6 +147,8 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
     selectedGateId: null,
     selectedGateIds: [],
     isDeleteDialogOpen: false,
+    pendingGateInsertion: null,
+    sequenceEditor: null,
     ...pushHistory({ ...state, currentTrack: state.currentTrack }),
   })),
   replaceTrack: (track) => set({
@@ -133,6 +156,8 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
     selectedGateId: null,
     selectedGateIds: [],
     isDeleteDialogOpen: false,
+    pendingGateInsertion: null,
+    sequenceEditor: null,
     past: [],
     future: [],
   }),
@@ -252,11 +277,11 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
   }),
   selectGate: (gateId, additive = false) => set((state) => {
     if (!gateId) {
-      return { selectedGateId: null, selectedGateIds: [], isDeleteDialogOpen: false }
+      return { selectedGateId: null, selectedGateIds: [], isDeleteDialogOpen: false, pendingGateInsertion: null, sequenceEditor: null }
     }
 
     if (!additive) {
-      return { selectedGateId: gateId, selectedGateIds: [gateId], isDeleteDialogOpen: false }
+      return { selectedGateId: gateId, selectedGateIds: [gateId], isDeleteDialogOpen: false, pendingGateInsertion: null, sequenceEditor: null }
     }
 
     const isAlreadySelected = state.selectedGateIds.includes(gateId)
@@ -268,6 +293,8 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       selectedGateIds,
       selectedGateId: selectedGateIds.length > 0 ? selectedGateIds[0] : null,
       isDeleteDialogOpen: false,
+      pendingGateInsertion: null,
+      sequenceEditor: null,
     }
   }),
   setSelectedGates: (gateIds) => set((state) => {
@@ -280,6 +307,8 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       selectedGateIds,
       selectedGateId: selectedGateIds.length > 0 ? selectedGateIds[0] : null,
       isDeleteDialogOpen: false,
+      pendingGateInsertion: null,
+      sequenceEditor: null,
     }
   }),
   insertGateAtIndex: (gate, gateIndex, sequenceIndex) => set((state) => {
@@ -309,9 +338,13 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       selectedGateId: normalizedGate.id,
       selectedGateIds: [normalizedGate.id],
       isDeleteDialogOpen: false,
+      pendingGateInsertion: null,
+      sequenceEditor: null,
       ...history,
     }
   }),
+  openGateInsertionDialog: (insertion) => set({ pendingGateInsertion: insertion, isDeleteDialogOpen: false, sequenceEditor: null }),
+  closeGateInsertionDialog: () => set({ pendingGateInsertion: null }),
   deleteSelectedGates: () => set((state) => {
     if (!state.currentTrack || state.selectedGateIds.length === 0) return state
 
@@ -328,6 +361,8 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       selectedGateId: null,
       selectedGateIds: [],
       isDeleteDialogOpen: false,
+      pendingGateInsertion: null,
+      sequenceEditor: null,
       ...history,
     }
   }),
@@ -336,7 +371,7 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       return state
     }
 
-    return { isDeleteDialogOpen: true }
+    return { isDeleteDialogOpen: true, pendingGateInsertion: null, sequenceEditor: null }
   }),
   closeDeleteDialog: () => set({ isDeleteDialogOpen: false }),
   toggleGateDirection: (gateId, openingId) => set((state) => {
@@ -410,9 +445,12 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
         gateSequence: nextSequence,
         updatedAt: new Date().toISOString(),
       }),
+      sequenceEditor: null,
       ...history,
     }
   }),
+  openSequenceEditor: (editor) => set({ sequenceEditor: editor, isDeleteDialogOpen: false, pendingGateInsertion: null }),
+  closeSequenceEditor: () => set({ sequenceEditor: null }),
   undo: () => set((state) => {
     if (state.past.length === 0 || !state.currentTrack) return state
 
@@ -429,6 +467,8 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       past: newPast,
       future: [currentEntry, ...state.future],
       isDeleteDialogOpen: false,
+      pendingGateInsertion: null,
+      sequenceEditor: null,
     }
   }),
   redo: () => set((state) => {
@@ -447,6 +487,8 @@ export const createTrackSlice: StateCreator<TrackSlice, [], [], TrackSlice> = (s
       past: [...state.past, currentEntry],
       future: newFuture,
       isDeleteDialogOpen: false,
+      pendingGateInsertion: null,
+      sequenceEditor: null,
     }
   }),
   setDraggingGate: (isDragging) => set({ isDraggingGate: isDragging }),
