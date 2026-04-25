@@ -1,73 +1,137 @@
-# React + TypeScript + Vite
+# FPV Track Designer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ein desktop-orientierter 3D-Editor zum Entwerfen, Generieren und Speichern von FPV-Drohnen-Rennstrecken direkt im Browser.
 
-Currently, two official plugins are available:
+Das Projekt kombiniert eine interaktive React-Oberfläche mit einer Three.js/R3F-Szene. Strecken können automatisch generiert, über einzelne Gates feinjustiert und lokal als JSON-ähnliche Track-Daten gespeichert werden.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **3D-Streckeneditor** mit frei sichtbarer FPV-Rennstrecke
+- **Zufällige Track-Generierung** anhand von Feldgröße, Gate-Anzahl und Gate-Größe
+- **8 Gate-Typen**: Standard, Start/Ziel, H-Gate, Double-H, Dive, Double, Ladder und Flag
+- **Gate-Bearbeitung** direkt in der Szene: auswählen, verschieben, drehen, einfügen und löschen
+- **Flugpfad-Visualisierung** mit Gate-Reihenfolge und Richtungspfeilen
+- **Undo/Redo-Verlauf** für Bearbeitungsschritte
+- **Lokale Speicherung** von Tracks im Browser über `localStorage`
+- **Track-Galerie** zum Laden und Löschen gespeicherter Strecken
+- **Keyboard-Shortcuts** für schnelle Bedienung
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- [React](https://react.dev/) 19
+- [TypeScript](https://www.typescriptlang.org/)
+- [Vite](https://vite.dev/)
+- [React Three Fiber](https://r3f.docs.pmnd.rs/) und [Drei](https://github.com/pmndrs/drei)
+- [Zustand](https://zustand-demo.pmnd.rs/) für globalen State
+- [Tailwind CSS](https://tailwindcss.com/) v4
+- [shadcn/ui](https://ui.shadcn.com/) Komponenten
+- [Vitest](https://vitest.dev/) für Tests
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Voraussetzungen
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 20 oder neuer empfohlen
+- npm
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Installation
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone <repository-url>
+cd fpv-track-designer
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Entwicklung starten
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+
+Die App läuft anschließend standardmäßig unter:
+
+```text
+http://localhost:5173
+```
+
+## Nützliche Skripte
+
+```bash
+npm run dev      # Entwicklungsserver starten
+npm run build    # TypeScript prüfen und Produktions-Build erstellen
+npm run preview  # Produktions-Build lokal ansehen
+npm run lint     # ESLint ausführen
+npm run test     # Vitest starten
+```
+
+## Bedienung
+
+### Strecke konfigurieren
+
+Über die Einstellungen können Gate-Anzahlen, Feldmaße, Gate-Größe sowie Anzeigeoptionen angepasst werden. Beim Mischen wird daraus automatisch eine neue Strecke erzeugt.
+
+### Gates bearbeiten
+
+1. Gate in der 3D-Szene anklicken.
+2. Verschieben- oder Drehen-Werkzeug direkt am Gate verwenden.
+3. Neue Gates können relativ zu einem ausgewählten Gate eingefügt werden.
+4. Ausgewählte Gates lassen sich per Dialog oder Shortcut löschen.
+
+### Shortcuts
+
+| Aktion | Shortcut |
+| --- | --- |
+| Strecke mischen | `R` |
+| Strecke speichern | `Cmd/Ctrl + S` |
+| Galerie öffnen | `G` |
+| Ansicht verschieben | `Space + linke Maustaste ziehen` |
+| Kamerahöhe ändern | `Shift + linke Maustaste ziehen` |
+| Auswahl/Dialog schließen | `Escape` |
+| Ausgewähltes Gate löschen | `Backspace` |
+| Rückgängig | `Cmd/Ctrl + Z` |
+| Wiederholen | `Cmd/Ctrl + Y` oder `Cmd/Ctrl + Shift + Z` |
+
+## Projektstruktur
+
+```text
+src/
+├── components/
+│   ├── gates/       # 3D-Komponenten für Gate-Typen und Handles
+│   ├── layout/      # TopBar und Werkzeugleiste
+│   ├── scene/       # R3F-Canvas, Kamera, Grid und Flugpfad
+│   └── ui/          # Dialoge, Panels und shadcn/ui-Primitives
+├── hooks/           # Keyboard- und Auswahl-Logik
+├── schemas/         # Zod-Validierung für Track-Daten
+├── store/           # Zustand-Slices für Config und Tracks
+├── types/           # TypeScript-Domänenmodelle
+└── utils/           # Generator, Flugpfad, Gate-Operationen und Storage
+```
+
+## Daten und Speicherung
+
+Die App benötigt kein Backend. Gespeicherte Tracks werden lokal im Browser abgelegt. Dadurch bleiben Daten auf dem Gerät, sind aber auch an den jeweiligen Browser und dessen Speicher gekoppelt.
+
+## Tests
+
+Die Kernlogik ist mit Vitest abgedeckt, unter anderem für:
+
+- Track-Generierung
+- Gate-Operationen
+- Gate-Öffnungen und Sequenzen
+- Flugpfad-Berechnung
+- Store-Slices
+- LocalStorage-Persistenz
+
+```bash
+npm run test
+```
+
+## Build
+
+```bash
+npm run build
+```
+
+Der Build führt zuerst den TypeScript-Projektcheck aus und erstellt danach die optimierten Vite-Assets in `dist/`.
+
+## Lizenz
+
+Falls du das Projekt veröffentlichst, ergänze hier noch die gewünschte Lizenz, zum Beispiel MIT.
