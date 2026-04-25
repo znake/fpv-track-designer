@@ -5,6 +5,7 @@ import { saveTrack } from '@/utils/storage'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -46,6 +47,9 @@ export const SaveTrackDialog: FC<SaveTrackDialogProps> = ({ open, onOpenChange }
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Strecke speichern</DialogTitle>
+          <DialogDescription>
+            Vergib einen Namen und speichere die aktuelle Strecke lokal im Browser.
+          </DialogDescription>
         </DialogHeader>
         <form
           onSubmit={(event) => {
