@@ -79,7 +79,7 @@ npm run test     # Vitest starten
 
 | Aktion | Shortcut |
 | --- | --- |
-| Strecke mischen | `R` |
+| Streke Shuffeln | `R` |
 | Strecke speichern | `Cmd/Ctrl + S` |
 | Galerie öffnen | `G` |
 | Ansicht verschieben | `Space + linke Maustaste ziehen` |
