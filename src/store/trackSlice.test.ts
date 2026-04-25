@@ -289,6 +289,54 @@ describe('TrackSlice - Undo/Redo', () => {
     expect(store.getState().past).toEqual([])
   })
 
+  it('should preserve an explicit double-h sequence order including middle when normalizing track', () => {
+    const doubleHGate = createTestGate('double-h-1', {
+      type: 'double-h',
+      openings: createDefaultGateOpenings('double-h', 1),
+    })
+    const track = createTestTrack([doubleHGate])
+    track.gateSequence = [
+      { gateId: 'double-h-1', openingId: 'lower', reverse: false },
+      { gateId: 'double-h-1', openingId: 'upper', reverse: false },
+      { gateId: 'double-h-1', openingId: 'middle', reverse: false },
+    ]
+
+    store.getState().setTrack(track)
+
+    expect(store.getState().currentTrack?.gateSequence).toEqual([
+      { gateId: 'double-h-1', openingId: 'lower', reverse: false },
+      { gateId: 'double-h-1', openingId: 'upper', reverse: false },
+      { gateId: 'double-h-1', openingId: 'middle', reverse: false },
+    ])
+  })
+
+  it('should move a double-h upper opening from sequence number 10 to 9 without duplicating middle', () => {
+    const fillerGates = Array.from({ length: 7 }, (_, index) => createTestGate(`gate-${index + 1}`))
+    const doubleHGate = createTestGate('double-h-1', {
+      type: 'double-h',
+      openings: createDefaultGateOpenings('double-h', 1),
+    })
+    const track = createTestTrack([...fillerGates, doubleHGate])
+    track.gateSequence = [
+      ...fillerGates.map((gate) => ({ gateId: gate.id, openingId: 'main', reverse: false })),
+      { gateId: 'double-h-1', openingId: 'lower', reverse: false },
+      { gateId: 'double-h-1', openingId: 'middle', reverse: false },
+      { gateId: 'double-h-1', openingId: 'upper', reverse: false },
+    ]
+
+    store.getState().setTrack(track)
+    store.getState().moveGateSequenceEntry('double-h-1', 'upper', 10, 9)
+
+    expect(store.getState().currentTrack?.gateSequence).toEqual([
+      ...fillerGates.map((gate) => ({ gateId: gate.id, openingId: 'main', reverse: false })),
+      { gateId: 'double-h-1', openingId: 'lower', reverse: false },
+      { gateId: 'double-h-1', openingId: 'upper', reverse: false },
+      { gateId: 'double-h-1', openingId: 'middle', reverse: false },
+    ])
+    expect(store.getState().currentTrack?.gateSequence).toHaveLength(10)
+    expect(store.getState().past.length).toBe(1)
+  })
+
   it('should select gate', () => {
     store.getState().selectGate('gate-1')
     expect(store.getState().selectedGateId).toBe('gate-1')
