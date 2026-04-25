@@ -38,6 +38,7 @@ const HANDLE_CLEARANCE_ABOVE_GATE = 0.5
 const INSERT_HANDLE_OFFSET_Y = 0.9
 const DEGREES_PER_PIXEL = 1
 const FALLBACK_INSERT_DISTANCE = 3
+const GATE_HANDLE_Z_INDEX_RANGE: [number, number] = [30, 0]
 const HANDLE_BUTTON_CLASSNAME = 'pointer-events-auto flex size-11 items-center justify-center rounded-full border shadow-lg shadow-black/30 backdrop-blur supports-backdrop-filter:backdrop-blur-sm transition-colors select-none touch-none'
 
 function getMidpoint(a: GatePosition, b: GatePosition): GatePosition {
@@ -395,6 +396,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
         ]}
         center
         distanceFactor={9}
+        zIndexRange={GATE_HANDLE_Z_INDEX_RANGE}
         style={{ pointerEvents: 'none' }}
       >
         <div className="relative flex flex-col items-center gap-2 pointer-events-auto">
@@ -429,6 +431,7 @@ export function GateHandles({ gateId, gateType, position, rotation, size }: Gate
         position={[position.x, moveRotateHandleY, position.z]}
         center
         distanceFactor={8}
+        zIndexRange={GATE_HANDLE_Z_INDEX_RANGE}
         style={{ pointerEvents: 'none' }}
       >
         <div style={{ display: 'flex', gap: 24, pointerEvents: 'none' }}>
