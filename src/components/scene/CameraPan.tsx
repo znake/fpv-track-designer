@@ -17,6 +17,7 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
 
   useEffect(() => {
     const canvas = gl.domElement
+    let isUsingNativeTouch = false
 
     const setControlsEnabled = (enabled: boolean) => {
       const controls = controlsRef.current
@@ -68,12 +69,73 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
       }
     }
 
+    const getNativeTouchMidpoint = (touches: TouchList) => {
+      const first = touches.item(0)
+      const second = touches.item(1)
+      if (!first || !second) return null
+
+      return {
+        x: (first.clientX + second.clientX) / 2,
+        y: (first.clientY + second.clientY) / 2,
+      }
+    }
+
     const stopTouchPanning = () => {
       if (!isTouchPanning.current) return
 
       isTouchPanning.current = false
+      isUsingNativeTouch = false
       canvas.dataset.cameraPanning = 'false'
       setControlsEnabled(true)
+    }
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length < 2) return
+
+      const midpoint = getNativeTouchMidpoint(e.touches)
+      if (!midpoint) return
+
+      isUsingNativeTouch = true
+      if (e.cancelable) {
+        e.preventDefault()
+      }
+      e.stopPropagation()
+      isTouchPanning.current = true
+      canvas.dataset.cameraPanning = 'true'
+      prevMouse.current = midpoint
+      setControlsEnabled(false)
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isTouchPanning.current || e.touches.length < 2) return
+
+      const midpoint = getNativeTouchMidpoint(e.touches)
+      if (!midpoint) return
+
+      if (e.cancelable) {
+        e.preventDefault()
+      }
+      e.stopPropagation()
+
+      const dx = midpoint.x - prevMouse.current.x
+      const dy = midpoint.y - prevMouse.current.y
+      prevMouse.current = midpoint
+      applyPlanarPan(dx, dy)
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!isUsingNativeTouch) return
+
+      if (e.touches.length >= 2) {
+        const midpoint = getNativeTouchMidpoint(e.touches)
+        if (midpoint) {
+          prevMouse.current = midpoint
+        }
+        return
+      }
+
+      touchPointers.clear()
+      stopTouchPanning()
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -100,6 +162,8 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
 
     const handlePointerDown = (e: PointerEvent) => {
       if (e.pointerType === 'touch') {
+        if (isUsingNativeTouch) return
+
         touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
         if (touchPointers.size === 2) {
@@ -130,6 +194,7 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
 
     const handlePointerMove = (e: PointerEvent) => {
       if (e.pointerType === 'touch') {
+        if (isUsingNativeTouch) return
         if (!touchPointers.has(e.pointerId)) return
 
         touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -158,6 +223,7 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
 
     const handlePointerUp = (e: PointerEvent) => {
       if (e.pointerType === 'touch') {
+        if (isUsingNativeTouch) return
         touchPointers.delete(e.pointerId)
         if (touchPointers.size < 2) {
           stopTouchPanning()
@@ -180,6 +246,7 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
 
     const handlePointerCancel = (e: PointerEvent) => {
       if (e.pointerType !== 'touch') return
+      if (isUsingNativeTouch) return
 
       touchPointers.delete(e.pointerId)
       stopTouchPanning()
@@ -204,6 +271,10 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
 
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false })
+    canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false })
     canvas.addEventListener('pointerdown', handlePointerDown)
     canvas.addEventListener('pointermove', handlePointerMove)
     canvas.addEventListener('pointerup', handlePointerUp)
@@ -215,6 +286,10 @@ export function CameraPan({ controlsRef }: CameraPanProps) {
       canvas.dataset.cameraPanning = 'false'
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
+      canvas.removeEventListener('touchstart', handleTouchStart)
+      canvas.removeEventListener('touchmove', handleTouchMove)
+      canvas.removeEventListener('touchend', handleTouchEnd)
+      canvas.removeEventListener('touchcancel', handleTouchEnd)
       canvas.removeEventListener('pointerdown', handlePointerDown)
       canvas.removeEventListener('pointermove', handlePointerMove)
       canvas.removeEventListener('pointerup', handlePointerUp)

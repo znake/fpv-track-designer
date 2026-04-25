@@ -59,7 +59,15 @@ export function SmoothZoom({
     let lastY = 0
     let previousPinchDistance: number | null = null
     let touchGestureResetTimeout: number | null = null
+    let isUsingNativeTouch = false
     const touchPointers = new Map<number, { x: number; y: number }>()
+
+    const setControlsEnabled = (enabled: boolean) => {
+      const controls = controlsRef.current
+      if (controls) {
+        controls.enabled = enabled
+      }
+    }
 
     const setTouchGesturing = (isGesturing: boolean) => {
       if (touchGestureResetTimeout !== null) {
@@ -67,8 +75,9 @@ export function SmoothZoom({
         touchGestureResetTimeout = null
       }
 
-      canvas.dataset.cameraTouchGesturing = isGesturing ? 'true' : 'false'
-      if (!isGesturing) {
+      if (isGesturing) {
+        canvas.dataset.cameraTouchGesturing = 'true'
+      } else {
         touchGestureResetTimeout = window.setTimeout(() => {
           canvas.dataset.cameraTouchGesturing = 'false'
           touchGestureResetTimeout = null
@@ -83,19 +92,76 @@ export function SmoothZoom({
       return Math.hypot(second.x - first.x, second.y - first.y)
     }
 
+    const getTouchDistance = (touches: TouchList) => {
+      const first = touches.item(0)
+      const second = touches.item(1)
+      if (!first || !second) return null
+
+      return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY)
+    }
+
+    const zoomByPinchDistance = (nextPinchDistance: number) => {
+      const controls = controlsRef.current
+      if (!controls || previousPinchDistance === null || nextPinchDistance <= 0) return
+
+      const currentDist = targetDistRef.current ?? camera.position.distanceTo(controls.target)
+      const factor = currentDist * (previousPinchDistance / nextPinchDistance)
+      previousPinchDistance = nextPinchDistance
+      targetDistRef.current = MathUtils.clamp(factor, minDistance, maxDistance)
+    }
+
     const stopTouchZoom = () => {
       previousPinchDistance = null
+      isUsingNativeTouch = false
       if (touchPointers.size === 0) {
-        const controls = controlsRef.current
-        if (controls) {
-          controls.enabled = true
-        }
+        setControlsEnabled(true)
       }
       setTouchGesturing(false)
     }
 
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length < 2) return
+
+      isUsingNativeTouch = true
+      if (e.cancelable) {
+        e.preventDefault()
+      }
+      e.stopPropagation()
+      previousPinchDistance = getTouchDistance(e.touches)
+      setTouchGesturing(true)
+      setControlsEnabled(false)
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length < 2 || previousPinchDistance === null) return
+
+      if (e.cancelable) {
+        e.preventDefault()
+      }
+      e.stopPropagation()
+
+      const nextPinchDistance = getTouchDistance(e.touches)
+      if (nextPinchDistance === null) return
+
+      zoomByPinchDistance(nextPinchDistance)
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!isUsingNativeTouch) return
+
+      if (e.touches.length >= 2) {
+        previousPinchDistance = getTouchDistance(e.touches)
+        return
+      }
+
+      touchPointers.clear()
+      stopTouchZoom()
+    }
+
     const handlePointerDown = (e: PointerEvent) => {
       if (e.pointerType === 'touch') {
+        if (isUsingNativeTouch) return
+
         touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
         if (touchPointers.size === 2) {
@@ -103,11 +169,7 @@ export function SmoothZoom({
           e.stopPropagation()
           previousPinchDistance = getPinchDistance()
           setTouchGesturing(true)
-
-          const controls = controlsRef.current
-          if (controls) {
-            controls.enabled = false
-          }
+          setControlsEnabled(false)
         }
         return
       }
@@ -120,6 +182,7 @@ export function SmoothZoom({
 
     const handlePointerMove = (e: PointerEvent) => {
       if (e.pointerType === 'touch') {
+        if (isUsingNativeTouch) return
         if (!touchPointers.has(e.pointerId)) return
 
         touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -129,13 +192,9 @@ export function SmoothZoom({
         e.stopPropagation()
 
         const nextPinchDistance = getPinchDistance()
-        const controls = controlsRef.current
-        if (!controls || nextPinchDistance === null || nextPinchDistance <= 0) return
+        if (nextPinchDistance === null) return
 
-        const currentDist = camera.position.distanceTo(controls.target)
-        const factor = currentDist * (previousPinchDistance / nextPinchDistance)
-        previousPinchDistance = nextPinchDistance
-        targetDistRef.current = MathUtils.clamp(factor, minDistance, maxDistance)
+        zoomByPinchDistance(nextPinchDistance)
         return
       }
 
@@ -155,6 +214,7 @@ export function SmoothZoom({
 
     const handlePointerUp = (e: PointerEvent) => {
       if (e.pointerType === 'touch') {
+        if (isUsingNativeTouch) return
         touchPointers.delete(e.pointerId)
         if (touchPointers.size < 2) {
           stopTouchZoom()
@@ -171,12 +231,17 @@ export function SmoothZoom({
 
     const handlePointerCancel = (e: PointerEvent) => {
       if (e.pointerType !== 'touch') return
+      if (isUsingNativeTouch) return
 
       touchPointers.delete(e.pointerId)
       stopTouchZoom()
     }
 
     canvas.addEventListener('wheel', handleWheel, { passive: false })
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false })
+    canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false })
     canvas.addEventListener('pointerdown', handlePointerDown)
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
@@ -184,6 +249,10 @@ export function SmoothZoom({
 
     return () => {
       canvas.removeEventListener('wheel', handleWheel)
+      canvas.removeEventListener('touchstart', handleTouchStart)
+      canvas.removeEventListener('touchmove', handleTouchMove)
+      canvas.removeEventListener('touchend', handleTouchEnd)
+      canvas.removeEventListener('touchcancel', handleTouchEnd)
       canvas.removeEventListener('pointerdown', handlePointerDown)
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
