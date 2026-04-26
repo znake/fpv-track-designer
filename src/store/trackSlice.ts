@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { Config } from '../types/config'
 import type { Track, Gate } from '../types'
+import { GATE_BASE_WIDTH } from '../constants/gateDimensions'
 import { normalizeGates, recreateGateOpenings } from '../utils/gateOpenings'
 import { buildDefaultGateSequenceEntries, normalizeGateSequence } from '../utils/gateSequence'
 import type { GenerationConfig } from '../utils/generationConfig'
@@ -172,10 +173,10 @@ function getSelectionState(track: Track, selectedGateId: string | null, selected
   }
 }
 
-// Gates have a base geometric width/height of 1.2m (see BASE_WIDTH in src/components/gates/*).
+// Gates share their base footprint with the gate opening geometry.
 // The snap step is 1/4 of the gate footprint so gates can be aligned edge-to-edge
 // (every 4 steps) while still allowing finer placement in between for fine-tuning.
-const GATE_BASE_FOOTPRINT = 1.2
+const GATE_BASE_FOOTPRINT = GATE_BASE_WIDTH
 const SNAP_SUBDIVISIONS = 4
 
 function getSnapStep(): number {

@@ -3,6 +3,8 @@ import type { Gate, GateOpening, GateSequenceItem } from '../types'
 import { getHGateBackrestSide, normalizeGates } from './gateOpenings'
 import { buildFallbackGateSequence, normalizeGateSequence } from './gateSequence'
 
+export { GATE_BASE_HEIGHT } from '../constants/gateDimensions'
+
 const MIN_CURVE_SAMPLES_PER_SEGMENT = 80
 const MAX_CURVE_SAMPLES_PER_SEGMENT = 400
 const CURVE_SAMPLES_PER_METER = 14
@@ -47,7 +49,6 @@ interface GateVisit {
 }
 
 const ARROW_SPACING = 1.5
-export const GATE_BASE_HEIGHT = 1.2
 
 function createStraightCurve(from: Vector3, to: Vector3): CubicBezierCurve3 {
   const delta = to.clone().sub(from)

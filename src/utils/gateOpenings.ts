@@ -1,7 +1,8 @@
 import type { Gate, GateOpening, GateType } from '../types'
+import { GATE_BASE_HEIGHT, GATE_BASE_WIDTH } from '../constants/gateDimensions'
 
-const BASE_WIDTH = 1.2
-const BASE_HEIGHT = 1.2
+const BASE_WIDTH = GATE_BASE_WIDTH
+const BASE_HEIGHT = GATE_BASE_HEIGHT
 const STACK_DISTANCE = BASE_HEIGHT
 
 type DiveExitSide = 'front' | 'back' | 'left' | 'right'
