@@ -22,7 +22,7 @@ export function DiveGate({ position, rotation, openings, openingLabels, isSelect
   const groupRef = useRef<Mesh>(null)
   const s = BASE_SIZE
   const half = s / 2
-  const color = isSelected ? '#F0A6B7' : '#E88BA0'
+  const color = isSelected ? '#F472B6' : '#EC4899'
   const emissiveColor = isSelected ? '#FFD27A' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
 

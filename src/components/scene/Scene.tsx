@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Sky, OrbitControls } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei'
 import { MOUSE } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useAppStore } from '../../store'
@@ -48,17 +48,10 @@ export function Scene() {
       camera={{ position: [0, 30, 30], fov: 50, near: 0.1, far: 1000 }}
       style={{ width: '100%', height: '100%', touchAction: 'none' }}
     >
-      <Sky
-        distance={450000}
-        sunPosition={[100, 80, 50]}
-        turbidity={3}
-        rayleigh={1}
-        mieCoefficient={0.005}
-        mieDirectionalG={0.7}
-      />
-      <fog attach="fog" args={['#CFE7F5', 80, 240]} />
+      <color attach="background" args={['#5DADE2']} />
+      <fog attach="fog" args={['#5DADE2', 140, 360]} />
 
-      <hemisphereLight args={['#BFE2F5', '#7BB369', 0.4]} />
+      <hemisphereLight args={['#5DADE2', '#3B7A28', 0.4]} />
       <directionalLight
         position={[100, 80, 50]}
         intensity={1.0}

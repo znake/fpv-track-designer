@@ -39,7 +39,7 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
         onClick={handleGroundClick}
       >
         <planeGeometry args={[fieldSize.width, fieldSize.height]} />
-        <meshStandardMaterial color="#6BA84F" roughness={0.9} metalness={0} />
+        <meshStandardMaterial color="#3B7A28" roughness={0.95} metalness={0} />
       </mesh>
 
       {showGrid && (
@@ -70,10 +70,10 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
             args={[fieldSize.width, fieldSize.height]}
             cellSize={1}
             cellThickness={0.5}
-            cellColor="#8FBF6E"
+            cellColor="#5A8F44"
             sectionSize={sectionSize}
             sectionThickness={1}
-            sectionColor="#A8D08D"
+            sectionColor="#7AAA60"
             fadeDistance={200}
             fadeStrength={1}
           />

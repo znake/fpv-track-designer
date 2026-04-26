@@ -21,7 +21,7 @@ const BASE_HEIGHT = 2
 export function Flag({ position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const height = BASE_HEIGHT
-  const color = isSelected ? '#FFA8A8' : '#FF8B8B'
+  const color = isSelected ? '#EF4444' : '#DC2626'
   const emissiveColor = isSelected ? '#FFD27A' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
 
@@ -34,7 +34,7 @@ export function Flag({ position, rotation, openings, openingLabels, isSelected, 
       {/* Vertical pole */}
       <mesh position={[0, height / 2, 0]} onClick={onClick}>
         <boxGeometry args={[POLE_THICKNESS, height, POLE_THICKNESS]} />
-        <meshStandardMaterial color="#A38B6F" emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color="#5C4033" emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>
 
       {/* Triangular flag */}

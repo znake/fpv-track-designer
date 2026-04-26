@@ -24,7 +24,7 @@ export function DoubleGate({ position, rotation, openings, openingLabels, isSele
   const groupRef = useRef<Mesh>(null)
   const width = BASE_WIDTH
   const height = BASE_HEIGHT
-  const color = isSelected ? '#FFDC8A' : '#FFD166'
+  const color = isSelected ? '#FDE047' : '#FACC15'
   const emissiveColor = isSelected ? '#FFD27A' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
   const stackOffset = STACK_DISTANCE
