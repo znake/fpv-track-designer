@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { GateOpening } from '../../types'
+import { GATE_BASE_HEIGHT, GATE_BASE_WIDTH, GATE_POST_THICKNESS } from '../../constants/gateDimensions'
 import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
@@ -15,9 +16,9 @@ interface GateComponentProps {
   onOpeningLabelClick?: (openingId: string, sequenceNumber: number, e: ThreeEvent<MouseEvent>) => void
 }
 
-const POST_THICKNESS = 0.06
-const BASE_WIDTH = 1.2
-const BASE_HEIGHT = 1.2
+const POST_THICKNESS = GATE_POST_THICKNESS
+const BASE_WIDTH = GATE_BASE_WIDTH
+const BASE_HEIGHT = GATE_BASE_HEIGHT
 const STACK_DISTANCE = BASE_HEIGHT
 function GateFrame({ y, width, height, color, emissiveColor, emissiveIntensity, onClick }: {
   y: number; width: number; height: number; color: string; emissiveColor: string; emissiveIntensity: number; onClick?: (e: ThreeEvent<MouseEvent>) => void
