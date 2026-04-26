@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { FocusEvent, KeyboardEvent } from 'react'
 import { useAppStore } from '@/store'
-import type { GateType } from '@/types'
+import { gateTypeOptions } from '@/utils/gateTypeOptions'
+import { GateIcon } from '@/components/icons/GateIcon'
 import {
   Card,
   CardContent,
@@ -20,17 +21,6 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { RotateCcw, ChevronDown } from 'lucide-react'
 
-const GATE_TYPES: { type: GateType; label: string }[] = [
-  { type: 'start-finish', label: 'Start/Ziel-Gate' },
-  { type: 'standard', label: 'Standard-Gate' },
-  { type: 'h-gate', label: 'h-Gate' },
-  { type: 'double-h', label: 'Doppel-h-Gate' },
-  { type: 'dive', label: 'Dive-Gate' },
-  { type: 'double', label: 'Doppel-Gate' },
-  { type: 'ladder', label: 'Leiter-Gate' },
-  { type: 'flag', label: 'Flaggen-Gate' },
-  { type: 'octagonal-tunnel', label: 'Tunnel' },
-]
 
 export function GateConfigPanel() {
   const config = useAppStore((state) => state.config)
@@ -95,13 +85,14 @@ export function GateConfigPanel() {
             />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3 pt-3">
-            {GATE_TYPES.map(({ type, label }) => (
+            {gateTypeOptions.map(({ type, label }) => (
               <div
                 key={type}
                 className="flex items-center justify-between gap-2"
               >
-                <Label className="text-sm text-muted-foreground">
-                  {label}
+                <Label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <GateIcon type={type} className="size-5 shrink-0" />
+                  <span>{label}</span>
                 </Label>
                 <Input
                   type="number"

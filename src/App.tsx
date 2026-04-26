@@ -4,6 +4,7 @@ import { generateTrack } from './utils/generator'
 import { extractGenerationConfig } from './utils/generationConfig'
 import { createDefaultGateOpenings } from './utils/gateOpenings'
 import { gateTypeOptions } from './utils/gateTypeOptions'
+import { GateIcon } from './components/icons/GateIcon'
 import { defaultConfig } from './store/configSlice'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import type { GateType } from './types'
@@ -258,11 +259,12 @@ function App() {
                   key={option.type}
                   type="button"
                   variant="outline"
-                  className="h-auto justify-start py-3 text-left"
+                  className="flex h-auto items-center gap-3 py-3 text-left"
                   disabled={disabled}
                   onClick={() => handleInsertGate(option.type)}
                 >
-                  {option.label}
+                  <GateIcon type={option.type} className="size-6 shrink-0" />
+                  <span>{option.label}</span>
                 </Button>
               )
             })}
