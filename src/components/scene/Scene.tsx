@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
-import { ACESFilmicToneMapping, MOUSE, PCFSoftShadowMap } from 'three'
+import { ACESFilmicToneMapping, MOUSE } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useAppStore } from '../../store'
 import { buildDefaultGateSequenceEntries } from '../../utils/gateSequence'
@@ -44,13 +44,8 @@ export function Scene() {
     return labelsByGate
   }, [currentTrack])
 
-  // Shadow camera scales with field size so a single sun frustum covers the
-  // whole playable area without wasting resolution on empty space.
-  const shadowExtent = Math.max(60, Math.max(config.fieldSize.width, config.fieldSize.height) * 0.7)
-
   return (
     <Canvas
-      shadows={{ type: PCFSoftShadowMap }}
       dpr={[1, 1.5]}
       gl={{
         antialias: true,
@@ -71,18 +66,8 @@ export function Scene() {
         position={[80, 110, 60]}
         intensity={1.4}
         color="#FFF1D6"
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0005}
-        shadow-normalBias={0.02}
-        shadow-camera-left={-shadowExtent}
-        shadow-camera-right={shadowExtent}
-        shadow-camera-top={shadowExtent}
-        shadow-camera-bottom={-shadowExtent}
-        shadow-camera-near={1}
-        shadow-camera-far={400}
       />
-      {/* Extra fill light keeps gate shadows subtle instead of high-contrast. */}
+      {/* Cool fill light softens the sun direction. */}
       <directionalLight position={[-60, 40, -40]} intensity={0.4} color="#A8C8E6" />
       <ambientLight intensity={0.28} color="#FFFFFF" />
 

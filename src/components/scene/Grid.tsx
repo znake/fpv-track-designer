@@ -32,7 +32,7 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
   return (
     <group>
       {/* Dark underside keeps the floating field from washing out against the bright sky. */}
-      <mesh position={[0, -0.06, 0]} receiveShadow>
+      <mesh position={[0, -0.06, 0]}>
         <boxGeometry args={[fieldSize.width, 0.1, fieldSize.height]} />
         <meshStandardMaterial color="#03163F" roughness={0.94} metalness={0} />
       </mesh>
@@ -41,7 +41,6 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
       <mesh
         rotation-x={-Math.PI / 2}
         position={[0, 0, 0]}
-        receiveShadow
         onClick={handleGroundClick}
       >
         <planeGeometry args={[fieldSize.width, fieldSize.height]} />

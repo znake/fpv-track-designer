@@ -157,17 +157,13 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
       ref={groupRef}
       position={position}
       rotation={[(rotationX * Math.PI) / 180, (rotationY * Math.PI) / 180, 0]}
-      userData={{ noShadowCast: true }}
     >
       {/* Entry side — green (approach from here) */}
       <mesh
         position={[0, 0, entryZ]}
-        userData={{ noShadowCast: true }}
         onClick={onClick}
         onPointerOver={handleOpeningPointerOver}
         onPointerOut={handleOpeningPointerOut}
-        castShadow={false}
-        receiveShadow={false}
       >
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
@@ -182,12 +178,9 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
       {/* Exit side — red (do not approach from here) */}
       <mesh
         position={[0, 0, exitZ]}
-        userData={{ noShadowCast: true }}
         onClick={onClick}
         onPointerOver={handleOpeningPointerOver}
         onPointerOut={handleOpeningPointerOut}
-        castShadow={false}
-        receiveShadow={false}
       >
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial

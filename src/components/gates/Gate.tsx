@@ -1,5 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
-import type { Group, Mesh, Object3D } from 'three'
+import type { ReactNode } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { Gate as GateType } from '../../types'
 import { useGateSelection } from '../../hooks/useGateSelection'
@@ -22,7 +21,6 @@ interface GateProps {
 }
 
 export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProps) {
-  const shadowGroupRef = useRef<Group>(null)
   const { isSelected, handleClick } = useGateSelection(gate.id)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const currentTrack = useAppStore((state) => state.currentTrack)
@@ -102,35 +100,8 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProp
       break
   }
 
-  // Mark every mesh inside the gate as a shadow caster on mount/update.
-  // Cheaper than threading castShadow through 8 gate components by hand.
-  useEffect(() => {
-    const root = shadowGroupRef.current
-    if (!root) return
-
-    const hasNoShadowCast = (object: Object3D) => {
-      let current: Object3D | null = object
-
-      while (current) {
-        if (current.userData.noShadowCast === true) {
-          return true
-        }
-        current = current.parent
-      }
-
-      return false
-    }
-
-    root.traverse((obj) => {
-      const mesh = obj as Mesh
-      if (mesh.isMesh) {
-        mesh.castShadow = !hasNoShadowCast(mesh)
-      }
-    })
-  })
-
   return (
-    <group ref={shadowGroupRef}>
+    <group>
       {gateComponent}
       {isSelected && (
         <GateHandles
