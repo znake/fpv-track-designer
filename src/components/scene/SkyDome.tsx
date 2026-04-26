@@ -6,7 +6,8 @@ import { BackSide, Color, ShaderMaterial } from 'three'
 const TOP_COLOR = '#4FA8F6'
 const MID_COLOR = '#8FD3FF'
 const HORIZON_COLOR = '#D8F1FF'
-const BOTTOM_COLOR = '#5AAEF0'
+const BOTTOM_COLOR = '#76C2FA'
+const HORIZON_OFFSET = 0.16
 const RADIUS = 600
 const SEGMENTS = 64
 
@@ -29,10 +30,13 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform vec3 horizonColor;
   uniform vec3 bottomColor;
   uniform float exponent;
+  uniform float horizonOffset;
   varying vec3 vLocal;
   void main() {
     // h: 1 = zenith, 0 = horizon, negative = below horizon.
-    float h = normalize(vLocal).y;
+    // A positive offset pushes the visible horizon band lower in the view,
+    // leaving more mid-sky above the field before the pale horizon starts.
+    float h = normalize(vLocal).y + horizonOffset;
     float t = pow(clamp(h, 0.0, 1.0), exponent);
     // Tight horizon haze band that fades into the mid sky, then blends
     // into the deep zenith. Gives a soft, atmospheric falloff that meets
@@ -56,6 +60,8 @@ interface SkyDomeProps {
    * Larger = the top color stays close to the zenith (soft, washed gradient).
    */
   exponent?: number
+  /** Positive values push the horizon gradient lower in the viewport. */
+  horizonOffset?: number
 }
 
 export function SkyDome({
@@ -64,6 +70,7 @@ export function SkyDome({
   horizonColor = HORIZON_COLOR,
   bottomColor = BOTTOM_COLOR,
   exponent = 0.82,
+  horizonOffset = HORIZON_OFFSET,
 }: SkyDomeProps) {
   const meshRef = useRef<Mesh>(null)
 
@@ -76,6 +83,7 @@ export function SkyDome({
           horizonColor: { value: new Color(horizonColor) },
           bottomColor: { value: new Color(bottomColor) },
           exponent: { value: exponent },
+          horizonOffset: { value: horizonOffset },
         },
         vertexShader: VERTEX_SHADER,
         fragmentShader: FRAGMENT_SHADER,
@@ -83,7 +91,7 @@ export function SkyDome({
         depthWrite: false,
         fog: false,
       }),
-    [topColor, midColor, horizonColor, bottomColor, exponent],
+    [topColor, midColor, horizonColor, bottomColor, exponent, horizonOffset],
   )
 
   // Anchor the dome to the camera so the viewer is always at its center.

@@ -32,8 +32,8 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
   return (
     <group>
       {/* Dark underside keeps the floating field from washing out against the bright sky. */}
-      <mesh position={[0, -0.26, 0]} receiveShadow>
-        <boxGeometry args={[fieldSize.width, 0.5, fieldSize.height]} />
+      <mesh position={[0, -0.06, 0]} receiveShadow>
+        <boxGeometry args={[fieldSize.width, 0.1, fieldSize.height]} />
         <meshStandardMaterial color="#03163F" roughness={0.94} metalness={0} />
       </mesh>
 
