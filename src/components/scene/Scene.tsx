@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
-import { MOUSE } from 'three'
+import { ACESFilmicToneMapping, MOUSE, PCFSoftShadowMap } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useAppStore } from '../../store'
 import { buildDefaultGateSequenceEntries } from '../../utils/gateSequence'
@@ -11,6 +11,7 @@ import { Grid } from '../scene/Grid'
 import { CameraPan } from '../scene/CameraPan'
 import { CameraVerticalPan } from '../scene/CameraVerticalPan'
 import { SmoothZoom } from '../scene/SmoothZoom'
+import { SkyDome } from '../scene/SkyDome'
 
 export function Scene() {
   const controlsRef = useRef<OrbitControlsImpl>(null)
@@ -43,29 +44,47 @@ export function Scene() {
     return labelsByGate
   }, [currentTrack])
 
+  // Shadow camera scales with field size so a single sun frustum covers the
+  // whole playable area without wasting resolution on empty space.
+  const shadowExtent = Math.max(60, Math.max(config.fieldSize.width, config.fieldSize.height) * 0.7)
+
   return (
     <Canvas
+      shadows={{ type: PCFSoftShadowMap }}
+      dpr={[1, 1.5]}
+      gl={{
+        antialias: true,
+        toneMapping: ACESFilmicToneMapping,
+        toneMappingExposure: 1.05,
+      }}
       camera={{ position: [0, 30, 30], fov: 50, near: 0.1, far: 1000 }}
       style={{ width: '100%', height: '100%', touchAction: 'none' }}
-    >
-      <color attach="background" args={['#5DADE2']} />
-      <fog attach="fog" args={['#5DADE2', 140, 360]} />
+      >
+      <SkyDome />
+      {/* Fog stays saturated so the view under the floating field never washes out. */}
+      <fog attach="fog" args={['#5AAEF0', 160, 380]} />
 
-      <hemisphereLight args={['#5DADE2', '#3B7A28', 0.4]} />
+      {/* Soft sky / fresh green bounce hemisphere keeps the scene warm and friendly. */}
+      <hemisphereLight args={['#D8F1FF', '#4C8B38', 0.72]} />
+      {/* Warm directional sun, slightly off-zenith. */}
       <directionalLight
-        position={[100, 80, 50]}
-        intensity={1.0}
-        color="#FFFFFF"
+        position={[80, 110, 60]}
+        intensity={1.4}
+        color="#FFF1D6"
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-60}
-        shadow-camera-right={60}
-        shadow-camera-top={60}
-        shadow-camera-bottom={-60}
+        shadow-bias={-0.0005}
+        shadow-normalBias={0.02}
+        shadow-camera-left={-shadowExtent}
+        shadow-camera-right={shadowExtent}
+        shadow-camera-top={shadowExtent}
+        shadow-camera-bottom={-shadowExtent}
         shadow-camera-near={1}
-        shadow-camera-far={300}
+        shadow-camera-far={400}
       />
-      <ambientLight intensity={0.45} color="#FFFFFF" />
+      {/* Extra fill light keeps gate shadows subtle instead of high-contrast. */}
+      <directionalLight position={[-60, 40, -40]} intensity={0.4} color="#A8C8E6" />
+      <ambientLight intensity={0.28} color="#FFFFFF" />
 
       <Grid fieldSize={config.fieldSize} />
 
