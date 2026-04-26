@@ -24,7 +24,7 @@ const GATE_PATHS: Record<GateType, ReactElement> = {
   // Standard gate: 2 vertical posts + top crossbar (open bottom).
   standard: (
     <>
-      <line x1="4" y1="7" x2="20" y2="7" />
+      <line x1="6" y1="7" x2="18" y2="7" />
       <line x1="6" y1="7" x2="6" y2="22" />
       <line x1="18" y1="7" x2="18" y2="22" />
     </>
@@ -32,7 +32,7 @@ const GATE_PATHS: Record<GateType, ReactElement> = {
   // h-gate: standard frame + one post extends upward (backrest) on the right.
   'h-gate': (
     <>
-      <line x1="4" y1="9" x2="20" y2="9" />
+      <line x1="6" y1="9" x2="18" y2="9" />
       <line x1="6" y1="9" x2="6" y2="22" />
       <line x1="18" y1="2" x2="18" y2="22" />
     </>
@@ -40,8 +40,8 @@ const GATE_PATHS: Record<GateType, ReactElement> = {
   // double-h: bottom standard frame + top h-gate frame stacked.
   'double-h': (
     <>
-      <line x1="4" y1="16" x2="20" y2="16" />
-      <line x1="4" y1="10" x2="20" y2="10" />
+      <line x1="6" y1="16" x2="18" y2="16" />
+      <line x1="6" y1="10" x2="18" y2="10" />
       <line x1="6" y1="10" x2="6" y2="22" />
       <line x1="18" y1="3" x2="18" y2="22" />
     </>
@@ -65,8 +65,8 @@ const GATE_PATHS: Record<GateType, ReactElement> = {
   // double: two identical standard frames stacked.
   double: (
     <>
-      <line x1="4" y1="15" x2="20" y2="15" />
-      <line x1="4" y1="8" x2="20" y2="8" />
+      <line x1="6" y1="15" x2="18" y2="15" />
+      <line x1="6" y1="8" x2="18" y2="8" />
       <line x1="6" y1="8" x2="6" y2="22" />
       <line x1="18" y1="8" x2="18" y2="22" />
     </>
@@ -74,9 +74,9 @@ const GATE_PATHS: Record<GateType, ReactElement> = {
   // ladder: three identical frames stacked (tallest gate).
   ladder: (
     <>
-      <line x1="4" y1="17" x2="20" y2="17" />
-      <line x1="4" y1="11" x2="20" y2="11" />
-      <line x1="4" y1="5" x2="20" y2="5" />
+      <line x1="6" y1="17" x2="18" y2="17" />
+      <line x1="6" y1="11" x2="18" y2="11" />
+      <line x1="6" y1="5" x2="18" y2="5" />
       <line x1="6" y1="5" x2="6" y2="22" />
       <line x1="18" y1="5" x2="18" y2="22" />
     </>
@@ -84,7 +84,7 @@ const GATE_PATHS: Record<GateType, ReactElement> = {
   // start-finish: standard frame + sign panel on top with "S" indicator.
   'start-finish': (
     <>
-      <line x1="4" y1="9" x2="20" y2="9" />
+      <line x1="6" y1="9" x2="18" y2="9" />
       <line x1="6" y1="9" x2="6" y2="22" />
       <line x1="18" y1="9" x2="18" y2="22" />
       <rect x="9" y="3" width="6" height="6" rx="0.5" />
