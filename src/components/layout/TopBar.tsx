@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
+import { PoleCounter } from './PoleCounter'
 
 interface TopBarProps {
   onShortcutsClick: () => void
@@ -140,6 +141,11 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
           </TooltipContent>
         </Tooltip>
       </div>
+
+      <Separator orientation="vertical" className="hidden h-6 md:block" />
+
+      {/* Center: Pole counter (badge with click-popover) */}
+      <PoleCounter />
 
       <Separator orientation="vertical" className="hidden h-6 md:block" />
 
