@@ -26,8 +26,8 @@ export function OctagonalTunnelGate({ position, rotation, openings, openingLabel
   const radius = diameter / 2
   const centerY = radius
   const tunnelLength = 2
-  const color = isSelected ? '#38bdf8' : '#0891b2'
-  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const color = isSelected ? '#85CCDB' : '#5BB5C9'
+  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
   const vertices = Array.from({ length: OCTAGON_SEGMENTS }, (_, index) => {
     const angle = ANGLE_OFFSET + (index * 2 * Math.PI) / OCTAGON_SEGMENTS

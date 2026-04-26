@@ -25,7 +25,7 @@ export function FlightPath({ gates, gateSequence }: FlightPathProps) {
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    const material = new THREE.LineBasicMaterial({ color: '#ffff00', linewidth: 2 })
+    const material = new THREE.LineBasicMaterial({ color: '#FF8B5A', linewidth: 2 })
     return new THREE.Line(geometry, material)
   }), [path.sampledSegments])
 
@@ -55,7 +55,7 @@ export function FlightPath({ gates, gateSequence }: FlightPathProps) {
               [-0.04, 0, 0.04],
               [0, 0, -0.06],
             ]}
-            color="#ffff00"
+            color="#FF8B5A"
             lineWidth={1.5}
           />
           <Line
@@ -63,7 +63,7 @@ export function FlightPath({ gates, gateSequence }: FlightPathProps) {
               [0.04, 0, 0.04],
               [0, 0, -0.06],
             ]}
-            color="#ffff00"
+            color="#FF8B5A"
             lineWidth={1.5}
           />
         </group>

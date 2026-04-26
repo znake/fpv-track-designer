@@ -44,8 +44,8 @@ export function LadderGate({ position, rotation, openings, openingLabels, isSele
   const groupRef = useRef<Mesh>(null)
   const width = BASE_WIDTH
   const height = BASE_HEIGHT
-  const color = isSelected ? '#fb923c' : '#f97316'
-  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const color = isSelected ? '#FFCBBE' : '#FFB4A2'
+  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
   const stackOffset = STACK_DISTANCE
 

@@ -23,8 +23,8 @@ export function StandardGate({ position, rotation, openings, openingLabels, isSe
   const groupRef = useRef<Mesh>(null)
   const width = BASE_WIDTH
   const height = BASE_HEIGHT
-  const color = isSelected ? '#60a5fa' : '#3b82f6'
-  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const color = isSelected ? '#9DD9C5' : '#7EC8B0'
+  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
 
   return (

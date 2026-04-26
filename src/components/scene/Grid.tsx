@@ -39,7 +39,7 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
         onClick={handleGroundClick}
       >
         <planeGeometry args={[fieldSize.width, fieldSize.height]} />
-        <meshStandardMaterial color="#3d5c28" />
+        <meshStandardMaterial color="#6BA84F" roughness={0.9} metalness={0} />
       </mesh>
 
       {showGrid && (
@@ -61,7 +61,7 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
                 ]), 3]}
               />
             </bufferGeometry>
-            <lineBasicMaterial color="#ffffff" linewidth={2} />
+            <lineBasicMaterial color="#FFFEF0" linewidth={2} />
           </lineSegments>
 
           {/* Grid lines using drei Grid helper */}
@@ -70,10 +70,10 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
             args={[fieldSize.width, fieldSize.height]}
             cellSize={1}
             cellThickness={0.5}
-            cellColor="#5a7a4a"
+            cellColor="#8FBF6E"
             sectionSize={sectionSize}
             sectionThickness={1}
-            sectionColor="#7a9a6a"
+            sectionColor="#A8D08D"
             fadeDistance={200}
             fadeStrength={1}
           />

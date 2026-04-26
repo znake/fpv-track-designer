@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
+import { Sky, Environment, OrbitControls } from '@react-three/drei'
 import { MOUSE } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useAppStore } from '../../store'
@@ -48,8 +48,33 @@ export function Scene() {
       camera={{ position: [0, 30, 30], fov: 50, near: 0.1, far: 1000 }}
       style={{ width: '100%', height: '100%', touchAction: 'none' }}
     >
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[10, 20, 10]} intensity={1} castShadow />
+      <Sky
+        distance={450000}
+        inclination={0.5}
+        azimuth={0.25}
+        turbidity={4}
+        rayleigh={2}
+        mieCoefficient={0.005}
+        mieDirectionalG={0.8}
+      />
+      <Environment preset="park" />
+      <fog attach="fog" args={['#BFE2F5', 60, 220]} />
+
+      <hemisphereLight args={['#BFE2F5', '#7BB369', 0.45]} />
+      <directionalLight
+        position={[40, 80, 25]}
+        intensity={1.4}
+        color="#FFF4E0"
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-60}
+        shadow-camera-right={60}
+        shadow-camera-top={60}
+        shadow-camera-bottom={-60}
+        shadow-camera-near={1}
+        shadow-camera-far={200}
+      />
+      <ambientLight intensity={0.35} color="#E8E4F2" />
 
       <Grid fieldSize={config.fieldSize} />
 

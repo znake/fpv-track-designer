@@ -28,9 +28,9 @@ export function StartFinishGate({ position, rotation, openings, openingLabels, i
   const groupRef = useRef<Mesh>(null)
   const width = BASE_WIDTH
   const height = BASE_HEIGHT
-  const accentColor = '#f9fafb'
+  const accentColor = '#FFF4E6'
   const textColor = '#111827'
-  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
   const panelY = height + 0.25
   const panelTextZ = PANEL_DEPTH / 2 + 0.006

@@ -29,8 +29,8 @@ export function HGate({ gateId, position, rotation, openings, openingLabels, isS
   const backrestHeight = height * BACKREST_HEIGHT_MULTIPLIER
   const backrestSide = getHGateBackrestSide(gateId)
   const backrestX = backrestSide * width / 2
-  const color = isSelected ? '#f87171' : '#ef4444'
-  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const color = isSelected ? '#FFA8A8' : '#FF8B8B'
+  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
 
   return (

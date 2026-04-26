@@ -30,8 +30,8 @@ export function DoubleHGate({ gateId, position, rotation, openings, openingLabel
   const backrestHeight = height * BACKREST_HEIGHT_MULTIPLIER
   const backrestSide = getHGateBackrestSide(gateId)
   const backrestX = backrestSide * width / 2
-  const color = isSelected ? '#a78bfa' : '#8b5cf6'
-  const emissiveColor = isSelected ? '#22d3ee' : '#000000'
+  const color = isSelected ? '#CDC1F0' : '#B8A9E8'
+  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
   const emissiveIntensity = isSelected ? 0.8 : 0
   const stackOffset = STACK_DISTANCE
 
