@@ -259,11 +259,13 @@ function App() {
                   key={option.type}
                   type="button"
                   variant="outline"
-                  className="flex h-auto items-center gap-3 py-3 text-left"
+                  className="flex h-auto justify-start gap-3 py-3 text-left"
                   disabled={disabled}
                   onClick={() => handleInsertGate(option.type)}
                 >
-                  <GateIcon type={option.type} className="size-6 shrink-0" />
+                  <span className="flex w-10 shrink-0 justify-center">
+                    <GateIcon type={option.type} className="size-6" />
+                  </span>
                   <span>{option.label}</span>
                 </Button>
               )
