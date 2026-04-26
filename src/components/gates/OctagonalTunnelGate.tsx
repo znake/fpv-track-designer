@@ -2,6 +2,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import type { Group } from 'three'
 import { useRef } from 'react'
 import type { GateOpening } from '../../types'
+import { GATE_BASE_WIDTH, GATE_POST_THICKNESS } from '../../constants/gateDimensions'
 import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
@@ -15,8 +16,8 @@ interface GateComponentProps {
   onOpeningLabelClick?: (openingId: string, sequenceNumber: number, e: ThreeEvent<MouseEvent>) => void
 }
 
-const BASE_DIAMETER = 1.2
-const POST_THICKNESS = 0.06
+const BASE_DIAMETER = GATE_BASE_WIDTH
+const POST_THICKNESS = GATE_POST_THICKNESS
 const OCTAGON_SEGMENTS = 8
 const ANGLE_OFFSET = Math.PI / OCTAGON_SEGMENTS
 

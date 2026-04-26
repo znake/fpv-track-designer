@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { GateOpening } from '../../types'
+import { GATE_BASE_WIDTH, GATE_POST_THICKNESS } from '../../constants/gateDimensions'
 import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
@@ -15,8 +16,8 @@ interface GateComponentProps {
   onOpeningLabelClick?: (openingId: string, sequenceNumber: number, e: ThreeEvent<MouseEvent>) => void
 }
 
-const POST_THICKNESS = 0.06
-const BASE_SIZE = 1.2
+const POST_THICKNESS = GATE_POST_THICKNESS
+const BASE_SIZE = GATE_BASE_WIDTH
 
 export function DiveGate({ position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
