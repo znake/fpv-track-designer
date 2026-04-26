@@ -250,7 +250,7 @@ function App() {
               Wähle den Gate-Typ aus. Das neue Gate wird an der berechneten Position in die Durchflugreihenfolge eingefügt.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
             {gateTypeOptions.map((option) => {
               const disabled = singletonGateTypes.has(option.type)
 
