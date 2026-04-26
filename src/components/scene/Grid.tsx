@@ -1,6 +1,7 @@
 import type { ThreeEvent } from '@react-three/fiber'
 import { Grid as DreiGrid, Text } from '@react-three/drei'
 import { useAppStore } from '../../store'
+import { GATE_BASE_WIDTH } from '../../constants/gateDimensions'
 
 function isCameraTouchGesture(e: ThreeEvent<MouseEvent>) {
   const target = e.nativeEvent.target
@@ -21,7 +22,7 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
   const selectGate = useAppStore((state) => state.selectGate)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const showGrid = useAppStore((state) => state.config.showGrid)
-  const sectionSize = 5
+  const cellSize = GATE_BASE_WIDTH
 
   const handleGroundClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
@@ -73,12 +74,12 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
           <DreiGrid
             position={[0, 0.01, 0]}
             args={[fieldSize.width, fieldSize.height]}
-            cellSize={1}
+            cellSize={cellSize}
             cellThickness={0.5}
             cellColor="#5A8F44"
-            sectionSize={sectionSize}
-            sectionThickness={1}
-            sectionColor="#7AAA60"
+            sectionSize={5}
+            sectionThickness={0}
+            sectionColor="#5A8F44"
             fadeDistance={200}
             fadeStrength={1}
           />
