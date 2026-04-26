@@ -165,9 +165,9 @@ describe('TrackSlice - Undo/Redo', () => {
     expect(store.getState().selectedGateId).toBe('gate-1')
   })
 
-  it('should snap so adjacent gates touch edge-to-edge without overlap', () => {
-    // Gates are 1.2m wide, so the snap step must be 1.2,
-    // otherwise neighbouring gates overlap by ~0.2m as seen in user-reported screenshot.
+  it('should snap so adjacent gates can touch edge-to-edge without overlap', () => {
+    // Snap step is 1/4 of the 1.2m gate footprint (0.3m) so gates can be placed edge-to-edge
+    // (every 4 steps) while still allowing finer in-between placement.
     const snapStore = createSnapTestStore({ snapGatesToGrid: true })
     const track = createTestTrack([
       createTestGate('gate-1', { position: { x: 0, y: 0, z: 0 } }),
@@ -175,12 +175,27 @@ describe('TrackSlice - Undo/Redo', () => {
     ])
 
     snapStore.getState().setTrack(track)
-    // User drags gate-2 to x=1.1 (just past the right edge of gate-1)
+    // User drags gate-2 close to the right edge of gate-1; centre distance must be a multiple of 0.3.
     snapStore.getState().setGatePosition('gate-2', { x: 1.1, y: 0, z: 0 })
 
     const gate2 = snapStore.getState().currentTrack?.gates.find(g => g.id === 'gate-2')
-    // Gate width = 1.2 → centres must differ by exactly 1.2 to sit edge-to-edge
+    // 1.1 rounds to nearest 0.3 step → 1.2 (which also equals one full gate width).
     expect(gate2?.position.x).toBeCloseTo(1.2, 9)
+  })
+
+  it('should snap to quarter-gate sub-steps for fine adjustments', () => {
+    const snapStore = createSnapTestStore({ snapGatesToGrid: true })
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: 0, y: 0, z: 0 } }),
+    ])
+
+    snapStore.getState().setTrack(track)
+    // 0.4 rounds to nearest 0.3 step → 0.3 (one quarter of a gate width).
+    snapStore.getState().setGatePosition('gate-1', { x: 0.4, y: 0, z: 0.7 })
+
+    const gate = snapStore.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
+    expect(gate?.position.x).toBeCloseTo(0.3, 9)
+    expect(gate?.position.z).toBeCloseTo(0.6, 9)
   })
 
   it('should clamp vertical drag positions before snapping them to the active grid', () => {
@@ -208,10 +223,10 @@ describe('TrackSlice - Undo/Redo', () => {
 
     const positions = snapStore.getState().currentTrack?.gates.map((gate) => gate.position) ?? []
     expect(positions[0].x).toBeCloseTo(1.2, 9)
-    expect(positions[0].y).toBeCloseTo(1.2, 9)
+    expect(positions[0].y).toBeCloseTo(0.9, 9)
     expect(positions[0].z).toBeCloseTo(-1.2, 9)
     expect(positions[1].x).toBeCloseTo(2.4, 9)
-    expect(positions[1].y).toBeCloseTo(2.4, 9)
+    expect(positions[1].y).toBeCloseTo(2.1, 9)
     expect(positions[1].z).toBeCloseTo(2.4, 9)
     expect(snapStore.getState().past.length).toBe(1)
   })

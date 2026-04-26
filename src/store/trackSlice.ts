@@ -173,12 +173,13 @@ function getSelectionState(track: Track, selectedGateId: string | null, selected
 }
 
 // Gates have a base geometric width/height of 1.2m (see BASE_WIDTH in src/components/gates/*).
-// The snap step must match the actual gate footprint so gates align edge-to-edge
-// without gaps or overlap when manually composed side-by-side.
+// The snap step is 1/4 of the gate footprint so gates can be aligned edge-to-edge
+// (every 4 steps) while still allowing finer placement in between for fine-tuning.
 const GATE_BASE_FOOTPRINT = 1.2
+const SNAP_SUBDIVISIONS = 4
 
 function getSnapStep(): number {
-  return GATE_BASE_FOOTPRINT
+  return GATE_BASE_FOOTPRINT / SNAP_SUBDIVISIONS
 }
 
 function snapCoordinate(value: number): number {
