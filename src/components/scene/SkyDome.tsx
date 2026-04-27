@@ -3,10 +3,10 @@ import { useFrame } from '@react-three/fiber'
 import type { Mesh } from 'three'
 import { BackSide, Color, ShaderMaterial, Vector3 } from 'three'
 
-const TOP_COLOR = '#347CC3'
+const TOP_COLOR = '#9CCFEA'
 const MID_COLOR = '#5FADE0'
-const HORIZON_COLOR = '#9CCFEA'
-const BOTTOM_COLOR = '#3F92D0'
+const HORIZON_COLOR = '#347CC3'
+const BOTTOM_COLOR = '#1F4E8F'
 const SUN_COLOR = '#F4DCA8'
 const HORIZON_OFFSET = 0.16
 const RADIUS = 600
