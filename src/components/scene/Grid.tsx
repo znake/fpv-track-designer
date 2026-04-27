@@ -32,10 +32,10 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
 
   return (
     <group>
-      {/* Dark underside keeps the floating field from washing out against the bright sky. */}
+      {/* Earth-toned underside makes the floating field read like soil from the side. */}
       <mesh position={[0, -0.06, 0]}>
         <boxGeometry args={[fieldSize.width, 0.1, fieldSize.height]} />
-        <meshStandardMaterial color="#03163F" roughness={0.94} metalness={0} />
+        <meshStandardMaterial color="#5A3A22" roughness={0.94} metalness={0} />
       </mesh>
 
       {/* Ground plane - grass */}
