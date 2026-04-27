@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { ArrowRightLeft, CircleHelp, Move, Plus } from 'lucide-react'
+import { ArrowRightLeft, CircleHelp, Move, Plus, RotateCw } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -27,41 +27,37 @@ interface HelpStep {
   description: string
   Icon?: LucideIcon
   marker?: string
-  accentClassName: string
 }
+
+const helpIconAccentClassName = 'text-primary border-primary/40 bg-primary/10'
 
 const helpSteps: HelpStep[] = [
   {
     title: 'Gate verschieben',
     description: 'Gate einmal anklicken, dann das Verschieben-Symbol gedrückt halten und das Gate an die gewünschte Position ziehen.',
     Icon: Move,
-    accentClassName: 'text-primary border-primary/40 bg-primary/10',
   },
   {
     title: 'Gate drehen',
     description: 'Gate einmal anklicken, dann das Dreh-Symbol gedrückt halten und seitlich ziehen, bis die Ausrichtung passt.',
-    marker: '#',
-    accentClassName: 'text-secondary border-secondary/40 bg-secondary/10',
+    Icon: RotateCw,
   },
   {
     title: 'Einflugseite wechseln',
     description:
       'Beim ausgewählten Gate die jeweilige Öffnung anklicken (grün/rot) und die Richtung per Klick umdrehen. Die grüne Seite zeigt dann die neue Einflugseite.',
     Icon: ArrowRightLeft,
-    accentClassName: 'text-primary border-primary/40 bg-primary/10',
   },
   {
     title: 'Durchflugreihenfolge anpassen',
     description:
       'Die Durchflugnummer einer Öffnung anklicken, dann im kleinen Feld eine neue Position zwischen 1 und der Gesamtzahl der Durchflüge eintragen.',
     marker: '#',
-    accentClassName: 'text-secondary border-secondary/40 bg-secondary/10',
   },
   {
     title: 'Gate hinzufügen',
     description: 'Gate anklicken, bei dem davor oder danach ein neues Gate eingefügt werden soll. Dann auf das Plus-Symbol klicken und den Gate-Typ auswählen.',
     Icon: Plus,
-    accentClassName: 'text-primary border-primary/40 bg-primary/10',
   },
 ]
 
@@ -158,12 +154,12 @@ export function KeyboardShortcutsDialog({
                 Einstellungen wie Feldgröße, Anzahl/Größe der Gates und Anzeigeoptionen findest du über das Zahnrad in der Werkzeugleiste.
               </p>
               <div className="mt-4 grid gap-3">
-                {helpSteps.map(({ title, description, Icon, marker, accentClassName }) => (
+                {helpSteps.map(({ title, description, Icon, marker }) => (
                   <div
                     key={title}
                     className="flex min-w-0 gap-3 rounded-lg border border-border bg-background/70 p-3"
                   >
-                    <div className={`flex size-10 shrink-0 items-center justify-center rounded-full border ${accentClassName}`}>
+                    <div className={`flex size-10 shrink-0 items-center justify-center rounded-full border ${helpIconAccentClassName}`}>
                       {Icon ? <Icon className="size-5" /> : <span className="text-lg font-semibold leading-none">{marker}</span>}
                     </div>
                     <div className="min-w-0 space-y-1">
