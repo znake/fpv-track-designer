@@ -100,7 +100,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
         <span className="hidden text-sm font-semibold tracking-tight sm:inline">
           FPV-Track-Designer
         </span>
-        <Badge variant="outline" className="hidden border-amber-500/40 bg-amber-500/10 px-1.5 py-0 text-[10px] font-medium text-amber-700 sm:inline-flex">
+        <Badge variant="outline" className="hidden border-primary/40 bg-primary/10 px-1.5 py-0 text-[10px] font-medium text-primary sm:inline-flex">
           Beta Version
         </Badge>
       </div>
