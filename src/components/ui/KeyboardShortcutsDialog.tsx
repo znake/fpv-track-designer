@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { ArrowRightLeft, CircleHelp, Move, Plus, RotateCw } from 'lucide-react'
+import { ArrowRightLeft, CircleHelp, Move, Plus } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -25,7 +25,8 @@ interface ShortcutGroup {
 interface HelpStep {
   title: string
   description: string
-  Icon: LucideIcon
+  Icon?: LucideIcon
+  marker?: string
   accentClassName: string
 }
 
@@ -39,7 +40,7 @@ const helpSteps: HelpStep[] = [
   {
     title: 'Gate drehen',
     description: 'Gate einmal anklicken, dann das Dreh-Symbol gedrückt halten und seitlich ziehen, bis die Ausrichtung passt.',
-    Icon: RotateCw,
+    marker: '#',
     accentClassName: 'text-secondary border-secondary/40 bg-secondary/10',
   },
   {
@@ -53,7 +54,7 @@ const helpSteps: HelpStep[] = [
     title: 'Durchflugreihenfolge anpassen',
     description:
       'Die Durchflugnummer einer Öffnung anklicken, dann im kleinen Feld eine neue Position zwischen 1 und der Gesamtzahl der Durchflüge eintragen.',
-    Icon: Move,
+    marker: '#',
     accentClassName: 'text-secondary border-secondary/40 bg-secondary/10',
   },
   {
@@ -157,13 +158,13 @@ export function KeyboardShortcutsDialog({
                 Einstellungen wie Feldgröße, Anzahl/Größe der Gates und Anzeigeoptionen findest du über das Zahnrad in der Werkzeugleiste.
               </p>
               <div className="mt-4 grid gap-3">
-                {helpSteps.map(({ title, description, Icon, accentClassName }) => (
+                {helpSteps.map(({ title, description, Icon, marker, accentClassName }) => (
                   <div
                     key={title}
                     className="flex min-w-0 gap-3 rounded-lg border border-border bg-background/70 p-3"
                   >
                     <div className={`flex size-10 shrink-0 items-center justify-center rounded-full border ${accentClassName}`}>
-                      <Icon className="size-5" />
+                      {Icon ? <Icon className="size-5" /> : <span className="text-lg font-semibold leading-none">{marker}</span>}
                     </div>
                     <div className="min-w-0 space-y-1">
                       <h4 className="text-sm font-medium text-foreground">{title}</h4>
