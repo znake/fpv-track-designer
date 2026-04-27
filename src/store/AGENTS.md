@@ -60,3 +60,9 @@ a local `useState` boolean.
 ## NOTES
 - `trackSlice.ts` duplicates `moveGate`/`rotateGate` logic from `utils/gateOperations.ts`
 - `commitGateDrag()` pushes history without snapshotting (avoids undo stack pollution during drag)
+
+## TESTING
+- `trackSlice.test.ts` is the largest test suite; keep new store invariants there.
+- Use isolated Zustand stores with `create<...>()(...)` for slice tests.
+- Cover dirty-state and history behavior together: undo/redo must restore `isTrackModified` snapshots.
+- Destructive-action tests should exercise cancel, save-before-action, and discard paths.

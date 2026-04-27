@@ -34,3 +34,9 @@ utils/
 - Max placement attempts: 100 per gate
 - Arrow spacing: 5m along flight path
 - Storage key prefix: `fpv-track-`
+
+## TESTING
+- Algorithm tests are co-located and behavior-heavy; add edge cases near the changed utility.
+- `flightPath.test.ts` is the path-geometry regression suite; preserve gate-specific cases.
+- Browser API mocks, such as `localStorage`, stay local to each test file.
+- Prefer fixture helpers like `createTestGate`, `createTestTrack`, and `createTestConfig` over inline bulky objects.
