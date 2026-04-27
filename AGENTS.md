@@ -1,91 +1,101 @@
-# FPV TRACK DESIGNER — PROJECT KNOWLEDGE BASE
+# FPV TRACK DESIGNER - PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-04-24
-**Commit:** 8419a1f
+**Generated:** 2026-04-27
+**Commit:** 2c6b99a
 **Branch:** main
 
 ## OVERVIEW
-3D FPV drone racing track designer. Random track generation, gate fine-tuning, JSON persistence. Desktop-only, no backend.
+Desktop-only 3D FPV drone racing track designer. React 19 + Vite + R3F/Drei scene, Zustand slices, Tailwind v4 UI, Vitest coverage, JSON-like local persistence.
 
 ## STRUCTURE
 ```
 fpv-track-designer/
 ├── src/
+│   ├── App.tsx                 # top-level app orchestration, dialogs, sidebar/scene composition
+│   ├── main.tsx                # Vite/React entry, StrictMode + ErrorBoundary
 │   ├── components/
-│   │   ├── gates/       # 8 gate 3D components + dispatcher + handles
-│   │   ├── scene/       # R3F Canvas, flight path, grid, camera controllers
-│   │   ├── ui/          # shadcn primitives + 4 sidebar panels
-│   │   └── layout/      # TopBar, LeftToolPanel
-│   ├── hooks/           # useGateSelection, useKeyboardShortcuts
-│   ├── schemas/         # track.schema.ts (Zod JSON validation)
-│   ├── store/           # Zustand slices (config + track)
-│   ├── types/           # Gate, Track, Config interfaces
-│   └── utils/           # generator, flightPath, gateOperations, gateOpenings, gateSequence, storage
-├── public/              # Static assets
-└── vite.config.ts       # React + Tailwind v4 + Vitest (inline)
+│   │   ├── gates/              # fixed gate components + handles/opening indicators
+│   │   ├── scene/              # R3F Canvas, flight path, grid, camera controllers
+│   │   ├── ui/                 # shadcn primitives mixed with app panels/dialogs
+│   │   ├── layout/             # TopBar, LeftToolPanel, PoleCounter app shell
+│   │   └── icons/              # custom GateIcon
+│   ├── hooks/                  # keyboard shortcuts, R3F gate selection
+│   ├── schemas/                # track export/import validation boundary
+│   ├── store/                  # Zustand config + track slices
+│   ├── types/                  # shared domain contracts
+│   ├── utils/                  # generator, flight path, gate ops, storage, sequence/openings
+│   ├── constants/              # shared gate dimensions
+│   └── lib/                    # cn helper for shadcn classes
+├── public/                     # static assets
+└── vite.config.ts              # React + Tailwind v4 + Vitest config
 ```
 
 ## WHERE TO LOOK
-| Task | Location |
-|------|----------|
-| Add gate type | `src/components/gates/`, `src/types/gate.ts` |
-| Change track generation | `src/utils/generator.ts` |
-| Modify store state | `src/store/configSlice.ts` or `src/store/trackSlice.ts` |
-| Add UI panel | `src/components/ui/` |
-| Change 3D scene | `src/components/scene/Scene.tsx` |
-| Flight path logic | `src/utils/flightPath.ts` |
-| Storage/persistence | `src/utils/storage.ts` |
-| Camera controls | `src/components/scene/CameraPan.tsx`, `CameraVerticalPan.tsx`, `SmoothZoom.tsx` |
-| Gate openings/sequence | `src/utils/gateOpenings.ts`, `src/utils/gateSequence.ts` |
-| Keyboard shortcuts | `src/hooks/useKeyboardShortcuts.ts` |
+| Task | Location | Notes |
+|------|----------|-------|
+| App shell / first-load flow | `src/App.tsx`, `src/main.tsx` | StrictMode is enabled; keep mount effects idempotent |
+| Add/change gate visuals | `src/components/gates/`, `src/types/gate.ts` | Fixed gate set; no custom user-defined gate types |
+| Change 3D scene/camera | `src/components/scene/` | R3F hooks stay under the single Canvas owner |
+| Change sidebar/dialog UI | `src/components/ui/`, `src/components/layout/` | UI mixes shadcn primitives and app-specific panels |
+| Track generation | `src/utils/generator.ts` | Min 3m gate distance, nearest-neighbor order |
+| Flight path logic | `src/utils/flightPath.ts` | Dense geometry/avoidance algorithm; test edge cases |
+| Store state/actions | `src/store/configSlice.ts`, `src/store/trackSlice.ts` | Use slice pattern and dirty-state workflow |
+| Import/export validation | `src/schemas/track.schema.ts` | Persistence boundary, legacy normalization, error shape |
+| Persistence | `src/utils/storage.ts` | Browser `localStorage` only; use schema helpers |
+| Keyboard/mouse selection | `src/hooks/`, `src/components/gates/GateHandles.tsx` | Desktop mouse/keyboard only |
+
+## CODE MAP
+| Symbol | Type | Location | Role |
+|--------|------|----------|------|
+| `App` | component | `src/App.tsx` | Top-level UI, dialogs, first-load generation |
+| `createAppStore` / `useAppStore` | Zustand store | `src/store/index.ts` | Combines config + track slices with devtools |
+| `createTrackSlice` | Zustand slice | `src/store/trackSlice.ts` | Track state, selection, undo/redo, dirty-state, destructive actions |
+| `generateTrack` | function | `src/utils/generator.ts` | Random track generation and initial sequence |
+| `calculateFlightPath` | function | `src/utils/flightPath.ts` | Path segments, samples, arrows, gate-specific avoidance |
+| `GateHandles` | component | `src/components/gates/GateHandles.tsx` | Move/rotate/elevate/insert/delete controls in 3D |
+| `Scene` | component | `src/components/scene/Scene.tsx` | Single Canvas owner and scene composition |
+| `serializeTrack` / `deserializeTrack` | functions | `src/schemas/track.schema.ts` | Export/import shape validation and normalization |
 
 ## CONVENTIONS
-- **Named exports only** — no default exports except App.tsx
-- **`import type` required** — `verbatimModuleSyntax: true` in tsconfig
-- **PascalCase** for components, **camelCase** for utils/hooks
-- **Tests co-located** — `*.test.ts` next to source file
-- **Zustand slice pattern** — each domain gets its own slice file
-- **Tailwind v4** — CSS-based config via `@import "tailwindcss"`, no tailwind.config.js
-- **Import style split** — `gates/` and `scene/` use relative paths, `ui/` and `layout/` use `@/` alias. Prefer `@/` for consistency.
+- Named exports by default. `App.tsx` is the lone default export.
+- `import type` for type-only imports. `verbatimModuleSyntax` is enabled.
+- `@/*` aliases cross-domain imports; relative imports are common for nearby gates/scene files.
+- Tests are co-located as `*.test.ts` or `*.test.tsx`; no shared Vitest setup file.
+- Vitest config lives in `vite.config.ts` with `globals: true` and `environment: 'jsdom'`.
+- Tailwind v4 is CSS-first via `@tailwindcss/vite` and `@import "tailwindcss"`; no `tailwind.config.js`.
+- Zustand state uses slice files merged in `src/store/index.ts`.
+- UI components use shadcn/Radix primitives plus `cn` from `src/lib/utils.ts`.
 
-## ANTI-PATTERNS
-- ❌ No `as any` or `@ts-ignore` — strict TS enforced
-- ❌ No backend/API calls — localStorage only
-- ❌ No per-gate size adjustment — global `config.gateSize` only
-- ❌ No custom gate type creation — fixed 8 types
-- ❌ No mobile touch gestures — desktop mouse/keyboard only
-- ❌ No auth, no database, no AR/VR, no video export
+## ANTI-PATTERNS (THIS PROJECT)
+- No `as any`, `@ts-ignore`, or silent type suppression.
+- No backend/API/database/auth flows; persistence is browser `localStorage` only.
+- No per-gate size adjustment; `config.gateSize` is global.
+- No custom gate type creation; the app has a fixed gate type set.
+- No mobile/touch gesture scope; desktop mouse/keyboard only.
+- Do not duplicate schema validation in storage/import flows; route through `src/schemas`.
+- Do not bypass the unsaved-changes flow for destructive actions.
 
 ## UNIQUE STYLES
-- Gate rotation: 0-330 in 30° steps (12 positions)
-- Gate movement: N/S/E/W, 1m increments, clamped to field bounds
-- Undo/redo: past/future arrays, MAX_HISTORY=50
-- Min gate distance: 3m enforced by generator
-- Flight path: nearest-neighbor ordering, arrows every 5m
-- R3F camera: Space+click pan, Shift+click vertical pan, wheel smooth zoom
+- Gate rotation: 0-330 in 30 degree steps.
+- Gate movement: N/S/E/W, 1m increments, clamped to field bounds.
+- Undo/redo: `past`/`future` arrays, `MAX_HISTORY=50`, dirty flag captured in history entries.
+- Flight path: gate-sequence visits, Bezier sampling, arrows every 5m.
+- Camera controls: Space/right-click pan, Shift vertical pan, wheel/middle-click smooth zoom.
+- Import/export schema keeps legacy compatibility explicit, e.g. old `asymmetric` gate type mapping.
 
 ## COMMANDS
 ```bash
-npm run dev      # Dev server at localhost:5173
+npm run dev      # Vite dev server at localhost:5173
 npm run build    # tsc -b && vite build
-npm run test     # vitest --run
+npm run test     # vitest (watch/default mode)
 npm run lint     # eslint .
+npm run preview  # preview production build
 ```
 
-## COMMIT POLICY
-- **Sofort committen** nach jeder gröberen Änderung, sobald Tests durchgelaufen sind und ein Task als abgeschlossen gilt.
-- Trigger für einen Commit:
-  - Eine logische Einheit / ein Task ist fertig (Feature, Bugfix, Refactor-Schritt).
-  - `npm run test` und `npm run build` laufen ohne Fehler durch.
-  - `lsp_diagnostics` ist sauber auf den geänderten Dateien.
-- Nicht warten, bis sich mehrere Tasks anhäufen — lieber kleine, atomare Commits als ein großer Sammel-Commit.
-- Commit-Message kurz und im Stil des Repos halten; auf das *Warum* fokussieren, nicht nur auf das *Was*.
-- Niemals committen, wenn Tests/Build fehlschlagen oder der Stand bewusst kaputt ist.
-
 ## NOTES
-- `src/assets/hero.png`, `react.svg`, `vite.svg` — unused template assets
-- Chunk size warning (>500KB) from R3F+drei bundle — acceptable for MVP
-- ErrorBoundary wraps entire app in main.tsx
-- Test libraries (`vitest`, `@testing-library/*`) are in `dependencies` — should be `devDependencies`
-- `src/components/gates/index.ts` barrel is incomplete (missing LadderGate) and unused
-- `trackSlice.ts` duplicates `moveGate`/`rotateGate` logic from `utils/gateOperations.ts`
+- Chunk size warning from R3F/Drei bundle is acceptable for MVP.
+- `src/assets/hero.png`, `react.svg`, `vite.svg` are template/unused leftovers.
+- `src/components/gates/index.ts` barrel is incomplete (missing `LadderGate`) and currently bypassed by `Scene.tsx`.
+- `trackSlice.ts` duplicates `moveGate`/`rotateGate` logic from `utils/gateOperations.ts`.
+- Test libraries live in `dependencies`; they would normally be `devDependencies`.
+- Root has untracked QA screenshots (`fpv-*-qa.png`); keep generated QA artifacts out of commits unless intentionally requested.
