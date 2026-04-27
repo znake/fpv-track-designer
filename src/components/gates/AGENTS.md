@@ -1,6 +1,6 @@
 # Gates — 3D Components
 
-**Domain:** R3F gate representations (8 types)
+**Domain:** R3F gate representations (fixed gate set)
 
 ## STRUCTURE
 ```
@@ -13,6 +13,7 @@ gates/
 ├── LadderGate.tsx      # Orange, three stacked gates (1.5m apart)
 ├── StartFinishGate.tsx # White with checkered panel + "Start" label
 ├── Flag.tsx            # Gray pole + red triangular flag
+├── OctagonalTunnel.tsx # Octagonal tunnel / legacy asymmetric replacement
 ├── Gate.tsx            # Dispatcher: GateType → component
 ├── GateHandles.tsx     # Html overlay: move/rotate/insert/delete handles
 ├── GateOpeningIndicators.tsx  # Maps openings to indicators
@@ -30,7 +31,7 @@ gates/
 ## WHERE TO LOOK
 | Task | File |
 |------|------|
-| Add new gate type | Create new `.tsx` + add to `Gate.tsx` dispatcher + `GateType` in types |
+| Change fixed gate set | Update component, `Gate.tsx` dispatcher, `GateType`, defaults, schema/tests |
 | Change gate appearance | Individual gate `.tsx` files |
 | Modify selection behavior | `Gate.tsx` + `useGateSelection` hook |
 | Modify handles | `GateHandles.tsx` |
@@ -39,4 +40,5 @@ gates/
 ## NOTES
 - Barrel export (`index.ts`) is incomplete: missing `LadderGate`
 - `Scene.tsx` imports `Gate` directly (`../gates/Gate`) bypassing the barrel
-- `GateHandles.tsx` (524 lines) is the largest component — handles move, rotate, insert, delete
+- `GateHandles.tsx` is the largest component — handles move, rotate, elevate, insert, delete
+- Insert handles use flight-path samples when available and fall back to rotated gate offsets
