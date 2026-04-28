@@ -18,9 +18,10 @@ interface GateProps {
   gate: GateType
   openingLabels?: Record<string, string>
   showOpeningLabels?: boolean
+  readOnly?: boolean
 }
 
-export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProps) {
+export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly = false }: GateProps) {
   const { isSelected, handleClick } = useGateSelection(gate.id)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const currentTrack = useAppStore((state) => state.currentTrack)
@@ -57,15 +58,17 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProp
     })
   }
 
+  const gateIsSelected = readOnly ? false : isSelected
+
   const commonProps = {
     position: gate.position,
     rotation: gate.rotation,
     openings: showOpeningLabels ? gate.openings : [],
     openingLabels: showOpeningLabels ? openingLabels : undefined,
-    isSelected,
-    onClick: handleClick,
-    onOpeningClick: showOpeningLabels ? handleOpeningClick : undefined,
-    onOpeningLabelClick: showOpeningLabels ? handleOpeningLabelClick : undefined,
+    isSelected: gateIsSelected,
+    onClick: readOnly ? undefined : handleClick,
+    onOpeningClick: showOpeningLabels && !readOnly ? handleOpeningClick : undefined,
+    onOpeningLabelClick: showOpeningLabels && !readOnly ? handleOpeningLabelClick : undefined,
   }
 
   let gateComponent: ReactNode
@@ -103,7 +106,7 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProp
   return (
     <group>
       {gateComponent}
-      {isSelected && (
+      {!readOnly && isSelected && (
         <GateHandles
           gateId={gate.id}
           gateType={gate.type}

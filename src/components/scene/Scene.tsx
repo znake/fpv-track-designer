@@ -12,11 +12,20 @@ import { CameraPan } from '../scene/CameraPan'
 import { CameraVerticalPan } from '../scene/CameraVerticalPan'
 import { SmoothZoom } from '../scene/SmoothZoom'
 import { SkyDome } from '../scene/SkyDome'
+import type { Config, Track } from '../../types'
 
-export function Scene() {
+interface SceneProps {
+  track?: Track | null
+  configOverride?: Config | null
+  readOnly?: boolean
+}
+
+export function Scene({ track, configOverride, readOnly = false }: SceneProps = {}) {
   const controlsRef = useRef<OrbitControlsImpl>(null)
-  const currentTrack = useAppStore((state) => state.currentTrack)
-  const config = useAppStore((state) => state.config)
+  const storeTrack = useAppStore((state) => state.currentTrack)
+  const storeConfig = useAppStore((state) => state.config)
+  const currentTrack = track !== undefined ? track : storeTrack
+  const config = configOverride ?? storeConfig
 
   const gateLabels = useMemo(() => {
     if (!currentTrack) return new Map<string, Record<string, string>>()
@@ -81,6 +90,7 @@ export function Scene() {
               gate={gate}
               openingLabels={config.showOpeningLabels ? gateLabels.get(gate.id) : undefined}
               showOpeningLabels={config.showOpeningLabels}
+              readOnly={readOnly}
             />
           ))}
           {config.showFlightPath && <FlightPath gates={currentTrack.gates} gateSequence={currentTrack.gateSequence} />}
