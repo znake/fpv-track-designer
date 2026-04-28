@@ -4,6 +4,8 @@ import type { ThreeEvent } from '@react-three/fiber'
 import type { GateOpening } from '../../types'
 import { GATE_BASE_HEIGHT, GATE_BASE_WIDTH, GATE_POST_THICKNESS } from '../../constants/gateDimensions'
 import { getHGateBackrestSide } from '../../utils/gateOpenings'
+import { useTheme } from '../../hooks/useTheme'
+import { getGateColors } from '../../utils/themeColors'
 import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
@@ -31,9 +33,8 @@ export function DoubleHGate({ gateId, position, rotation, openings, openingLabel
   const backrestHeight = height * BACKREST_HEIGHT_MULTIPLIER
   const backrestSide = getHGateBackrestSide(gateId)
   const backrestX = backrestSide * width / 2
-  const color = isSelected ? '#B560F5' : '#9333EA'
-  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
-  const emissiveIntensity = isSelected ? 0.8 : 0
+  const theme = useTheme()
+  const { color, emissiveColor, emissiveIntensity } = getGateColors(theme.colors, 'double-h', !!isSelected)
   const stackOffset = STACK_DISTANCE
 
   return (
@@ -46,15 +47,15 @@ export function DoubleHGate({ gateId, position, rotation, openings, openingLabel
       <group position={[0, 0, 0]}>
         <mesh position={[-width / 2, height / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
         <mesh position={[width / 2, height / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
         <mesh position={[0, height, 0]} onClick={onClick}>
           <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
       </group>
 
@@ -62,22 +63,22 @@ export function DoubleHGate({ gateId, position, rotation, openings, openingLabel
       <group position={[0, stackOffset, 0]}>
         <mesh position={[-width / 2, height / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
 
         <mesh position={[width / 2, height / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
 
         <mesh position={[0, height, 0]} onClick={onClick}>
           <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
 
         <mesh position={[backrestX, height + (backrestHeight - height) / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, backrestHeight - height, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
       </group>
 

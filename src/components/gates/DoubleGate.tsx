@@ -3,6 +3,8 @@ import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { GateOpening } from '../../types'
 import { GATE_BASE_HEIGHT, GATE_BASE_WIDTH, GATE_POST_THICKNESS } from '../../constants/gateDimensions'
+import { useTheme } from '../../hooks/useTheme'
+import { getGateColors } from '../../utils/themeColors'
 import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
@@ -25,9 +27,8 @@ export function DoubleGate({ position, rotation, openings, openingLabels, isSele
   const groupRef = useRef<Mesh>(null)
   const width = BASE_WIDTH
   const height = BASE_HEIGHT
-  const color = isSelected ? '#FDE047' : '#FACC15'
-  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
-  const emissiveIntensity = isSelected ? 0.8 : 0
+  const theme = useTheme()
+  const { color, emissiveColor, emissiveIntensity } = getGateColors(theme.colors, 'double', !!isSelected)
   const stackOffset = STACK_DISTANCE
 
   return (
@@ -40,15 +41,15 @@ export function DoubleGate({ position, rotation, openings, openingLabels, isSele
       <group position={[0, 0, 0]}>
         <mesh position={[-width / 2, height / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
         <mesh position={[width / 2, height / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
         <mesh position={[0, height, 0]} onClick={onClick}>
           <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
       </group>
 
@@ -56,15 +57,15 @@ export function DoubleGate({ position, rotation, openings, openingLabels, isSele
       <group position={[0, stackOffset, 0]}>
         <mesh position={[-width / 2, height / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
         <mesh position={[width / 2, height / 2, 0]} onClick={onClick}>
           <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
         <mesh position={[0, height, 0]} onClick={onClick}>
           <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
-          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+          <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
         </mesh>
       </group>
 
