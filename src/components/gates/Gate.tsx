@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
+import * as THREE from 'three'
 import type { Gate as GateType } from '../../types'
 import { useGateSelection } from '../../hooks/useGateSelection'
 import { useAppStore } from '../../store'
@@ -21,6 +22,7 @@ interface GateProps {
 }
 
 export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProps) {
+  const shadowGroupRef = useRef<THREE.Group>(null)
   const { isSelected, handleClick } = useGateSelection(gate.id)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const currentTrack = useAppStore((state) => state.currentTrack)
@@ -68,6 +70,14 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProp
     onOpeningLabelClick: showOpeningLabels ? handleOpeningLabelClick : undefined,
   }
 
+  useEffect(() => {
+    shadowGroupRef.current?.traverse((object) => {
+      if (object instanceof THREE.Mesh) {
+        object.castShadow = true
+      }
+    })
+  })
+
   let gateComponent: ReactNode
   switch (gate.type) {
     case 'h-gate':
@@ -101,7 +111,7 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true }: GateProp
   }
 
   return (
-    <group>
+    <group ref={shadowGroupRef}>
       {gateComponent}
       {isSelected && (
         <GateHandles
