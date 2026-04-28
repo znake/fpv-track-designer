@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 import type { Gate, GateSequenceItem } from '../../types'
 import { calculateFlightPath } from '../../utils/flightPath'
+import { useTheme } from '../../hooks/useTheme'
 import { Line } from '@react-three/drei'
 
 interface FlightPathProps {
@@ -10,8 +11,8 @@ interface FlightPathProps {
 }
 
 export function FlightPath({ gates, gateSequence }: FlightPathProps) {
+  const theme = useTheme()
   const path = useMemo(() => calculateFlightPath(gates, gateSequence), [gates, gateSequence])
-
   // Build one native THREE.Line per sampled curve to avoid implicit connections between disjoint segments.
   const lineObjects = useMemo(() => path.sampledSegments.map((segment) => {
     const geometry = new THREE.BufferGeometry()
@@ -25,9 +26,9 @@ export function FlightPath({ gates, gateSequence }: FlightPathProps) {
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    const material = new THREE.LineBasicMaterial({ color: '#FF8B5A', linewidth: 2 })
+    const material = new THREE.LineBasicMaterial({ color: theme.colors.flightPath, linewidth: 2 })
     return new THREE.Line(geometry, material)
-  }), [path.sampledSegments])
+  }), [path.sampledSegments, theme.colors.flightPath])
 
   if (path.segments.length === 0) return null
 
@@ -55,7 +56,7 @@ export function FlightPath({ gates, gateSequence }: FlightPathProps) {
               [-0.04, 0, 0.04],
               [0, 0, -0.06],
             ]}
-            color="#FF8B5A"
+            color={theme.colors.flightPath}
             lineWidth={1.5}
           />
           <Line
@@ -63,7 +64,7 @@ export function FlightPath({ gates, gateSequence }: FlightPathProps) {
               [0.04, 0, 0.04],
               [0, 0, -0.06],
             ]}
-            color="#FF8B5A"
+            color={theme.colors.flightPath}
             lineWidth={1.5}
           />
         </group>
