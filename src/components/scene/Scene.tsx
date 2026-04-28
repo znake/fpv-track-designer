@@ -1,10 +1,12 @@
 import { useMemo, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
+import { OrbitControls, Sky, Stars, Environment } from '@react-three/drei'
+import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { ACESFilmicToneMapping, MOUSE } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useAppStore } from '../../store'
 import { buildDefaultGateSequenceEntries } from '../../utils/gateSequence'
+import { useTheme } from '../../hooks/useTheme'
 import { Gate } from '../gates/Gate'
 import { FlightPath } from '../scene/FlightPath'
 import { Grid } from '../scene/Grid'
@@ -17,6 +19,7 @@ export function Scene() {
   const controlsRef = useRef<OrbitControlsImpl>(null)
   const currentTrack = useAppStore((state) => state.currentTrack)
   const config = useAppStore((state) => state.config)
+  const theme = useTheme()
 
   const gateLabels = useMemo(() => {
     if (!currentTrack) return new Map<string, Record<string, string>>()
@@ -46,62 +49,201 @@ export function Scene() {
 
   return (
     <Canvas
-      dpr={[1, 1.5]}
+      dpr={theme.dpr}
       gl={{
-        antialias: true,
+        antialias: theme.antialias,
         toneMapping: ACESFilmicToneMapping,
-        toneMappingExposure: 1.05,
+        toneMappingExposure: theme.toneMappingExposure,
       }}
+      shadows={theme.useShadows}
       camera={{ position: [0, 30, 30], fov: 50, near: 0.1, far: 1000 }}
       style={{ width: '100%', height: '100%', touchAction: 'none' }}
-      >
-      <SkyDome />
-      {/* Fog stays saturated so the view under the floating field never washes out. */}
-      <fog attach="fog" args={['#5AAEF0', 160, 380]} />
-
-      {/* Soft sky / fresh green bounce hemisphere keeps the scene warm and friendly. */}
-      <hemisphereLight args={['#D8F1FF', '#4C8B38', 0.72]} />
-      {/* Warm directional sun, slightly off-zenith. */}
-      <directionalLight
-        position={[80, 110, 60]}
-        intensity={1.4}
-        color="#FFF1D6"
-      />
-      {/* Cool fill light softens the sun direction. */}
-      <directionalLight position={[-60, 40, -40]} intensity={0.4} color="#A8C8E6" />
-      <ambientLight intensity={0.28} color="#FFFFFF" />
-
-      <Grid fieldSize={config.fieldSize} />
-
-      {currentTrack && (
+    >
+      {/* ── MINIMAL THEME ───────────────────────────────────────────────────── */}
+      {theme.id === 'minimal' && (
         <>
-          {currentTrack.gates.map((gate) => (
-            <Gate
-              key={gate.id}
-              gate={gate}
-              openingLabels={config.showOpeningLabels ? gateLabels.get(gate.id) : undefined}
-              showOpeningLabels={config.showOpeningLabels}
-            />
-          ))}
-          {config.showFlightPath && <FlightPath gates={currentTrack.gates} gateSequence={currentTrack.gateSequence} />}
+          <SkyDome
+            topColor={theme.colors.skyTop}
+            midColor={theme.colors.skyMid}
+            horizonColor={theme.colors.skyHorizon}
+            bottomColor={theme.colors.skyBottom}
+            sunColor={theme.colors.skySun}
+          />
+          <fog attach="fog" args={[theme.colors.fogColor, theme.colors.fogNear, theme.colors.fogFar]} />
+          <hemisphereLight args={[theme.colors.hemisphereSky, theme.colors.hemisphereGround, theme.colors.hemisphereIntensity]} />
+          <directionalLight
+            position={theme.colors.sunPosition}
+            intensity={theme.colors.sunIntensity}
+            color={theme.colors.sunColor}
+          />
+          <directionalLight
+            position={theme.colors.fillPosition}
+            intensity={theme.colors.fillIntensity}
+            color={theme.colors.fillColor}
+          />
+          <ambientLight intensity={theme.colors.ambientIntensity} color={theme.colors.ambientColor} />
+          <Grid fieldSize={config.fieldSize} />
+          {currentTrack && (
+            <>
+              {currentTrack.gates.map((gate) => (
+                <Gate
+                  key={gate.id}
+                  gate={gate}
+                  openingLabels={config.showOpeningLabels ? gateLabels.get(gate.id) : undefined}
+                  showOpeningLabels={config.showOpeningLabels}
+                />
+              ))}
+              {config.showFlightPath && <FlightPath gates={currentTrack.gates} gateSequence={currentTrack.gateSequence} />}
+            </>
+          )}
+          <OrbitControls
+            ref={controlsRef}
+            enableDamping
+            dampingFactor={0.1}
+            enableZoom={false}
+            enablePan={false}
+            mouseButtons={{
+              LEFT: MOUSE.ROTATE,
+              MIDDLE: MOUSE.DOLLY,
+            }}
+            maxPolarAngle={Math.PI / 2.1}
+          />
+          <CameraPan controlsRef={controlsRef} />
+          <CameraVerticalPan controlsRef={controlsRef} />
+          <SmoothZoom controlsRef={controlsRef} />
         </>
       )}
 
-      <OrbitControls
-        ref={controlsRef}
-        enableDamping
-        dampingFactor={0.1}
-        enableZoom={false}
-        enablePan={false}
-        mouseButtons={{
-          LEFT: MOUSE.ROTATE,
-          MIDDLE: MOUSE.DOLLY,
-        }}
-        maxPolarAngle={Math.PI / 2.1}
-      />
-      <CameraPan controlsRef={controlsRef} />
-      <CameraVerticalPan controlsRef={controlsRef} />
-      <SmoothZoom controlsRef={controlsRef} />
+      {/* ── REALISTIC THEME ──────────────────────────────────────────────────── */}
+      {theme.id === 'realistic' && (
+        <>
+          <Sky
+            inclination={0.11}
+            azimuth={0.28}
+            turbidity={14}
+            rayleigh={0.8}
+            mieCoefficient={0.018}
+            mieDirectionalG={0.82}
+          />
+          <group position={[82, 20, -66]}>
+            <mesh renderOrder={3}>
+              <sphereGeometry args={[4.5, 32, 32]} />
+              <meshBasicMaterial color="#FFB347" toneMapped={false} depthTest={false} depthWrite={false} fog={false} />
+            </mesh>
+          </group>
+          <mesh rotation-x={-Math.PI / 2} position={[0, -62, 0]}>
+            <planeGeometry args={[10000, 10000]} />
+            <meshBasicMaterial color="#123F50" />
+          </mesh>
+          <Environment preset={theme.environmentPreset as 'sunset' | 'night'} environmentIntensity={theme.environmentIntensity} />
+          <fog attach="fog" args={[theme.colors.fogColor, theme.colors.fogNear, theme.colors.fogFar]} />
+          <hemisphereLight args={[theme.colors.hemisphereSky, theme.colors.hemisphereGround, theme.colors.hemisphereIntensity]} />
+          <directionalLight
+            position={theme.colors.sunPosition}
+            intensity={theme.colors.sunIntensity}
+            color={theme.colors.sunColor}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={200}
+            shadow-camera-left={-50}
+            shadow-camera-right={50}
+            shadow-camera-top={50}
+            shadow-camera-bottom={-50}
+            shadow-bias={-0.00015}
+            shadow-normalBias={0.02}
+          />
+          <directionalLight
+            position={theme.colors.fillPosition}
+            intensity={theme.colors.fillIntensity}
+            color={theme.colors.fillColor}
+          />
+          <ambientLight intensity={theme.colors.ambientIntensity} color={theme.colors.ambientColor} />
+          <Grid fieldSize={config.fieldSize} />
+          {currentTrack && (
+            <>
+              {currentTrack.gates.map((gate) => (
+                <Gate
+                  key={gate.id}
+                  gate={gate}
+                  openingLabels={config.showOpeningLabels ? gateLabels.get(gate.id) : undefined}
+                  showOpeningLabels={config.showOpeningLabels}
+                />
+              ))}
+              {config.showFlightPath && <FlightPath gates={currentTrack.gates} gateSequence={currentTrack.gateSequence} />}
+            </>
+          )}
+          <OrbitControls
+            ref={controlsRef}
+            enableDamping
+            dampingFactor={0.1}
+            enableZoom={false}
+            enablePan={false}
+            mouseButtons={{
+              LEFT: MOUSE.ROTATE,
+              MIDDLE: MOUSE.DOLLY,
+            }}
+            maxPolarAngle={Math.PI / 2.1}
+          />
+          <CameraPan controlsRef={controlsRef} />
+          <CameraVerticalPan controlsRef={controlsRef} />
+          <SmoothZoom controlsRef={controlsRef} />
+        </>
+      )}
+
+      {/* ── NIGHT THEME ─────────────────────────────────────────────────────── */}
+      {theme.id === 'night' && (
+        <>
+          <color attach="background" args={[theme.colors.skyTop]} />
+          <Stars radius={100} depth={60} count={4000} factor={3} saturation={0} fade speed={0.5} />
+          <Environment preset={theme.environmentPreset as 'sunset' | 'night'} environmentIntensity={theme.environmentIntensity} />
+          <fog attach="fog" args={[theme.colors.fogColor, theme.colors.fogNear, theme.colors.fogFar]} />
+          <hemisphereLight args={[theme.colors.hemisphereSky, theme.colors.hemisphereGround, theme.colors.hemisphereIntensity]} />
+          <directionalLight
+            position={theme.colors.sunPosition}
+            intensity={theme.colors.sunIntensity}
+            color={theme.colors.sunColor}
+          />
+          <directionalLight
+            position={theme.colors.fillPosition}
+            intensity={theme.colors.fillIntensity}
+            color={theme.colors.fillColor}
+          />
+          <ambientLight intensity={theme.colors.ambientIntensity} color={theme.colors.ambientColor} />
+          <Grid fieldSize={config.fieldSize} />
+          {currentTrack && (
+            <>
+              <EffectComposer>
+                <Bloom mipmapBlur intensity={1.6} luminanceThreshold={1} luminanceSmoothing={0.2} />
+              </EffectComposer>
+              {currentTrack.gates.map((gate) => (
+                <Gate
+                  key={gate.id}
+                  gate={gate}
+                  openingLabels={config.showOpeningLabels ? gateLabels.get(gate.id) : undefined}
+                  showOpeningLabels={config.showOpeningLabels}
+                />
+              ))}
+              {config.showFlightPath && <FlightPath gates={currentTrack.gates} gateSequence={currentTrack.gateSequence} />}
+            </>
+          )}
+          <OrbitControls
+            ref={controlsRef}
+            enableDamping
+            dampingFactor={0.1}
+            enableZoom={false}
+            enablePan={false}
+            mouseButtons={{
+              LEFT: MOUSE.ROTATE,
+              MIDDLE: MOUSE.DOLLY,
+            }}
+            maxPolarAngle={Math.PI / 2.1}
+          />
+          <CameraPan controlsRef={controlsRef} />
+          <CameraVerticalPan controlsRef={controlsRef} />
+          <SmoothZoom controlsRef={controlsRef} />
+        </>
+      )}
     </Canvas>
   )
 }
