@@ -1,8 +1,8 @@
 import { useMemo, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Sky, Stars, Environment } from '@react-three/drei'
+import { OrbitControls, Stars, Environment } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
-import { ACESFilmicToneMapping, MOUSE } from 'three'
+import { ACESFilmicToneMapping, AdditiveBlending, CanvasTexture, MOUSE } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useAppStore } from '../../store'
 import { buildDefaultGateSequenceEntries } from '../../utils/gateSequence'
@@ -20,6 +20,24 @@ export function Scene() {
   const currentTrack = useAppStore((state) => state.currentTrack)
   const config = useAppStore((state) => state.config)
   const theme = useTheme()
+
+  const sunGlowTexture = useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 128
+    canvas.height = 128
+
+    const context = canvas.getContext('2d')
+    if (context) {
+      const gradient = context.createRadialGradient(64, 64, 4, 64, 64, 64)
+      gradient.addColorStop(0, 'rgba(255, 190, 90, 0.65)')
+      gradient.addColorStop(0.28, 'rgba(255, 160, 70, 0.28)')
+      gradient.addColorStop(1, 'rgba(255, 120, 40, 0)')
+      context.fillStyle = gradient
+      context.fillRect(0, 0, canvas.width, canvas.height)
+    }
+
+    return new CanvasTexture(canvas)
+  }, [])
 
   const gateLabels = useMemo(() => {
     if (!currentTrack) return new Map<string, Record<string, string>>()
@@ -117,15 +135,19 @@ export function Scene() {
       {/* ── REALISTIC THEME ──────────────────────────────────────────────────── */}
       {theme.id === 'realistic' && (
         <>
-          <Sky
-            inclination={0.11}
-            azimuth={0.28}
-            turbidity={14}
-            rayleigh={0.8}
-            mieCoefficient={0.018}
-            mieDirectionalG={0.82}
+          <SkyDome
+            topColor="#354B68"
+            midColor="#6F7D91"
+            horizonColor="#E9A97C"
+            bottomColor="#E9A97C"
+            sunColor="#FFB347"
+            exponent={0.74}
+            horizonOffset={0.12}
           />
           <group position={[82, 20, -66]}>
+            <sprite scale={[22, 22, 1]} renderOrder={2}>
+              <spriteMaterial map={sunGlowTexture} transparent opacity={0.75} depthTest={false} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
+            </sprite>
             <mesh renderOrder={3}>
               <sphereGeometry args={[4.5, 32, 32]} />
               <meshBasicMaterial color="#FFB347" toneMapped={false} depthTest={false} depthWrite={false} fog={false} />
@@ -133,7 +155,7 @@ export function Scene() {
           </group>
           <mesh rotation-x={-Math.PI / 2} position={[0, -62, 0]}>
             <planeGeometry args={[10000, 10000]} />
-            <meshBasicMaterial color="#123F50" />
+            <meshStandardMaterial color="#123F50" emissive="#062A45" emissiveIntensity={0.08} roughness={0.22} metalness={0.18} />
           </mesh>
           <Environment preset={theme.environmentPreset as 'sunset' | 'night'} environmentIntensity={theme.environmentIntensity} />
           <fog attach="fog" args={[theme.colors.fogColor, theme.colors.fogNear, theme.colors.fogFar]} />
