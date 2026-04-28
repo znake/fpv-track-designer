@@ -21,6 +21,7 @@ const config: Config = {
   showFlightPath: true,
   showOpeningLabels: true,
   showGrid: false,
+  theme: 'minimal',
 }
 
 const track: Track = {

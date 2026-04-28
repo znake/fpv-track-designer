@@ -54,6 +54,7 @@ const createTestConfig = (): Config => ({
   showFlightPath: true,
   showOpeningLabels: true,
   showGrid: false,
+  theme: 'minimal',
 })
 
 describe('storage', () => {
