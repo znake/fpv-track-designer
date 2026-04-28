@@ -2,6 +2,8 @@ import { useRef } from 'react'
 import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { GateOpening } from '../../types'
+import { useTheme } from '../../hooks/useTheme'
+import { getGateColors, getFlagPoleColor } from '../../utils/themeColors'
 import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
@@ -21,9 +23,9 @@ const BASE_HEIGHT = 2
 export function Flag({ position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const height = BASE_HEIGHT
-  const color = isSelected ? '#EF4444' : '#DC2626'
-  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
-  const emissiveIntensity = isSelected ? 0.8 : 0
+  const theme = useTheme()
+  const { color, emissiveColor, emissiveIntensity } = getGateColors(theme.colors, 'flag', !!isSelected)
+  const poleColor = theme.id === 'night' ? color : getFlagPoleColor()
 
   return (
     <group
@@ -34,13 +36,13 @@ export function Flag({ position, rotation, openings, openingLabels, isSelected, 
       {/* Vertical pole */}
       <mesh position={[0, height / 2, 0]} onClick={onClick}>
         <boxGeometry args={[POLE_THICKNESS, height, POLE_THICKNESS]} />
-        <meshStandardMaterial color="#5C4033" emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={poleColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
       {/* Triangular flag */}
       <mesh position={[0.15, height - 0.15, 0]} onClick={onClick}>
         <boxGeometry args={[0.3, 0.2, 0.02]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
       <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} />

@@ -3,6 +3,8 @@ import type { Group } from 'three'
 import { useRef } from 'react'
 import type { GateOpening } from '../../types'
 import { GATE_BASE_WIDTH, GATE_POST_THICKNESS } from '../../constants/gateDimensions'
+import { useTheme } from '../../hooks/useTheme'
+import { getGateColors } from '../../utils/themeColors'
 import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
@@ -27,9 +29,8 @@ export function OctagonalTunnelGate({ position, rotation, openings, openingLabel
   const radius = diameter / 2
   const centerY = radius
   const tunnelLength = 2
-  const color = isSelected ? '#22D3EE' : '#06B6D4'
-  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
-  const emissiveIntensity = isSelected ? 0.8 : 0
+  const theme = useTheme()
+  const { color, emissiveColor, emissiveIntensity } = getGateColors(theme.colors, 'octagonal-tunnel', !!isSelected)
   const vertices = Array.from({ length: OCTAGON_SEGMENTS }, (_, index) => {
     const angle = ANGLE_OFFSET + (index * 2 * Math.PI) / OCTAGON_SEGMENTS
     return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }
@@ -54,7 +55,7 @@ export function OctagonalTunnelGate({ position, rotation, openings, openingLabel
             onClick={onClick}
           >
             <boxGeometry args={[edgeLength + POST_THICKNESS, POST_THICKNESS, tunnelLength]} />
-            <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+            <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
           </mesh>
         )
       })}
