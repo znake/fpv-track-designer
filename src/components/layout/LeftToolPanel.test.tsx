@@ -71,12 +71,30 @@ describe('LeftToolPanel', () => {
     expect(useAppStore.getState().currentTrack?.id).toBe('shuffle')
   })
 
-  it('renders Galerie below Speichern and Einstellungen as the fourth icon', () => {
+  it('renders Track Teilen between Speichern and Galerie', () => {
     renderPanel()
 
     const buttonNames = screen.getAllByRole('button').map((button) => button.getAttribute('aria-label'))
 
-    expect(buttonNames).toEqual(['Shuffle', 'Speichern', 'Galerie', 'Einstellungen'])
+    expect(buttonNames).toEqual(['Shuffle', 'Speichern', 'Track Teilen', 'Galerie', 'Einstellungen'])
     expect(screen.queryByRole('button', { name: 'Neue Strecke' })).toBeNull()
+  })
+
+  it('disables Track Teilen when no track is loaded', () => {
+    renderPanel()
+
+    expect(screen.getByRole('button', { name: 'Track Teilen' })).toHaveProperty('disabled', true)
+  })
+
+  it('opens a share dialog with an encoded viewer URL', () => {
+    useAppStore.setState({ currentTrack: createMockTrack('share') })
+
+    renderPanel()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Track Teilen' }))
+
+    const shareInput = screen.getByLabelText('Teilbarer Link')
+    expect(shareInput).toHaveProperty('value')
+    expect((shareInput as HTMLInputElement).value.startsWith('https://sharedtrack.fpvooe.com/#')).toBe(true)
   })
 })

@@ -1,9 +1,10 @@
 import type { FC } from 'react'
 import { useState, useCallback } from 'react'
-import { Dice5, Save, Settings2, GalleryVertical } from 'lucide-react'
+import { Dice5, Save, Settings2, GalleryVertical, Share2 } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { generateTrack } from '@/utils/generator'
 import { extractGenerationConfig } from '@/utils/generationConfig'
+import { createTrackShareUrl } from '@/utils/shareTrack'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -11,6 +12,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { SaveTrackDialog } from '@/components/ui/SaveTrackDialog'
+import { ShareTrackDialog } from '@/components/ui/ShareTrackDialog'
 
 interface LeftToolPanelProps {
   onSaveClick?: () => void
@@ -24,10 +26,13 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
   onSettingsClick,
 }) => {
   const config = useAppStore((state) => state.config)
+  const currentTrack = useAppStore((state) => state.currentTrack)
   const setTrack = useAppStore((state) => state.setTrack)
   const requestDestructiveAction = useAppStore((state) => state.requestDestructiveAction)
 
   const [saveOpen, setSaveOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [shareUrl, setShareUrl] = useState('')
 
   const handleShuffle = useCallback(() => {
     requestDestructiveAction(
@@ -49,6 +54,13 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
     onGalleryClick?.()
   }, [onGalleryClick])
 
+  const handleShareClick = useCallback(() => {
+    if (!currentTrack) return
+
+    setShareUrl(createTrackShareUrl(currentTrack, config, import.meta.env.VITE_VIEWER_DOMAIN))
+    setShareOpen(true)
+  }, [config, currentTrack])
+
   const handleSettingsClick = useCallback(() => {
     onSettingsClick?.()
   }, [onSettingsClick])
@@ -59,6 +71,7 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
     shortcut: string
     description?: string
     action: () => void
+    disabled?: boolean
   }> = [
     {
       icon: Dice5,
@@ -73,6 +86,13 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
       label: 'Speichern',
       shortcut: 'Ctrl+S',
       action: handleSaveClick,
+    },
+    {
+      icon: Share2,
+      label: 'Track Teilen',
+      shortcut: '',
+      action: handleShareClick,
+      disabled: !currentTrack,
     },
     {
       icon: GalleryVertical,
@@ -92,7 +112,7 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
     <>
       <aside className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(3.75rem+env(safe-area-inset-bottom))] shrink-0 items-start justify-center border-t border-border bg-surface/95 px-3 pt-2 pb-[env(safe-area-inset-bottom)] shadow-2xl shadow-black/30 backdrop-blur-md transition-all duration-200 ease-out md:static md:h-auto md:w-12 md:flex-col md:items-center md:justify-start md:border-t-0 md:border-r md:bg-surface md:px-0 md:py-2 md:shadow-none md:backdrop-blur-none">
         <div className="flex w-full max-w-sm items-center justify-around gap-2 md:w-auto md:flex-col md:justify-start md:gap-1">
-          {primaryTools.map(({ icon: Icon, label, shortcut, description, action }) => (
+          {primaryTools.map(({ icon: Icon, label, shortcut, description, action, disabled }) => (
             <Tooltip key={label}>
               <TooltipTrigger asChild>
                 <Button
@@ -100,6 +120,7 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
                   variant="ghost"
                   size="icon"
                   onClick={action}
+                  disabled={disabled}
                   aria-label={label}
                   className="size-11 rounded-2xl md:size-8 md:rounded-lg"
                 >
@@ -125,6 +146,7 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
       {!onSaveClick && (
         <SaveTrackDialog open={saveOpen} onOpenChange={setSaveOpen} />
       )}
+      <ShareTrackDialog open={shareOpen} onOpenChange={setShareOpen} shareUrl={shareUrl} />
     </>
   )
 }
