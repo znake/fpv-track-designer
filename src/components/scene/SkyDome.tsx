@@ -9,6 +9,8 @@ const HORIZON_COLOR = '#347CC3'
 const BOTTOM_COLOR = '#1F4E8F'
 const SUN_COLOR = '#F4DCA8'
 const HORIZON_OFFSET = 0.16
+const HAZE_SOFTNESS = 0.16
+const BELOW_HORIZON_SOFTNESS = 0.72
 const RADIUS = 600
 const SEGMENTS = 64
 const SUN_DIRECTION = new Vector3(-0.38, 0.58, -0.72).normalize()
@@ -35,6 +37,8 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform vec3 sunDirection;
   uniform float exponent;
   uniform float horizonOffset;
+  uniform float hazeSoftness;
+  uniform float belowHorizonSoftness;
   varying vec3 vLocal;
 
   void main() {
@@ -44,13 +48,12 @@ const FRAGMENT_SHADER = /* glsl */ `
     // leaving more mid-sky above the field before the pale horizon starts.
     float h = direction.y + horizonOffset;
     float t = pow(clamp(h, 0.0, 1.0), exponent);
-    // Tight horizon haze band that fades into the mid sky, then blends
-    // into the deep zenith. Gives a soft, atmospheric falloff that meets
-    // the ground/fog at a similar pale tone.
-    float haze = 1.0 - smoothstep(0.0, 0.16, clamp(h, 0.0, 1.0));
+    // Horizon haze band that fades into the mid sky, then blends into the
+    // deep zenith. Themes can widen this band to avoid a hard sky/ground seam.
+    float haze = 1.0 - smoothstep(0.0, hazeSoftness, clamp(h, 0.0, 1.0));
     vec3 lower = mix(midColor, horizonColor, haze);
     vec3 sky = mix(lower, topColor, t);
-    float belowHorizon = smoothstep(0.0, 0.72, clamp(-h, 0.0, 1.0));
+    float belowHorizon = smoothstep(0.0, belowHorizonSoftness, clamp(-h, 0.0, 1.0));
     sky = mix(sky, bottomColor, belowHorizon);
 
     float sunAmount = max(dot(direction, sunDirection), 0.0);
@@ -77,6 +80,10 @@ interface SkyDomeProps {
   exponent?: number
   /** Positive values push the horizon gradient lower in the viewport. */
   horizonOffset?: number
+  /** Width of the warm haze band above the mathematical horizon. */
+  hazeSoftness?: number
+  /** Width of the blend into the lower dome color below the horizon. */
+  belowHorizonSoftness?: number
 }
 
 export function SkyDome({
@@ -87,6 +94,8 @@ export function SkyDome({
   sunColor = SUN_COLOR,
   exponent = 0.82,
   horizonOffset = HORIZON_OFFSET,
+  hazeSoftness = HAZE_SOFTNESS,
+  belowHorizonSoftness = BELOW_HORIZON_SOFTNESS,
 }: SkyDomeProps) {
   const meshRef = useRef<Mesh>(null)
 
@@ -102,6 +111,8 @@ export function SkyDome({
           sunDirection: { value: SUN_DIRECTION },
           exponent: { value: exponent },
           horizonOffset: { value: horizonOffset },
+          hazeSoftness: { value: hazeSoftness },
+          belowHorizonSoftness: { value: belowHorizonSoftness },
         },
         vertexShader: VERTEX_SHADER,
         fragmentShader: FRAGMENT_SHADER,
@@ -109,7 +120,7 @@ export function SkyDome({
         depthWrite: false,
         fog: false,
       }),
-    [topColor, midColor, horizonColor, bottomColor, sunColor, exponent, horizonOffset],
+    [topColor, midColor, horizonColor, bottomColor, sunColor, exponent, horizonOffset, hazeSoftness, belowHorizonSoftness],
   )
 
   useEffect(() => () => material.dispose(), [material])

@@ -202,12 +202,14 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
         <>
           <SkyDome
             topColor="#354B68"
-            midColor="#6F7D91"
-            horizonColor="#E9A97C"
-            bottomColor="#E9A97C"
+            midColor="#746F82"
+            horizonColor="#EEC09A"
+            bottomColor="#E8A87C"
             sunColor="#FFB347"
-            exponent={0.74}
-            horizonOffset={0.12}
+            exponent={0.82}
+            horizonOffset={0.02}
+            hazeSoftness={0.38}
+            belowHorizonSoftness={0.94}
           />
           <group position={[82, 20, -66]}>
             <sprite scale={[48, 48, 1]} renderOrder={2}>
