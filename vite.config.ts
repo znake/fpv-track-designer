@@ -11,7 +11,7 @@ export default defineConfig({
       '/api/shorten-track': {
         target: 'https://n8n.fanaticagentic.com',
         changeOrigin: true,
-        rewrite: (pathname) => pathname.replace(/^\/api\//, '/webhook-test/'),
+        rewrite: (pathname) => pathname.replace(/^\/api\//, '/webhook/'),
       },
     },
   },

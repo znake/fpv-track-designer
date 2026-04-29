@@ -108,7 +108,7 @@ describe('shareTrack helpers', () => {
   })
 
   it('uses the n8n endpoint in production by default', () => {
-    expect(getTrackShortenerEndpoint(false)).toBe('https://n8n.fanaticagentic.com/webhook-test/shorten-track')
+    expect(getTrackShortenerEndpoint(false)).toBe('https://n8n.fanaticagentic.com/webhook/shorten-track')
   })
 
   it('prefers an explicitly configured shortener endpoint', () => {

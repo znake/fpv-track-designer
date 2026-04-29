@@ -4,7 +4,7 @@ import { serializeTrack, deserializeTrack } from '@/schemas/track.schema'
 
 const DEFAULT_VIEWER_DOMAIN = 'https://sharedtrack.fpvooe.com'
 const COMPRESSED_PAYLOAD_PREFIX = 'z.'
-const DEFAULT_SHORTENER_ENDPOINT = 'https://n8n.fanaticagentic.com/webhook-test/shorten-track'
+const DEFAULT_SHORTENER_ENDPOINT = 'https://n8n.fanaticagentic.com/webhook/shorten-track'
 const DEV_SHORTENER_ENDPOINT = '/api/shorten-track'
 const SHORTENER_TIMEOUT_MS = 8000
 
