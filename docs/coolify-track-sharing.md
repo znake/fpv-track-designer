@@ -14,6 +14,7 @@ The Track Teilen feature uses two static deployments from the same GitHub reposi
 
 This is the full FPV Track Designer editor. The **Track Teilen** button serializes the current track and creates a share URL that points to the viewer domain.
 In local development, the editor calls `/api/shorten-track`; Vite proxies that same-origin request to the n8n webhook so localhost is not blocked by browser CORS preflight checks. In the Docker-based production editor, nginx proxies the same `/api/shorten-track` path to n8n so the browser never performs a cross-origin request. If you bypass the nginx proxy and call n8n directly, the webhook must return CORS headers for the deployed editor origin, for example `https://trackdesigner.fpvooe.com`.
+The proxy targets n8n's production webhook path `/webhook/shorten-track`. Do not use `/webhook-test/shorten-track` for deployed traffic because n8n test webhooks only work while the workflow is in test execution mode.
 
 ## Viewer service
 
