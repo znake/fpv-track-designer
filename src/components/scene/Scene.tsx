@@ -173,7 +173,7 @@ export function Scene({ track, configOverride, readOnly = false }: SceneProps = 
           </group>
           <mesh rotation-x={-Math.PI / 2} position={[0, -62, 0]}>
             <planeGeometry args={[10000, 10000]} />
-            <meshStandardMaterial color="#123F50" emissive="#062A45" emissiveIntensity={0.08} roughness={0.22} metalness={0.18} />
+            <meshStandardMaterial color="#5F6F72" emissive="#584A46" emissiveIntensity={0.18} roughness={0.26} metalness={0.16} />
           </mesh>
           <Environment preset={theme.environmentPreset as 'sunset' | 'night'} environmentIntensity={theme.environmentIntensity} />
           <fog attach="fog" args={[theme.colors.fogColor, theme.colors.fogNear, theme.colors.fogFar]} />
