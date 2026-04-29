@@ -72,7 +72,7 @@ describe('ShareTrackDialog', () => {
     )
 
     expect(screen.getByDisplayValue('http://go.fpvooe.com/viMbW')).not.toBeNull()
-    expect(screen.getByText(/Kurzlink erstellt/)).not.toBeNull()
+    expect(screen.getByText('Kurzlink erstellt.')).not.toBeNull()
   })
 
   it('shows shortener errors while keeping the current link copyable', () => {

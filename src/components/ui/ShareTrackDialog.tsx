@@ -81,7 +81,7 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
           )}
           {!isShortening && hasShortLink && (
             <p className="text-xs text-muted-foreground">
-              Kurzlink erstellt. Bewahre den Original-Link zusätzlich auf, falls der Kurzlink später nicht verfügbar ist.
+              Kurzlink erstellt.
             </p>
           )}
           {!isShortening && !hasShortLink && !shortenError && (
