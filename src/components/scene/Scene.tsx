@@ -14,21 +14,29 @@ import { CameraPan } from '../scene/CameraPan'
 import { CameraVerticalPan } from '../scene/CameraVerticalPan'
 import { SmoothZoom } from '../scene/SmoothZoom'
 import { SkyDome } from '../scene/SkyDome'
+import { FpvFlyThrough } from '../scene/FpvFlyThrough'
 import type { Config, Track } from '../../types'
+import { calculateFlightPath } from '../../utils/flightPath'
 
 interface SceneProps {
   track?: Track | null
   configOverride?: Config | null
   readOnly?: boolean
+  fpvModeActive?: boolean
+  onFpvComplete?: () => void
 }
 
-export function Scene({ track, configOverride, readOnly = false }: SceneProps = {}) {
+export function Scene({ track, configOverride, readOnly = false, fpvModeActive = false, onFpvComplete }: SceneProps = {}) {
   const controlsRef = useRef<OrbitControlsImpl>(null)
   const storeTrack = useAppStore((state) => state.currentTrack)
   const storeConfig = useAppStore((state) => state.config)
   const currentTrack = track !== undefined ? track : storeTrack
   const config = configOverride ?? storeConfig
   const theme = useMemo(() => getThemeConfig(config.theme), [config.theme])
+  const flightPath = useMemo(() => {
+    if (!currentTrack) return null
+    return calculateFlightPath(currentTrack.gates, currentTrack.gateSequence)
+  }, [currentTrack])
 
   const sunGlowTexture = useMemo(() => {
     const canvas = document.createElement('canvas')
@@ -102,10 +110,17 @@ export function Scene({ track, configOverride, readOnly = false }: SceneProps = 
           MIDDLE: MOUSE.DOLLY,
         }}
         maxPolarAngle={Math.PI / 2.1}
+        enabled={!fpvModeActive}
       />
-      <CameraPan controlsRef={controlsRef} />
-      <CameraVerticalPan controlsRef={controlsRef} />
-      <SmoothZoom controlsRef={controlsRef} />
+      {!fpvModeActive && <CameraPan controlsRef={controlsRef} />}
+      {!fpvModeActive && <CameraVerticalPan controlsRef={controlsRef} />}
+      {!fpvModeActive && <SmoothZoom controlsRef={controlsRef} />}
+      <FpvFlyThrough
+        active={fpvModeActive}
+        points={flightPath?.sampledPoints ?? []}
+        controlsRef={controlsRef}
+        onComplete={onFpvComplete ?? (() => undefined)}
+      />
     </>
   )
 
