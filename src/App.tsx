@@ -97,6 +97,7 @@ function App() {
       setSettingsOpen(false)
       setGalleryOpen(true)
     },
+    onEscape: () => setFpvModeActive(false),
   })
 
   // Auto-generate track on first load

@@ -5,10 +5,11 @@ interface KeyboardShortcutsOptions {
   onSave?: () => void
   onShuffle?: () => void
   onOpenGallery?: () => void
+  onEscape?: () => void
 }
 
 export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
-  const { onSave, onShuffle, onOpenGallery } = options
+  const { onSave, onShuffle, onOpenGallery, onEscape } = options
   const undo = useAppStore((s) => s.undo)
   const redo = useAppStore((s) => s.redo)
   const selectGate = useAppStore((s) => s.selectGate)
@@ -55,6 +56,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
       }
 
       if (e.key === 'Escape') {
+        onEscape?.()
         selectGate(null)
         if (isDeleteDialogOpen) {
           closeDeleteDialog()
@@ -85,6 +87,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
     onSave,
     onShuffle,
     onOpenGallery,
+    onEscape,
     selectGate,
     selectedGateId,
     selectedGateIds,
