@@ -4,6 +4,8 @@ Ein desktop-orientierter 3D-Editor zum Entwerfen, Generieren und Speichern von F
 
 Das Projekt kombiniert eine interaktive React-Oberfläche mit einer Three.js/R3F-Szene. Strecken können automatisch generiert, über einzelne Gates feinjustiert und lokal als JSON-ähnliche Track-Daten gespeichert werden.
 
+![FPV Track Designer Screenshot](public/screenshot.png)
+
 ## Features
 
 - **3D-Streckeneditor** mit frei sichtbarer FPV-Rennstrecke
