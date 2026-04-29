@@ -4,6 +4,8 @@ import type { ThreeEvent } from '@react-three/fiber'
 import type { GateOpening } from '../../types'
 import { GATE_BASE_HEIGHT, GATE_BASE_WIDTH, GATE_POST_THICKNESS } from '../../constants/gateDimensions'
 import { getHGateBackrestSide } from '../../utils/gateOpenings'
+import { useTheme } from '../../hooks/useTheme'
+import { getGateColors } from '../../utils/themeColors'
 import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
@@ -30,9 +32,8 @@ export function HGate({ gateId, position, rotation, openings, openingLabels, isS
   const backrestHeight = height * BACKREST_HEIGHT_MULTIPLIER
   const backrestSide = getHGateBackrestSide(gateId)
   const backrestX = backrestSide * width / 2
-  const color = isSelected ? '#F46A75' : '#E63946'
-  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
-  const emissiveIntensity = isSelected ? 0.8 : 0
+  const theme = useTheme()
+  const { color, emissiveColor, emissiveIntensity } = getGateColors(theme.colors, 'h-gate', !!isSelected)
 
   return (
     <group
@@ -43,23 +44,23 @@ export function HGate({ gateId, position, rotation, openings, openingLabels, isS
       {/* Lower gate: the fly-through under the "seat" */}
       <mesh position={[-width / 2, height / 2, 0]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
       <mesh position={[width / 2, height / 2, 0]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
       <mesh position={[0, height, 0]} onClick={onClick}>
         <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
       {/* Backrest/flag: deterministic 50/50 left or right, not a second full gate */}
       <mesh position={[backrestX, height + (backrestHeight - height) / 2, 0]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, backrestHeight - height, POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
       <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} />

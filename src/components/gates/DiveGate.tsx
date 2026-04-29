@@ -3,6 +3,8 @@ import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { GateOpening } from '../../types'
 import { GATE_BASE_WIDTH, GATE_POST_THICKNESS } from '../../constants/gateDimensions'
+import { useTheme } from '../../hooks/useTheme'
+import { getGateColors } from '../../utils/themeColors'
 import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
@@ -23,9 +25,8 @@ export function DiveGate({ position, rotation, openings, openingLabels, isSelect
   const groupRef = useRef<Mesh>(null)
   const s = BASE_SIZE
   const half = s / 2
-  const color = isSelected ? '#F472B6' : '#EC4899'
-  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
-  const emissiveIntensity = isSelected ? 0.8 : 0
+  const theme = useTheme()
+  const { color, emissiveColor, emissiveIntensity } = getGateColors(theme.colors, 'dive', !!isSelected)
 
   return (
     <group
@@ -39,43 +40,43 @@ export function DiveGate({ position, rotation, openings, openingLabels, isSelect
       {/* Front-left */}
       <mesh position={[-half, half, half]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, s, POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
       {/* Front-right */}
       <mesh position={[half, half, half]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, s, POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
       {/* Back-left */}
       <mesh position={[-half, half, -half]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, s, POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
       {/* Back-right */}
       <mesh position={[half, half, -half]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, s, POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
       {/* Top connecting edges — open at bottom */}
       {/* Front */}
       <mesh position={[0, s, half]} onClick={onClick}>
         <boxGeometry args={[s + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
       {/* Back */}
       <mesh position={[0, s, -half]} onClick={onClick}>
         <boxGeometry args={[s + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
       {/* Left */}
       <mesh position={[-half, s, 0]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, POST_THICKNESS, s + POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
       {/* Right */}
       <mesh position={[half, s, 0]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, POST_THICKNESS, s + POST_THICKNESS]} />
-        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={color} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
       {/* Entry/exit indicator — green entry side, red exit side */}

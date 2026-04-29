@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand'
-import type { Config, GateType } from '../types'
+import type { Config, GateType, ThemeId } from '../types'
 
 export interface ConfigSlice {
   config: Config
@@ -10,6 +10,7 @@ export interface ConfigSlice {
   setShowGrid: (value: boolean) => void
   setShowFlightPath: (value: boolean) => void
   setShowOpeningLabels: (value: boolean) => void
+  setTheme: (theme: string) => void;
   resetToDefault: () => void
 }
 
@@ -30,7 +31,8 @@ export const defaultConfig: Config = {
   showGrid: false,
   showFlightPath: true,
   showOpeningLabels: true,
-}
+  theme: 'minimal' as const,
+};
 
 export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> = (set) => ({
   config: defaultConfig,
@@ -55,6 +57,9 @@ export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> =
   })),
   setShowOpeningLabels: (value) => set((state) => ({
     config: { ...state.config, showOpeningLabels: value },
+  })),
+  setTheme: (value) => set((state) => ({
+    config: { ...state.config, theme: value as ThemeId },
   })),
   resetToDefault: () => set({ config: defaultConfig }),
 })

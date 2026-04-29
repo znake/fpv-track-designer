@@ -19,6 +19,7 @@ const createTestConfig = (overrides: Partial<Config> = {}): Config => ({
   showFlightPath: true,
   showOpeningLabels: true,
   showGrid: false,
+  theme: 'minimal',
   ...overrides,
 })
 
@@ -163,6 +164,7 @@ const config: Config = {
   showFlightPath: true,
   showOpeningLabels: true,
   showGrid: false,
+  theme: 'minimal',
 }
 
     const track = generateTrack(config)

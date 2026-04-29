@@ -19,6 +19,7 @@ const baseConfig: Config = {
   showGrid: false,
   showFlightPath: true,
   showOpeningLabels: true,
+  theme: 'minimal',
 }
 
 function makeConfig(overrides?: Partial<Config>): Config {

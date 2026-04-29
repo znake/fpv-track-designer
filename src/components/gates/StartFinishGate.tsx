@@ -4,6 +4,8 @@ import type { Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { GateOpening } from '../../types'
 import { GATE_BASE_HEIGHT, GATE_BASE_WIDTH, GATE_POST_THICKNESS } from '../../constants/gateDimensions'
+import { useTheme } from '../../hooks/useTheme'
+import { getGateColors, getStartFinishTextColor } from '../../utils/themeColors'
 import { GateOpeningIndicators } from './GateOpeningIndicators'
 
 interface GateComponentProps {
@@ -29,10 +31,9 @@ export function StartFinishGate({ position, rotation, openings, openingLabels, i
   const groupRef = useRef<Mesh>(null)
   const width = BASE_WIDTH
   const height = BASE_HEIGHT
-  const accentColor = '#F5F5F5'
-  const textColor = '#111827'
-  const emissiveColor = isSelected ? '#FFD27A' : '#000000'
-  const emissiveIntensity = isSelected ? 0.8 : 0
+  const theme = useTheme()
+  const { color: accentColor, emissiveColor, emissiveIntensity } = getGateColors(theme.colors, 'start-finish', !!isSelected)
+  const textColor = getStartFinishTextColor()
   const panelY = height + 0.25
   const panelTextZ = PANEL_DEPTH / 2 + 0.006
 
@@ -45,26 +46,26 @@ export function StartFinishGate({ position, rotation, openings, openingLabels, i
       {/* Left post */}
       <mesh position={[-width / 2, height / 2, 0]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-        <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
       {/* Right post */}
       <mesh position={[width / 2, height / 2, 0]} onClick={onClick}>
         <boxGeometry args={[POST_THICKNESS, height, POST_THICKNESS]} />
-        <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
       {/* Top crossbar */}
       <mesh position={[0, height, 0]} onClick={onClick}>
         <boxGeometry args={[width + POST_THICKNESS, POST_THICKNESS, POST_THICKNESS]} />
-        <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
 
       {/* Start panel on top */}
       <mesh position={[0, panelY, 0]} onClick={onClick}>
         <boxGeometry args={[PANEL_WIDTH, PANEL_HEIGHT, PANEL_DEPTH]} />
-        <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
+        <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} toneMapped={false} />
       </mesh>
 
       <Text

@@ -30,6 +30,7 @@ export function GateConfigPanel() {
 
   const [quantitiesOpen, setQuantitiesOpen] = useState(true)
   const [fieldOpen, setFieldOpen] = useState(true)
+  const [themeOpen, setThemeOpen] = useState(true)
 
   const normalizeFieldSizeValue = (value: string): string | null => {
     const parsedValue = parseInt(value, 10)
@@ -166,6 +167,44 @@ export function GateConfigPanel() {
               <RotateCcw className="mr-2 h-4 w-4" />
               Auf Standard zurücksetzen
             </Button>
+          </CollapsibleContent>
+        </Collapsible>
+
+        <Separator />
+
+        {/* Theme Selection */}
+        <Collapsible open={themeOpen} onOpenChange={setThemeOpen}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-foreground">
+            Design
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${themeOpen ? 'rotate-180' : ''}`}
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 pt-3">
+            <Label className="text-sm text-muted-foreground">
+              Visuelles Erscheinungsbild
+            </Label>
+            <div className="grid gap-2">
+              {([
+                { id: 'minimal', label: 'Minimal', desc: 'Für schwächere Geräte' },
+                { id: 'realistic', label: 'Realistisch', desc: 'Sonnenuntergang & Schatten' },
+                { id: 'night', label: 'Nacht', desc: 'Neon & Sternenhimmel' },
+              ] as const).map(({ id, label, desc }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => useAppStore.getState().setTheme(id)}
+                  className={`flex flex-col items-start gap-0.5 rounded-lg border p-3 text-left transition-colors ${
+                    config.theme === id
+                      ? 'border-primary bg-primary/10 text-primary-foreground'
+                      : 'border-border hover:border-primary/50 hover:bg-accent/30'
+                  }`}
+                >
+                  <span className="text-sm font-medium">{label}</span>
+                  <span className="text-xs text-muted-foreground">{desc}</span>
+                </button>
+              ))}
+            </div>
           </CollapsibleContent>
         </Collapsible>
       </CardContent>

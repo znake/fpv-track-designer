@@ -24,6 +24,7 @@ export interface TrackExportSchema {
     showGrid?: boolean
     showFlightPath?: boolean
     showOpeningLabels?: boolean
+    theme?: string
   }
 }
 
@@ -345,6 +346,12 @@ export function validateTrack(data: unknown): { valid: boolean; errors: Validati
     errors.push(...validateBooleanFlag(config.showGrid, 'config.showGrid'))
     errors.push(...validateBooleanFlag(config.showFlightPath, 'config.showFlightPath'))
     errors.push(...validateBooleanFlag(config.showOpeningLabels, 'config.showOpeningLabels'))
+
+    if (config.theme !== undefined && typeof config.theme !== 'string') {
+      errors.push({ field: 'config.theme', message: 'Theme must be a string when provided' })
+    } else if (config.theme !== undefined && !['minimal', 'realistic', 'night'].includes(config.theme)) {
+      errors.push({ field: 'config.theme', message: 'Theme must be one of: minimal, realistic, night' })
+    }
   }
 
   return { valid: errors.length === 0, errors }
@@ -369,6 +376,7 @@ export function serializeTrack(track: Track, config: Config): string {
       showGrid: config.showGrid,
       showFlightPath: config.showFlightPath,
       showOpeningLabels: config.showOpeningLabels,
+      theme: config.theme,
     },
   }
 
@@ -413,6 +421,7 @@ export function deserializeTrack(jsonString: string): { track: Track; config: Co
       showGrid: data.config.showGrid ?? false,
       showFlightPath: data.config.showFlightPath ?? true,
       showOpeningLabels: data.config.showOpeningLabels ?? true,
+      theme: (data.config.theme ?? 'minimal') as Config['theme'],
     },
   }
 }

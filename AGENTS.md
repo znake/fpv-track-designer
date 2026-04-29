@@ -65,6 +65,7 @@ fpv-track-designer/
 - Tailwind v4 is CSS-first via `@tailwindcss/vite` and `@import "tailwindcss"`; no `tailwind.config.js`.
 - Zustand state uses slice files merged in `src/store/index.ts`.
 - UI components use shadcn/Radix primitives plus `cn` from `src/lib/utils.ts`.
+- Do not run Playwright/browser QA unless the user explicitly requests it; the user handles visual QA by default.
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - No `as any`, `@ts-ignore`, or silent type suppression.
@@ -99,3 +100,4 @@ npm run preview  # preview production build
 - `trackSlice.ts` duplicates `moveGate`/`rotateGate` logic from `utils/gateOperations.ts`.
 - Test libraries live in `dependencies`; they would normally be `devDependencies`.
 - Root has untracked QA screenshots (`fpv-*-qa.png`); keep generated QA artifacts out of commits unless intentionally requested.
+- Avoid creating visual QA screenshots unless explicitly requested.

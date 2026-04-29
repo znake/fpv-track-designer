@@ -2,6 +2,7 @@ import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useTheme } from '../../hooks/useTheme'
 import { useRef, useState } from 'react'
 
 interface GateEntryIndicatorProps {
@@ -37,10 +38,11 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
   const lineCount = Math.max(lines.length, 1)
   const widestLineLength = Math.max(...lines.map((line) => line.length), 1)
   const fontSize = Math.min((width * 0.58) / widestLineLength, (height * 0.56) / lineCount)
-  const entryLabelColor = '#86efac'
-  const exitLabelColor = '#fca5a5'
-  const entryOutlineColor = '#4ade80'
-  const exitOutlineColor = '#f87171'
+  const theme = useTheme()
+  const entryLabelColor = theme.colors.indicatorEntryLabel
+  const exitLabelColor = theme.colors.indicatorExitLabel
+  const entryOutlineColor = theme.colors.indicatorEntryOutline
+  const exitOutlineColor = theme.colors.indicatorExitOutline
   const canEditLabel = !!onLabelClick
   const showOpeningHighlight = isSelected || isOpeningHovered
   const canShowSwapIcon = isSelected || isOpeningHovered || isLabelHovered || isSwapIconHovered
@@ -167,7 +169,7 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
       >
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
-          color="#16a34a"
+          color={theme.colors.indicatorEntryPlane}
           transparent
           opacity={showOpeningHighlight ? openingHoverOpacity : 0.5}
           side={THREE.DoubleSide}
@@ -184,7 +186,7 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
       >
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
-          color="#ef4444"
+          color={theme.colors.indicatorExitPlane}
           transparent
           opacity={showOpeningHighlight ? openingHoverOpacity : 0.5}
           side={THREE.DoubleSide}
