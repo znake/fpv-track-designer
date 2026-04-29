@@ -4,7 +4,7 @@ import { Dice5, Save, Settings2, GalleryVertical, Share2 } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { generateTrack } from '@/utils/generator'
 import { extractGenerationConfig } from '@/utils/generationConfig'
-import { createTrackShareUrl } from '@/utils/shareTrack'
+import { createTrackShareUrl, getTrackShortenerEndpoint, shortenTrackShareUrl } from '@/utils/shareTrack'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -33,6 +33,9 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
   const [saveOpen, setSaveOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [shareUrl, setShareUrl] = useState('')
+  const [originalShareUrl, setOriginalShareUrl] = useState('')
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareError, setShareError] = useState<string | null>(null)
 
   const handleShuffle = useCallback(() => {
     requestDestructiveAction(
@@ -57,8 +60,25 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
   const handleShareClick = useCallback(() => {
     if (!currentTrack) return
 
-    setShareUrl(createTrackShareUrl(currentTrack, config, import.meta.env.VITE_VIEWER_DOMAIN))
+    const longUrl = createTrackShareUrl(currentTrack, config, import.meta.env.VITE_VIEWER_DOMAIN)
+    setShareUrl(longUrl)
+    setOriginalShareUrl(longUrl)
+    setShareError(null)
+    setShareLoading(true)
     setShareOpen(true)
+
+    void shortenTrackShareUrl(longUrl, { endpoint: getTrackShortenerEndpoint() })
+      .then((shortUrl) => {
+        setShareUrl(shortUrl)
+        setShareError(null)
+      })
+      .catch(() => {
+        setShareUrl(longUrl)
+        setShareError('Der Kurzlink konnte nicht erstellt werden. Du kannst den langen Link trotzdem teilen.')
+      })
+      .finally(() => {
+        setShareLoading(false)
+      })
   }, [config, currentTrack])
 
   const handleSettingsClick = useCallback(() => {
@@ -146,7 +166,14 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
       {!onSaveClick && (
         <SaveTrackDialog open={saveOpen} onOpenChange={setSaveOpen} />
       )}
-      <ShareTrackDialog open={shareOpen} onOpenChange={setShareOpen} shareUrl={shareUrl} />
+      <ShareTrackDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        shareUrl={shareUrl}
+        originalShareUrl={originalShareUrl}
+        isShortening={shareLoading}
+        shortenError={shareError}
+      />
     </>
   )
 }

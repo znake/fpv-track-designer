@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAppStore } from '@/store'
@@ -52,6 +52,7 @@ describe('LeftToolPanel', () => {
   beforeEach(() => {
     resetStore()
     vi.clearAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('calls generateTrack and setTrack from Mischen', () => {
@@ -86,7 +87,14 @@ describe('LeftToolPanel', () => {
     expect(screen.getByRole('button', { name: 'Track Teilen' })).toHaveProperty('disabled', true)
   })
 
-  it('opens a share dialog with an encoded viewer URL', () => {
+  it('opens a share dialog and replaces the long viewer URL with a short URL', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      new Response(JSON.stringify({ shortUrl: 'http://go.fpvooe.com/viMbW' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
     useAppStore.setState({ currentTrack: createMockTrack('share') })
 
     renderPanel()
@@ -96,5 +104,14 @@ describe('LeftToolPanel', () => {
     const shareInput = screen.getByLabelText('Teilbarer Link')
     expect(shareInput).toHaveProperty('value')
     expect((shareInput as HTMLInputElement).value.startsWith('https://sharedtrack.fpvooe.com/#')).toBe(true)
+
+    await waitFor(() => expect(shareInput).toHaveProperty('value', 'http://go.fpvooe.com/viMbW'))
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/shorten-track',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
   })
 })

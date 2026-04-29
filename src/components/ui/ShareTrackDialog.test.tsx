@@ -27,7 +27,7 @@ describe('ShareTrackDialog', () => {
     expect(screen.getByText('Track teilen')).not.toBeNull()
     expect(screen.getByLabelText('Teilbarer Link')).toHaveProperty('readOnly', true)
     expect(screen.getByDisplayValue('https://sharedtrack.fpvooe.com/#abc')).not.toBeNull()
-    expect(screen.getByText(/Bewahre den Original-Link zusätzlich auf/)).not.toBeNull()
+    expect(screen.getByText('Der Track öffnet sich über diesen Link im reinen Ansichtsmodus.')).not.toBeNull()
   })
 
   it('copies the link and shows feedback', async () => {
@@ -45,24 +45,49 @@ describe('ShareTrackDialog', () => {
     expect(screen.getByRole('button', { name: 'Kopiert!' })).not.toBeNull()
   })
 
-  it('links to is.gd with the encoded share URL', () => {
-    const shareUrl = 'https://sharedtrack.fpvooe.com/#z.payload+with&symbols'
-
+  it('shows shortener loading feedback while keeping the long link usable', () => {
     render(
       <ShareTrackDialog
         open
         onOpenChange={vi.fn()}
-        shareUrl={shareUrl}
+        shareUrl="https://sharedtrack.fpvooe.com/#abc"
+        originalShareUrl="https://sharedtrack.fpvooe.com/#abc"
+        isShortening
       />,
     )
 
-    const shortlink = screen.getByRole('link', { name: 'Shortlink erzeugen' })
+    expect(screen.getByDisplayValue('https://sharedtrack.fpvooe.com/#abc')).not.toBeNull()
+    expect(screen.getByText(/Kurzlink wird erstellt/)).not.toBeNull()
+    expect(screen.queryByRole('link', { name: 'Shortlink erzeugen' })).toBeNull()
+  })
 
-    expect(shortlink.getAttribute('href')).toBe(
-      `https://is.gd/create.php?format=web&url=${encodeURIComponent(shareUrl)}`,
+  it('shows successful short-link feedback', () => {
+    render(
+      <ShareTrackDialog
+        open
+        onOpenChange={vi.fn()}
+        shareUrl="http://go.fpvooe.com/viMbW"
+        originalShareUrl="https://sharedtrack.fpvooe.com/#abc"
+      />,
     )
-    expect(shortlink.getAttribute('target')).toBe('_blank')
-    expect(shortlink.getAttribute('rel')).toBe('noreferrer')
+
+    expect(screen.getByDisplayValue('http://go.fpvooe.com/viMbW')).not.toBeNull()
+    expect(screen.getByText(/Kurzlink erstellt/)).not.toBeNull()
+  })
+
+  it('shows shortener errors while keeping the current link copyable', () => {
+    render(
+      <ShareTrackDialog
+        open
+        onOpenChange={vi.fn()}
+        shareUrl="https://sharedtrack.fpvooe.com/#abc"
+        originalShareUrl="https://sharedtrack.fpvooe.com/#abc"
+        shortenError="Der Kurzlink konnte nicht erstellt werden."
+      />,
+    )
+
+    expect(screen.getByDisplayValue('https://sharedtrack.fpvooe.com/#abc')).not.toBeNull()
+    expect(screen.getByText('Der Kurzlink konnte nicht erstellt werden.')).not.toBeNull()
   })
 
   it('closes via the Schließen button', () => {
