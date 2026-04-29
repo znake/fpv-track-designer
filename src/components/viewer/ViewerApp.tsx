@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { CircleHelp } from 'lucide-react'
+import { CircleHelp, Download } from 'lucide-react'
 import { Scene } from '@/components/scene/Scene'
 import { Button } from '@/components/ui/button'
+import { serializeTrack } from '@/schemas/track.schema'
 import { useViewerStore } from '@/viewer-store'
 import { ViewerHelpDialog } from './ViewerHelpDialog'
 
@@ -20,6 +21,10 @@ function setViewerHelpCookie() {
   if (typeof document === 'undefined') return
 
   document.cookie = `${VIEWER_HELP_COOKIE}=true; max-age=${VIEWER_HELP_COOKIE_MAX_AGE}; path=/; SameSite=Lax`
+}
+
+function createTrackFileName(trackName: string): string {
+  return `${trackName.replace(/\s+/g, '-').toLowerCase()}.json`
 }
 
 export function ViewerApp() {
@@ -57,19 +62,42 @@ export function ViewerApp() {
     )
   }
 
+  const handleExport = () => {
+    const json = serializeTrack(track, config)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = createTrackFileName(track.name)
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <main className="relative h-dvh w-dvw overflow-hidden bg-slate-950">
       <Scene track={track} configOverride={config} readOnly />
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="absolute top-3 right-3 rounded-full border-white/15 bg-black/25 text-white/70 backdrop-blur hover:bg-white/10 hover:text-white"
-        onClick={() => setHelpOpen(true)}
-        aria-label="Viewer-Hilfe öffnen"
-      >
-        <CircleHelp className="size-4" />
-      </Button>
+      <div className="absolute top-3 right-3 flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="rounded-full border-white/15 bg-black/25 text-white/70 backdrop-blur hover:bg-white/10 hover:text-white"
+          onClick={handleExport}
+          aria-label="Track als JSON herunterladen"
+        >
+          <Download className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="rounded-full border-white/15 bg-black/25 text-white/70 backdrop-blur hover:bg-white/10 hover:text-white"
+          onClick={() => setHelpOpen(true)}
+          aria-label="Viewer-Hilfe öffnen"
+        >
+          <CircleHelp className="size-4" />
+        </Button>
+      </div>
       <a
         href="https://fpvooe.com"
         className="absolute right-3 bottom-3 rounded-full border border-white/15 bg-black/25 px-3 py-1 text-xs font-medium text-white/60 backdrop-blur transition hover:text-white"
