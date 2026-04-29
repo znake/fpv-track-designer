@@ -24,6 +24,10 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({ open, onOpenChange
   const [prevOpen, setPrevOpen] = useState(open)
   const [prevShareUrl, setPrevShareUrl] = useState(shareUrl)
 
+  const isGdShortenerUrl = shareUrl
+    ? `https://is.gd/create.php?format=web&url=${encodeURIComponent(shareUrl)}`
+    : ''
+
   if (open !== prevOpen || shareUrl !== prevShareUrl) {
     setPrevOpen(open)
     setPrevShareUrl(shareUrl)
@@ -63,12 +67,27 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({ open, onOpenChange
             aria-label="Teilbarer Link"
             onFocus={(event) => event.currentTarget.select()}
           />
+          <p className="text-xs text-muted-foreground">
+            Hinweis: Der Shortlink wird über den externen Dienst is.gd erstellt. Bewahre den Original-Link zusätzlich auf, damit du dauerhaft Zugriff auf den Track hast, falls der Kurzlink später nicht verfügbar ist.
+          </p>
           {copyError && <p className="text-xs text-destructive">{copyError}</p>}
         </div>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Schließen
+          </Button>
+          <Button type="button" variant="secondary" asChild aria-disabled={!shareUrl}>
+            <a
+              href={isGdShortenerUrl || undefined}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(event) => {
+                if (!shareUrl) event.preventDefault()
+              }}
+            >
+              Shortlink erzeugen
+            </a>
           </Button>
           <Button type="button" onClick={handleCopy} disabled={!shareUrl}>
             {copied ? 'Kopiert!' : 'Link kopieren'}
