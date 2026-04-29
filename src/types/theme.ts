@@ -215,10 +215,10 @@ const nightColors: ThemeColors = {
   ambientColor: '#1A1A3A',
   ambientIntensity: 0.1,
 
-  groundGrass: '#241044',
-  groundEarth: '#090211',
+  groundGrass: '#8B5CF6',
+  groundEarth: '#4C1D95',
   groundBoundary: '#FF00E5',
-  gridColor: '#51258F',
+  gridColor: '#C4B5FD',
   watermarkColor: '#6D28D9',
 
   flightPath: '#FFEA00',
