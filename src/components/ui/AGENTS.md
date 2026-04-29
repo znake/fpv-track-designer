@@ -1,47 +1,43 @@
-# UI Components — Sidebar Panels & shadcn Primitives
+# UI Components — Panels, Dialogs & shadcn Primitives
 
-**Domain:** 28 UI files: shadcn primitives + 4 app-specific panels
+**Domain:** 34 UI files: editor panels/dialogs, shadcn/Radix primitives, variant helpers
 
 ## STRUCTURE
 ```
 ui/
-├── GateConfigPanel.tsx    # Gate quantities and field size settings
-├── SaveTrackDialog.tsx    # Name + save track to localStorage
-├── TrackGallery.tsx       # Saved tracks list with load/delete
-├── KeyboardShortcutsDialog.tsx  # Keyboard shortcut reference
-├── directional-pad.tsx    # N/S/E/W movement pad (1m steps)
-├── icon-button.tsx        # Tooltip + Button composition
-├── button.tsx             # shadcn Button (with button-variants.ts)
-├── badge.tsx              # shadcn Badge
-├── card.tsx               # shadcn Card
-├── dialog.tsx             # shadcn Dialog
-├── input.tsx              # shadcn Input
-├── label.tsx              # shadcn Label
-├── select.tsx             # shadcn Select
-├── slider.tsx             # shadcn Slider
-├── sheet.tsx              # shadcn Sheet
-├── tabs.tsx               # shadcn Tabs
-├── toggle.tsx             # shadcn Toggle
-├── toggle-group.tsx       # shadcn ToggleGroup
-├── tooltip.tsx            # shadcn Tooltip
-├── separator.tsx          # shadcn Separator
-├── scroll-area.tsx        # shadcn ScrollArea
-├── collapsible.tsx        # shadcn Collapsible
-├── popover.tsx            # shadcn Popover
-└── *-variants.ts          # Variant definitions (button, badge, tabs, toggle)
+├── GateConfigPanel.tsx       # Gate quantities, field size, theme settings
+├── ApplyConfigFooter.tsx     # Apply/discard footer for config changes
+├── SaveTrackDialog.tsx       # Name + save track to localStorage
+├── TrackGallery.tsx          # Saved tracks list with load/delete/duplicate
+├── ShareTrackDialog.tsx      # Generate/copy compressed viewer URL
+├── UnsavedChangesDialog.tsx  # Destructive-action save/discard/cancel flow
+├── KeyboardShortcutsDialog.tsx
+├── directional-pad.tsx       # N/S/E/W movement pad
+├── icon-button.tsx           # Tooltip + Button composition
+├── *-variants.ts             # cva variant definitions
+└── button/dialog/input/...   # shadcn primitives
 ```
 
 ## CONVENTIONS
-- All panels use Tailwind CSS (gray-800/700 palette, purple accents)
-- Each panel is self-contained — imports store directly via `useAppStore`
-- shadcn primitives import `cn` from `@/lib/utils` (clsx + tailwind-merge)
-- Consistent heading: `<h2 className="text-lg font-semibold text-white">`
-- Button states: `hover:bg-gray-600`, `focus:ring-2 focus:ring-purple-400`
-- Disabled states: `disabled:bg-gray-600 disabled:text-gray-400`
+- App-specific panels may import `useAppStore` directly; primitives must stay store-agnostic.
+- shadcn primitives import `cn` from `@/lib/utils` and keep Radix composition patterns.
+- Variant files (`button-variants.ts`, `badge-variants.ts`, `tabs-variants.ts`, `toggle-variants.ts`) own `cva` class maps.
+- Theme-aware visual language uses dark cockpit surfaces, sky-blue/slate panels, and warm yellow primary accents.
+- Dialog copy is currently German; keep user-facing viewer/editor strings consistent.
+- Destructive editor actions use `UnsavedChangesDialog`, not ad-hoc confirm dialogs.
 
 ## WHERE TO LOOK
 | Task | File |
 |------|------|
-| Add sidebar panel | Create new `.tsx` + add to `App.tsx` sidebar |
-| Change button styling | All files — consistent Tailwind classes |
-| Add keyboard shortcut | `useKeyboardShortcuts.ts` hook (pattern to follow) |
+| Gate quantities / field / theme settings | `GateConfigPanel.tsx`, `ApplyConfigFooter.tsx` |
+| Save current track | `SaveTrackDialog.tsx` |
+| Load/delete/duplicate saved tracks | `TrackGallery.tsx` |
+| Share current track | `ShareTrackDialog.tsx`, `src/utils/shareTrack.ts` |
+| Unsaved destructive-action flow | `UnsavedChangesDialog.tsx`, `src/store/trackSlice.ts` |
+| Keyboard shortcut reference | `KeyboardShortcutsDialog.tsx`, `src/hooks/useKeyboardShortcuts.ts` |
+| Primitive styling | primitive file + matching `*-variants.ts` if present |
+
+## TESTING
+- Co-located RTL tests exist for `GateConfigPanel`, `TrackGallery`, and `ShareTrackDialog`.
+- Mock browser APIs locally in the relevant suite (`localStorage`, clipboard, URL, random UUID).
+- Do not snapshot broad shadcn output; test app behavior and accessible labels instead.
