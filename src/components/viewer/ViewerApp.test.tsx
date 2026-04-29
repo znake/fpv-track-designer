@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultConfig } from '@/store/configSlice'
 import type { Track } from '@/types'
@@ -33,6 +33,7 @@ const createTestTrack = (): Track => ({
 describe('ViewerApp', () => {
   beforeEach(() => {
     useViewerStore.getState().reset()
+    document.cookie = 'fpv-track-viewer-help-seen=; max-age=0; path=/'
   })
 
   it('renders a German error state', () => {
@@ -53,5 +54,36 @@ describe('ViewerApp', () => {
     expect(screen.queryByRole('button', { name: 'Speichern' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Galerie' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull()
+  })
+
+  it('shows viewer help on first valid track load', async () => {
+    useViewerStore.getState().setTrackData(createTestTrack(), defaultConfig)
+
+    render(<ViewerApp />)
+
+    await waitFor(() => expect(screen.getByText('Viewer-Hilfe')).not.toBeNull())
+    expect(screen.getByText('Linke Maustaste gedrückt halten und ziehen')).not.toBeNull()
+    expect(screen.getByText('Rechte Maustaste ziehen oder Space + linke Maustaste ziehen')).not.toBeNull()
+  })
+
+  it('does not show viewer help automatically after the first visit', async () => {
+    document.cookie = 'fpv-track-viewer-help-seen=true; path=/'
+    useViewerStore.getState().setTrackData(createTestTrack(), defaultConfig)
+
+    render(<ViewerApp />)
+
+    await waitFor(() => expect(screen.queryByText('Viewer-Hilfe')).toBeNull())
+    expect(screen.getByRole('button', { name: 'Viewer-Hilfe öffnen' })).not.toBeNull()
+  })
+
+  it('opens viewer help from the help button', async () => {
+    document.cookie = 'fpv-track-viewer-help-seen=true; path=/'
+    useViewerStore.getState().setTrackData(createTestTrack(), defaultConfig)
+
+    render(<ViewerApp />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Viewer-Hilfe öffnen' }))
+
+    expect(await screen.findByText('Viewer-Hilfe')).not.toBeNull()
   })
 })
