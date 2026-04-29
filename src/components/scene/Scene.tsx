@@ -40,15 +40,47 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
 
   const sunGlowTexture = useMemo(() => {
     const canvas = document.createElement('canvas')
-    canvas.width = 128
-    canvas.height = 128
+    canvas.width = 256
+    canvas.height = 256
+
+    const center = canvas.width / 2
 
     const context = canvas.getContext('2d')
     if (context) {
-      const gradient = context.createRadialGradient(64, 64, 4, 64, 64, 64)
-      gradient.addColorStop(0, 'rgba(255, 190, 90, 0.65)')
-      gradient.addColorStop(0.28, 'rgba(255, 160, 70, 0.28)')
-      gradient.addColorStop(1, 'rgba(255, 120, 40, 0)')
+      context.globalCompositeOperation = 'lighter'
+
+      const drawRay = (rotation: number, length: number, width: number, opacity: number) => {
+        context.save()
+        context.translate(center, center)
+        context.rotate(rotation)
+
+        const rayGradient = context.createLinearGradient(0, 0, length, 0)
+        rayGradient.addColorStop(0, `rgba(255, 248, 176, ${opacity})`)
+        rayGradient.addColorStop(0.35, `rgba(255, 202, 88, ${opacity * 0.42})`)
+        rayGradient.addColorStop(1, 'rgba(255, 148, 56, 0)')
+
+        context.fillStyle = rayGradient
+        context.beginPath()
+        context.ellipse(length / 2, 0, length / 2, width, 0, 0, Math.PI * 2)
+        context.fill()
+        context.restore()
+      }
+
+      drawRay(-0.18, 116, 12, 0.28)
+      drawRay(Math.PI - 0.18, 116, 12, 0.28)
+      drawRay(Math.PI / 2 - 0.12, 96, 9, 0.18)
+      drawRay(-Math.PI / 2 - 0.12, 96, 9, 0.18)
+      drawRay(Math.PI / 4, 76, 6, 0.13)
+      drawRay(-Math.PI / 4, 76, 6, 0.13)
+      drawRay((Math.PI * 3) / 4, 76, 6, 0.13)
+      drawRay((-Math.PI * 3) / 4, 76, 6, 0.13)
+
+      const gradient = context.createRadialGradient(center, center, 2, center, center, center)
+      gradient.addColorStop(0, 'rgba(255, 255, 210, 1)')
+      gradient.addColorStop(0.08, 'rgba(255, 245, 150, 0.96)')
+      gradient.addColorStop(0.22, 'rgba(255, 202, 88, 0.58)')
+      gradient.addColorStop(0.52, 'rgba(255, 150, 66, 0.22)')
+      gradient.addColorStop(1, 'rgba(255, 105, 36, 0)')
       context.fillStyle = gradient
       context.fillRect(0, 0, canvas.width, canvas.height)
     }
@@ -178,12 +210,15 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
             horizonOffset={0.12}
           />
           <group position={[82, 20, -66]}>
-            <sprite scale={[22, 22, 1]} renderOrder={2}>
-              <spriteMaterial map={sunGlowTexture} transparent opacity={0.75} depthTest={false} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
+            <sprite scale={[48, 48, 1]} renderOrder={2}>
+              <spriteMaterial map={sunGlowTexture} transparent opacity={0.95} depthTest={false} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
             </sprite>
-            <mesh renderOrder={3}>
-              <sphereGeometry args={[4.5, 32, 32]} />
-              <meshBasicMaterial color="#FFB347" toneMapped={false} depthTest={false} depthWrite={false} fog={false} />
+            <sprite scale={[24, 24, 1]} renderOrder={3}>
+              <spriteMaterial map={sunGlowTexture} transparent opacity={0.55} depthTest={false} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
+            </sprite>
+            <mesh renderOrder={4}>
+              <sphereGeometry args={[4.8, 32, 32]} />
+              <meshBasicMaterial color="#FFF2A6" toneMapped={false} depthTest={false} depthWrite={false} fog={false} />
             </mesh>
           </group>
           <mesh rotation-x={-Math.PI / 2} position={[0, -62, 0]}>
