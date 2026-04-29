@@ -32,17 +32,17 @@ const ShortcutHarness = ({
 }
 
 describe('useKeyboardShortcuts', () => {
-  it('dispatches shuffle via R', () => {
+  it('dispatches shuffle via S', () => {
     const onShuffle = vi.fn()
 
     resetStore()
 
     render(<ShortcutHarness onShuffle={onShuffle} />)
 
-    fireEvent.keyDown(window, { key: 'r' })
+    fireEvent.keyDown(window, { key: 's' })
     expect(onShuffle).toHaveBeenCalledTimes(1)
 
-    fireEvent.keyDown(window, { key: 'R' })
+    fireEvent.keyDown(window, { key: 'S' })
     expect(onShuffle).toHaveBeenCalledTimes(2)
   })
 })

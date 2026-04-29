@@ -42,7 +42,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
         return
       }
 
-      if (e.key === 'r' || e.key === 'R') {
+      if (e.key === 's' || e.key === 'S') {
         e.preventDefault()
         onShuffle?.()
         return
