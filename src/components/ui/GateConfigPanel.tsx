@@ -189,21 +189,25 @@ export function GateConfigPanel() {
                 { id: 'minimal', label: 'Minimal', desc: 'Für schwächere Geräte' },
                 { id: 'realistic', label: 'Realistisch', desc: 'Sonnenuntergang & Schatten' },
                 { id: 'night', label: 'Nacht', desc: 'Neon & Sternenhimmel' },
-              ] as const).map(({ id, label, desc }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => useAppStore.getState().setTheme(id)}
-                  className={`flex flex-col items-start gap-0.5 rounded-lg border p-3 text-left transition-colors ${
-                    config.theme === id
-                      ? 'border-primary bg-primary/10 text-primary-foreground'
-                      : 'border-border hover:border-primary/50 hover:bg-accent/30'
-                  }`}
-                >
-                  <span className="text-sm font-medium">{label}</span>
-                  <span className="text-xs text-muted-foreground">{desc}</span>
-                </button>
-              ))}
+              ] as const).map(({ id, label, desc }) => {
+                const isSelected = config.theme === id
+
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => useAppStore.getState().setTheme(id)}
+                    className={`flex flex-col items-start gap-0.5 rounded-lg border p-3 text-left transition-colors ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 ring-1 ring-primary/70'
+                        : 'border-border hover:border-primary/50 hover:bg-accent/30'
+                    }`}
+                  >
+                    <span className={`text-sm font-medium ${isSelected ? 'text-primary' : ''}`}>{label}</span>
+                    <span className={`text-xs ${isSelected ? 'text-foreground/80' : 'text-muted-foreground'}`}>{desc}</span>
+                  </button>
+                )
+              })}
             </div>
           </CollapsibleContent>
         </Collapsible>
