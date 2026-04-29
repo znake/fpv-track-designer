@@ -9,8 +9,11 @@ The Track Teilen feature uses two static deployments from the same GitHub reposi
 - Publish directory: `dist/`
 - Required environment variable:
   - `VITE_VIEWER_DOMAIN=https://sharedtrack.fpvooe.com`
+- Optional environment variable:
+  - `VITE_TRACK_SHORTENER_ENDPOINT=https://n8n.fanaticagentic.com/webhook-test/shorten-track`
 
 This is the full FPV Track Designer editor. The **Track Teilen** button serializes the current track and creates a share URL that points to the viewer domain.
+In local development, the editor calls `/api/shorten-track`; Vite proxies that same-origin request to the n8n webhook so localhost is not blocked by browser CORS preflight checks. Production builds call the configured `VITE_TRACK_SHORTENER_ENDPOINT` or the default n8n webhook directly, so the webhook must allow the deployed editor origin, for example `https://trackdesigner.fpvooe.com`, in its CORS response.
 
 ## Viewer service
 
