@@ -5,15 +5,15 @@ The Track Teilen feature uses two static deployments from the same GitHub reposi
 ## Editor service
 
 - Domain: `trackdesigner.fpvooe.com`
-- Build command: `npm run build`
-- Publish directory: `dist/`
+- Recommended deployment: use `Dockerfile` so nginx can serve `dist/` and proxy `/api/shorten-track` to n8n.
+- If using a static publish directory instead, configure an equivalent platform reverse proxy for `/api/shorten-track` or configure n8n CORS for `https://trackdesigner.fpvooe.com`.
 - Required environment variable:
   - `VITE_VIEWER_DOMAIN=https://sharedtrack.fpvooe.com`
 - Optional environment variable:
-  - `VITE_TRACK_SHORTENER_ENDPOINT=https://n8n.fanaticagentic.com/webhook-test/shorten-track`
+  - `VITE_TRACK_SHORTENER_ENDPOINT=/api/shorten-track`
 
 This is the full FPV Track Designer editor. The **Track Teilen** button serializes the current track and creates a share URL that points to the viewer domain.
-In local development, the editor calls `/api/shorten-track`; Vite proxies that same-origin request to the n8n webhook so localhost is not blocked by browser CORS preflight checks. Production builds call the configured `VITE_TRACK_SHORTENER_ENDPOINT` or the default n8n webhook directly, so the webhook must allow the deployed editor origin, for example `https://trackdesigner.fpvooe.com`, in its CORS response.
+In local development, the editor calls `/api/shorten-track`; Vite proxies that same-origin request to the n8n webhook so localhost is not blocked by browser CORS preflight checks. In the Docker-based production editor, nginx proxies the same `/api/shorten-track` path to n8n so the browser never performs a cross-origin request. If you bypass the nginx proxy and call n8n directly, the webhook must return CORS headers for the deployed editor origin, for example `https://trackdesigner.fpvooe.com`.
 
 ## Viewer service
 
@@ -37,10 +37,10 @@ Both Coolify services can point to the same GitHub repository and branch. Config
 
 | Service | Domain | Build command | Publish directory |
 | --- | --- | --- | --- |
-| Editor | `trackdesigner.fpvooe.com` | `npm run build` | `dist/` |
+| Editor | `trackdesigner.fpvooe.com` | `Dockerfile` | nginx on port `80` |
 | Viewer | `sharedtrack.fpvooe.com` | `npm run build:viewer` | `dist-viewer/` |
 
-For the Docker-based viewer deployment, set Coolify to use `Dockerfile.viewer` and expose port `80` instead of configuring Nixpacks build/start commands.
+For the Docker-based editor deployment, set Coolify to use `Dockerfile` and expose port `80` so `/api/shorten-track` is proxied by nginx. For the Docker-based viewer deployment, set Coolify to use `Dockerfile.viewer` and expose port `80` instead of configuring Nixpacks build/start commands.
 
 ## Verification
 
