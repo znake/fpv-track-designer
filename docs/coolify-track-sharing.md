@@ -18,6 +18,8 @@ This is the full FPV Track Designer editor. The **Track Teilen** button serializ
 - Build command: `npm run build:viewer`
 - Publish directory: `dist-viewer/`
 
+If Nixpacks selects an unsupported Node patch version, deploy the viewer with `Dockerfile.viewer` instead. The viewer Dockerfile builds with the official `node:24-alpine` image, installs optional native dependencies on Linux, and serves `dist-viewer/` with nginx on port `80`.
+
 This service serves the view-only build from `dist-viewer/index.html` at the domain root. It reads the encoded track data from the URL fragment:
 
 ```text
@@ -34,6 +36,8 @@ Both Coolify services can point to the same GitHub repository and branch. Config
 | --- | --- | --- | --- |
 | Editor | `trackdesigner.fpvooe.com` | `npm run build` | `dist/` |
 | Viewer | `sharedtrack.fpvooe.com` | `npm run build:viewer` | `dist-viewer/` |
+
+For the Docker-based viewer deployment, set Coolify to use `Dockerfile.viewer` and expose port `80` instead of configuring Nixpacks build/start commands.
 
 ## Verification
 
