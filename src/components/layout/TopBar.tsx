@@ -153,6 +153,26 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
         <TooltipTrigger asChild>
           <Button
             variant={fpvModeActive ? 'secondary' : 'ghost'}
+            size="icon"
+            className="md:hidden"
+            onClick={onFpvToggle}
+            disabled={fpvDisabled}
+            aria-label={fpvModeActive ? 'FPV-Flug stoppen' : 'FPV-Flug starten'}
+          >
+            {fpvModeActive ? <Square className="size-4" /> : <Play className="size-4" />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          {fpvModeActive
+            ? 'Stoppt den Kameraflug und stellt die Editor-Kamera wieder her.'
+            : 'Fliegt die Ideallinie automatisch aus der First-Person-Perspektive durch alle Gates.'}
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={fpvModeActive ? 'secondary' : 'ghost'}
             size="sm"
             className="hidden gap-1.5 md:inline-flex"
             onClick={onFpvToggle}
