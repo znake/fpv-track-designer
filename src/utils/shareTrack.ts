@@ -1,18 +1,9 @@
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
 import type { Config, Track } from '@/types'
 import { serializeTrack, deserializeTrack } from '@/schemas/track.schema'
 
 const DEFAULT_VIEWER_DOMAIN = 'https://sharedtrack.fpvooe.com'
-
-function encodeBase64Url(value: string): string {
-  const encoded = encodeURIComponent(value).replace(/%([0-9A-F]{2})/g, (_match, hex: string) => (
-    String.fromCharCode(Number.parseInt(hex, 16))
-  ))
-
-  return btoa(encoded)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
-}
+const COMPRESSED_PAYLOAD_PREFIX = 'z.'
 
 function decodeBase64Url(value: string): string {
   const normalized = value
@@ -28,11 +19,18 @@ function decodeBase64Url(value: string): string {
 }
 
 export function encodeTrackSharePayload(track: Track, config: Config): string {
-  return encodeBase64Url(serializeTrack(track, config))
+  return `${COMPRESSED_PAYLOAD_PREFIX}${compressToEncodedURIComponent(serializeTrack(track, config))}`
 }
 
 export function decodeTrackSharePayload(payload: string): ReturnType<typeof deserializeTrack> {
   try {
+    if (payload.startsWith(COMPRESSED_PAYLOAD_PREFIX)) {
+      const decompressed = decompressFromEncodedURIComponent(payload.slice(COMPRESSED_PAYLOAD_PREFIX.length))
+      if (!decompressed) throw new Error('Failed to decompress shared track data')
+
+      return deserializeTrack(decompressed)
+    }
+
     return deserializeTrack(decodeBase64Url(payload))
   } catch {
     return {
