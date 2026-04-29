@@ -77,6 +77,7 @@ function App() {
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [fpvModeActive, setFpvModeActive] = useState(false)
   const [sequenceDraft, setSequenceDraft] = useState<{ editorKey: string | null; value: string }>({
     editorKey: null,
     value: '',
@@ -201,6 +202,9 @@ function App() {
       <div className="flex h-dvh w-dvw flex-col overflow-hidden">
         <TopBar
           onShortcutsClick={() => setShortcutsOpen(true)}
+          fpvModeActive={fpvModeActive}
+          fpvDisabled={!currentTrack || currentTrack.gates.length < 2}
+          onFpvToggle={() => setFpvModeActive((active) => !active)}
         />
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <LeftToolPanel
@@ -215,7 +219,7 @@ function App() {
             }}
           />
           <main className="relative min-w-0 flex-1 touch-none pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0">
-            <Scene />
+            <Scene fpvModeActive={fpvModeActive} onFpvComplete={() => setFpvModeActive(false)} />
           </main>
         </div>
       </div>

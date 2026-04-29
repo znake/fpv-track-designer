@@ -5,6 +5,8 @@ import {
   Redo2,
   Upload,
   Download,
+  Play,
+  Square,
   CircleHelp,
 } from 'lucide-react'
 import { useAppStore } from '@/store'
@@ -21,9 +23,12 @@ import { PoleCounter } from './PoleCounter'
 
 interface TopBarProps {
   onShortcutsClick: () => void
+  fpvModeActive: boolean
+  fpvDisabled: boolean
+  onFpvToggle: () => void
 }
 
-export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
+export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDisabled, onFpvToggle }) => {
   const past = useAppStore((state) => state.past)
   const future = useAppStore((state) => state.future)
   const undo = useAppStore((state) => state.undo)
@@ -141,6 +146,28 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick }) => {
           </TooltipContent>
         </Tooltip>
       </div>
+
+      <Separator orientation="vertical" className="hidden h-6 md:block" />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={fpvModeActive ? 'secondary' : 'ghost'}
+            size="sm"
+            className="hidden gap-1.5 md:inline-flex"
+            onClick={onFpvToggle}
+            disabled={fpvDisabled}
+          >
+            {fpvModeActive ? <Square className="size-3.5" /> : <Play className="size-3.5" />}
+            <span>{fpvModeActive ? 'FPV stoppen' : 'FPV-Flug'}</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          {fpvModeActive
+            ? 'Stoppt den Kameraflug und stellt die Editor-Kamera wieder her.'
+            : 'Fliegt die Ideallinie automatisch aus der First-Person-Perspektive durch alle Gates.'}
+        </TooltipContent>
+      </Tooltip>
 
       <Separator orientation="vertical" className="hidden h-6 md:block" />
 
