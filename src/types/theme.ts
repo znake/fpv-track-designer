@@ -221,7 +221,7 @@ const nightColors: ThemeColors = {
   gridColor: '#51258F',
   watermarkColor: '#6D28D9',
 
-  flightPath: '#FF00E5',
+  flightPath: '#FFEA00',
 
   // Neon gate colors — vibrant, high saturation
   gates: {
