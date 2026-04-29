@@ -11,24 +11,40 @@ const revokeObjectURL = vi.fn<(_: string) => void>()
 const anchorClick = vi.fn<() => void>()
 
 vi.mock('@/components/scene/Scene', () => ({
-  Scene: ({ readOnly }: { readOnly?: boolean }) => (
-    <div data-testid="viewer-scene" data-readonly={String(readOnly)} />
+  Scene: ({
+    readOnly,
+    fpvModeActive,
+    onFpvComplete,
+  }: {
+    readOnly?: boolean
+    fpvModeActive?: boolean
+    onFpvComplete?: () => void
+  }) => (
+    <div
+      data-testid="viewer-scene"
+      data-readonly={String(readOnly)}
+      data-fpv-active={String(fpvModeActive)}
+    >
+      <button type="button" onClick={onFpvComplete}>Complete FPV</button>
+    </div>
   ),
 }))
 
-const createTestTrack = (): Track => ({
+const createTestTrack = (gateCount = 1): Track => ({
   id: 'viewer-track',
   name: 'Viewer Track',
-  gates: [
-    {
-      id: 'gate-1',
-      type: 'standard',
-      position: { x: 0, y: 0, z: 0 },
-      rotation: 0,
-      openings: createDefaultGateOpenings('standard'),
-    },
-  ],
-  gateSequence: [{ gateId: 'gate-1', openingId: 'main', reverse: false }],
+  gates: Array.from({ length: gateCount }, (_, index) => ({
+    id: `gate-${index + 1}`,
+    type: 'standard',
+    position: { x: index * 5, y: 0, z: 0 },
+    rotation: 0,
+    openings: createDefaultGateOpenings('standard'),
+  })),
+  gateSequence: Array.from({ length: gateCount }, (_, index) => ({
+    gateId: `gate-${index + 1}`,
+    openingId: 'main',
+    reverse: false,
+  })),
   fieldSize: { width: 30, height: 15 },
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
@@ -64,7 +80,42 @@ describe('ViewerApp', () => {
     expect(screen.queryByRole('button', { name: 'Speichern' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Galerie' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'FPV-Flug starten' })).not.toBeNull()
     expect(screen.getByRole('button', { name: 'Track als JSON herunterladen' })).not.toBeNull()
+  })
+
+  it('starts and stops the FPV flight from the viewer controls', () => {
+    useViewerStore.getState().setTrackData(createTestTrack(2), defaultConfig)
+
+    render(<ViewerApp />)
+
+    expect(screen.getByTestId('viewer-scene').getAttribute('data-fpv-active')).toBe('false')
+    fireEvent.click(screen.getByRole('button', { name: 'FPV-Flug starten' }))
+    expect(screen.getByTestId('viewer-scene').getAttribute('data-fpv-active')).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: 'FPV-Flug stoppen' }))
+    expect(screen.getByTestId('viewer-scene').getAttribute('data-fpv-active')).toBe('false')
+  })
+
+  it('stops the FPV flight with Escape in viewer mode', () => {
+    useViewerStore.getState().setTrackData(createTestTrack(2), defaultConfig)
+
+    render(<ViewerApp />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'FPV-Flug starten' }))
+    expect(screen.getByTestId('viewer-scene').getAttribute('data-fpv-active')).toBe('true')
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.getByTestId('viewer-scene').getAttribute('data-fpv-active')).toBe('false')
+  })
+
+  it('stops the FPV flight when the scene reports completion', () => {
+    useViewerStore.getState().setTrackData(createTestTrack(2), defaultConfig)
+
+    render(<ViewerApp />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'FPV-Flug starten' }))
+    expect(screen.getByTestId('viewer-scene').getAttribute('data-fpv-active')).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: 'Complete FPV' }))
+    expect(screen.getByTestId('viewer-scene').getAttribute('data-fpv-active')).toBe('false')
   })
 
   it('downloads the viewed track as importable JSON', async () => {

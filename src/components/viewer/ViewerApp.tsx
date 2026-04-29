@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CircleHelp, Download } from 'lucide-react'
+import { CircleHelp, Download, Play, Square } from 'lucide-react'
 import { Scene } from '@/components/scene/Scene'
 import { Button } from '@/components/ui/button'
 import { serializeTrack } from '@/schemas/track.schema'
@@ -32,6 +32,7 @@ export function ViewerApp() {
   const config = useViewerStore((state) => state.config)
   const error = useViewerStore((state) => state.error)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [fpvModeActive, setFpvModeActive] = useState(false)
 
   useEffect(() => {
     if (!track || !config || hasViewerHelpCookie()) return
@@ -41,6 +42,19 @@ export function ViewerApp() {
 
     return () => window.clearTimeout(timeoutId)
   }, [config, track])
+
+  useEffect(() => {
+    if (!fpvModeActive) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setFpvModeActive(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [fpvModeActive])
 
   if (error) {
     return (
@@ -73,10 +87,29 @@ export function ViewerApp() {
     URL.revokeObjectURL(url)
   }
 
+  const fpvDisabled = track.gates.length < 2
+
   return (
     <main className="relative h-dvh w-dvw overflow-hidden bg-slate-950">
-      <Scene track={track} configOverride={config} readOnly />
+      <Scene
+        track={track}
+        configOverride={config}
+        readOnly
+        fpvModeActive={fpvModeActive}
+        onFpvComplete={() => setFpvModeActive(false)}
+      />
       <div className="absolute top-3 right-3 flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="rounded-full border-white/15 bg-black/25 text-white/70 backdrop-blur hover:bg-white/10 hover:text-white"
+          onClick={() => setFpvModeActive((active) => !active)}
+          disabled={fpvDisabled}
+          aria-label={fpvModeActive ? 'FPV-Flug stoppen' : 'FPV-Flug starten'}
+        >
+          {fpvModeActive ? <Square className="size-4" /> : <Play className="size-4" />}
+        </Button>
         <Button
           type="button"
           variant="outline"
