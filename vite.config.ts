@@ -6,6 +6,15 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    proxy: {
+      '/api/shorten-track': {
+        target: 'https://n8n.fanaticagentic.com',
+        changeOrigin: true,
+        rewrite: (pathname) => pathname.replace(/^\/api\//, '/webhook-test/'),
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
