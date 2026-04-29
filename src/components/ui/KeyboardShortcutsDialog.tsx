@@ -65,7 +65,7 @@ const shortcuts: ShortcutGroup[] = [
   {
     category: 'Strecke',
     shortcuts: [
-      { description: 'Strecke shuffeln', keys: ['R'] },
+      { description: 'Strecke shuffeln', keys: ['S'] },
       { description: 'Strecke speichern', keys: [ctrl, 'S'] },
     ],
   },

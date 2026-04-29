@@ -76,7 +76,7 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
     {
       icon: Dice5,
       label: 'Shuffle',
-      shortcut: 'R',
+      shortcut: 'S',
       description:
         'Ordnet alle Gates neu an – basierend auf den Settings wird ein neuer Track zufällig generiert.',
       action: handleShuffle,

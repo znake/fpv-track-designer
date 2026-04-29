@@ -92,7 +92,7 @@ Alternativ kann die Ansicht auch mit `Space + linke Maustaste ziehen` verschoben
 
 | Aktion | Shortcut |
 | --- | --- |
-| Strecke shuffeln | `R` |
+| Strecke shuffeln | `S` |
 | Strecke speichern | `Cmd/Ctrl + S` |
 | Galerie öffnen | `G` |
 | Ansicht verschieben | `Space + linke Maustaste ziehen` |
