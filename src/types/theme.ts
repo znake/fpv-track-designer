@@ -105,11 +105,11 @@ const minimalColors: ThemeColors = {
   ambientColor: '#FFFFFF',
   ambientIntensity: 0.28,
 
-  groundGrass: '#3B7A28',
-  groundEarth: '#5A3A22',
-  groundBoundary: '#FFFEF0',
-  gridColor: '#5A8F44',
-  watermarkColor: '#d9ead0',
+  groundGrass: '#5C7328',
+  groundEarth: '#4A2E18',
+  groundBoundary: '#FFE8C8',
+  gridColor: '#8B6B3E',
+  watermarkColor: '#e8d5b0',
 
   flightPath: '#FF8B5A',
 
