@@ -11,6 +11,7 @@ const viewerControls = [
   { description: 'Über die Strecke bewegen', keys: 'Rechte Maustaste ziehen oder Space + linke Maustaste ziehen' },
   { description: 'Kamerahöhe ändern', keys: 'Shift gedrückt halten und mit linker Maustaste ziehen' },
   { description: 'Zoomen', keys: 'Mausrad scrollen oder mittlere Maustaste ziehen' },
+  { description: 'FPV-Flug stoppen', keys: 'Button erneut klicken oder Escape drücken' },
 ]
 
 export function ViewerHelpDialog({ open, onOpenChange }: ViewerHelpDialogProps) {
