@@ -96,16 +96,16 @@ const minimalColors: ThemeColors = {
   hemisphereSky: '#D6E7EE',
   hemisphereGround: '#4C8B38',
   hemisphereIntensity: 0.72,
-  sunColor: '#FFF1D6',
+  sunColor: '#FFF0C8',
   sunIntensity: 1.4,
   sunPosition: [80, 110, 60],
   fillColor: '#B8CBD8',
   fillIntensity: 0.4,
   fillPosition: [-60, 40, -40],
-  ambientColor: '#FFFFFF',
+  ambientColor: '#FFFDF6',
   ambientIntensity: 0.28,
 
-  groundGrass: '#5C7328',
+  groundGrass: '#6F8732',
   groundEarth: '#4A2E18',
   groundBoundary: '#FFE8C8',
   gridColor: '#8B6B3E',
@@ -136,28 +136,28 @@ const minimalColors: ThemeColors = {
   indicatorExitOutline: '#f87171',
 }
 
-// ── Realistic Sunset ──────────────────────────────────────────────
+// ── Realistic ─────────────────────────────────────────────────────
 const realisticColors: ThemeColors = {
-  skyTop: '#9CCFEA',       // not used (replaced by <Sky>), kept for fallback
-  skyMid: '#5FADE0',
-  skyHorizon: '#347CC3',
-  skyBottom: '#1F4E8F',
-  skySun: '#FF8C42',
+  skyTop: '#C8E2EE',
+  skyMid: '#A8C9DC',
+  skyHorizon: '#82ACC8',
+  skyBottom: '#5F8BAA',
+  skySun: '#F4DCA8',
 
-  fogColor: '#E8A87C',
+  fogColor: '#AFCBDC',
   fogNear: 80,
   fogFar: 350,
 
-  hemisphereSky: '#FFD4A3',
-  hemisphereGround: '#5C3A1E',
+  hemisphereSky: '#D6E7EE',
+  hemisphereGround: '#4C8B38',
   hemisphereIntensity: 0.55,
-  sunColor: '#FFB347',
+  sunColor: '#FFF1D6',
   sunIntensity: 2.2,
   sunPosition: [50, 12, -40],
-  fillColor: '#D4956B',
+  fillColor: '#B8CBD8',
   fillIntensity: 0.3,
   fillPosition: [-40, 20, 30],
-  ambientColor: '#FFD4A3',
+  ambientColor: '#FFFFFF',
   ambientIntensity: 0.2,
 
   groundGrass: '#5C7328',

@@ -201,15 +201,11 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
       {theme.id === 'realistic' && (
         <>
           <SkyDome
-            topColor="#354B68"
-            midColor="#746F82"
-            horizonColor="#EEC09A"
-            bottomColor="#E8A87C"
-            sunColor="#FFB347"
-            exponent={0.82}
-            horizonOffset={0.02}
-            hazeSoftness={0.38}
-            belowHorizonSoftness={0.94}
+            topColor={theme.colors.skyTop}
+            midColor={theme.colors.skyMid}
+            horizonColor={theme.colors.skyHorizon}
+            bottomColor={theme.colors.skyBottom}
+            sunColor={theme.colors.skySun}
           />
           <group position={[82, 20, -66]}>
             <sprite scale={[48, 48, 1]} renderOrder={2}>
@@ -223,18 +219,6 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
               <meshBasicMaterial color="#FFF2A6" toneMapped={false} depthTest={false} depthWrite={false} fog={false} />
             </mesh>
           </group>
-          <mesh rotation-x={-Math.PI / 2} position={[0, -62, 0]}>
-            <planeGeometry args={[10000, 10000]} />
-            <meshStandardMaterial
-              color="#D79B7A"
-              emissive="#C58A70"
-              emissiveIntensity={0.14}
-              roughness={0.58}
-              metalness={0.08}
-              transparent
-              opacity={0.82}
-            />
-          </mesh>
           <Environment preset={theme.environmentPreset as 'sunset' | 'night'} environmentIntensity={theme.environmentIntensity} />
           <fog attach="fog" args={[theme.colors.fogColor, theme.colors.fogNear, theme.colors.fogFar]} />
           <hemisphereLight args={[theme.colors.hemisphereSky, theme.colors.hemisphereGround, theme.colors.hemisphereIntensity]} />
