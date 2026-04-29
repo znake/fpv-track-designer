@@ -83,13 +83,13 @@ export interface ThemeConfig {
 
 // ── Minimal ──────────────────────────────────────────────────────
 const minimalColors: ThemeColors = {
-  skyTop: '#A9C8D7',
-  skyMid: '#789DB7',
-  skyHorizon: '#527C9F',
-  skyBottom: '#315A7C',
+  skyTop: '#C8E2EE',
+  skyMid: '#A8C9DC',
+  skyHorizon: '#82ACC8',
+  skyBottom: '#5F8BAA',
   skySun: '#F4DCA8',
 
-  fogColor: '#8FAFC3',
+  fogColor: '#AFCBDC',
   fogNear: 160,
   fogFar: 380,
 
@@ -99,7 +99,7 @@ const minimalColors: ThemeColors = {
   sunColor: '#FFF1D6',
   sunIntensity: 1.4,
   sunPosition: [80, 110, 60],
-  fillColor: '#A9BBCB',
+  fillColor: '#B8CBD8',
   fillIntensity: 0.4,
   fillPosition: [-60, 40, -40],
   ambientColor: '#FFFFFF',
