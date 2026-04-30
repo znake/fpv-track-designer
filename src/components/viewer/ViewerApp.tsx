@@ -4,6 +4,7 @@ import { Scene } from '@/components/scene/Scene'
 import { Button } from '@/components/ui/button'
 import { serializeTrack } from '@/schemas/track.schema'
 import { useViewerStore } from '@/viewer-store'
+import { useTranslation } from '@/i18n'
 import { ViewerHelpDialog } from './ViewerHelpDialog'
 
 const VIEWER_HELP_COOKIE = 'fpv-track-viewer-help-seen'
@@ -28,6 +29,7 @@ function createTrackFileName(trackName: string): string {
 }
 
 export function ViewerApp() {
+  const { t } = useTranslation()
   const track = useViewerStore((state) => state.track)
   const config = useViewerStore((state) => state.config)
   const error = useViewerStore((state) => state.error)
@@ -61,7 +63,7 @@ export function ViewerApp() {
       <main className="flex min-h-dvh items-center justify-center bg-slate-950 p-6 text-slate-100">
         <section className="max-w-md rounded-2xl border border-white/10 bg-white/10 p-6 shadow-2xl shadow-black/40">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-sky-300">FPV Track Viewer</p>
-          <h1 className="mt-3 text-2xl font-semibold">Track kann nicht geladen werden</h1>
+          <h1 className="mt-3 text-2xl font-semibold">{t('viewerLoadErrorTitle')}</h1>
           <p className="mt-3 text-sm leading-6 text-slate-300">{error}</p>
         </section>
       </main>
@@ -71,7 +73,7 @@ export function ViewerApp() {
   if (!track || !config) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-slate-950 p-6 text-slate-100">
-        <p>Kein Track geladen.</p>
+        <p>{t('noTrackLoaded')}</p>
       </main>
     )
   }
@@ -106,7 +108,7 @@ export function ViewerApp() {
           className="rounded-full border-white/15 bg-black/25 text-white/70 backdrop-blur hover:bg-white/10 hover:text-white"
           onClick={() => setFpvModeActive((active) => !active)}
           disabled={fpvDisabled}
-          aria-label={fpvModeActive ? 'FPV-Flug stoppen' : 'FPV-Flug starten'}
+          aria-label={fpvModeActive ? t('fpvStop') : t('fpvStart')}
         >
           {fpvModeActive ? <Square className="size-4" /> : <Play className="size-4" />}
         </Button>
@@ -116,7 +118,7 @@ export function ViewerApp() {
           size="icon"
           className="rounded-full border-white/15 bg-black/25 text-white/70 backdrop-blur hover:bg-white/10 hover:text-white"
           onClick={handleExport}
-          aria-label="Track als JSON herunterladen"
+          aria-label={t('downloadJson')}
         >
           <Download className="size-4" />
         </Button>
@@ -126,7 +128,7 @@ export function ViewerApp() {
           size="icon"
           className="rounded-full border-white/15 bg-black/25 text-white/70 backdrop-blur hover:bg-white/10 hover:text-white"
           onClick={() => setHelpOpen(true)}
-          aria-label="Viewer-Hilfe öffnen"
+          aria-label={t('openViewerHelp')}
         >
           <CircleHelp className="size-4" />
         </Button>

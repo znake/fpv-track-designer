@@ -1,30 +1,31 @@
 import { CircleHelp } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useTranslation } from '@/i18n'
 
 interface ViewerHelpDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-const viewerControls = [
-  { description: 'Ansicht drehen', keys: 'Linke Maustaste gedrückt halten und ziehen' },
-  { description: 'Über die Strecke bewegen', keys: 'Rechte Maustaste ziehen oder Space + linke Maustaste ziehen' },
-  { description: 'Kamerahöhe ändern', keys: 'Shift gedrückt halten und mit linker Maustaste ziehen' },
-  { description: 'Zoomen', keys: 'Mausrad scrollen oder mittlere Maustaste ziehen' },
-  { description: 'FPV-Flug stoppen', keys: 'Button erneut klicken oder Escape drücken' },
-]
-
 export function ViewerHelpDialog({ open, onOpenChange }: ViewerHelpDialogProps) {
+  const { t } = useTranslation()
+  const viewerControls = [
+    { description: t('rotateView'), keys: t('viewerRotateViewKey') },
+    { description: t('moveOverTrack'), keys: t('viewerMoveOverTrackKey') },
+    { description: t('changeCameraHeight'), keys: t('viewerChangeCameraHeightKey') },
+    { description: t('zoom'), keys: t('viewerZoomKey') },
+    { description: t('fpvStop'), keys: t('viewerStopFpvKey') },
+  ]
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl border-white/10 bg-slate-950/95 text-slate-100 shadow-2xl shadow-black/50 backdrop-blur">
         <DialogHeader className="pr-10">
           <DialogTitle className="flex items-center gap-2">
             <CircleHelp className="size-5 text-sky-300" />
-            Viewer-Hilfe
+            {t('viewerHelpTitle')}
           </DialogTitle>
           <DialogDescription className="text-slate-300">
-            So bewegst du dich durch den geteilten Track. Der Viewer ist read-only, du kannst also nichts versehentlich verändern.
+            {t('viewerHelpDescription')}
           </DialogDescription>
         </DialogHeader>
 
