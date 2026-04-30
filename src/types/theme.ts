@@ -8,6 +8,18 @@ export type ThemeId =
   | 'realistic'
   | 'night'
 
+/**
+ * Theme color contract.
+ *
+ * Keep theme color edits in this file, but verify the rendering consumer too:
+ * - Sky/fog/light values are applied in `components/scene/Scene.tsx`.
+ * - Ground/grid values are applied in `components/scene/Grid.tsx`.
+ * - Gate/emissive values are resolved through `utils/themeColors.ts` and gate components.
+ *
+ * Some scene branches intentionally render the same color differently. For example,
+ * the night field uses Grid's `useUnlitGround` path so `groundGrass` is not dimmed
+ * by low lighting, tone mapping, or fog.
+ */
 export interface ThemeColors {
   // Sky / Background
   skyTop: string
@@ -272,58 +284,88 @@ const minimalSolarizedDarkColors: ThemeColors = {
 }
 
 // ── Minimal / Catppuccin Mocha ─────────────────────────────────────
-const minimalCatppuccinMochaColors: ThemeColors = {
-  skyTop: '#11111b',
-  skyMid: '#181825',
-  skyHorizon: '#1e1e2e',
-  skyBottom: '#313244',
-  skySun: '#fab387',
+const catppuccinMocha = {
+  rosewater: '#f5e0dc',
+  flamingo: '#f2cdcd',
+  pink: '#f5c2e7',
+  mauve: '#cba6f7',
+  red: '#f38ba8',
+  maroon: '#eba0ac',
+  peach: '#fab387',
+  yellow: '#f9e2af',
+  green: '#a6e3a1',
+  teal: '#94e2d5',
+  sky: '#89dceb',
+  sapphire: '#74c7ec',
+  blue: '#89b4fa',
+  lavender: '#b4befe',
+  text: '#cdd6f4',
+  subtext1: '#bac2de',
+  subtext0: '#a6adc8',
+  overlay2: '#9399b2',
+  overlay1: '#7f849c',
+  overlay0: '#6c7086',
+  surface2: '#585b70',
+  surface1: '#45475a',
+  surface0: '#313244',
+  base: '#1e1e2e',
+  mantle: '#181825',
+  crust: '#11111b',
+} as const
 
-  fogColor: '#181825',
+const minimalCatppuccinMochaColors: ThemeColors = {
+  skyTop: catppuccinMocha.surface2,
+  skyMid: catppuccinMocha.surface1,
+  skyHorizon: catppuccinMocha.surface0,
+  skyBottom: catppuccinMocha.base,
+  skySun: catppuccinMocha.peach,
+
+  fogColor: catppuccinMocha.mantle,
   fogNear: 160,
   fogFar: 380,
 
-  hemisphereSky: '#1e1e2e',
-  hemisphereGround: '#181825',
+  hemisphereSky: catppuccinMocha.base,
+  hemisphereGround: catppuccinMocha.mantle,
   hemisphereIntensity: 0.58,
-  sunColor: '#f9e2af',
+  sunColor: catppuccinMocha.yellow,
   sunIntensity: 1.28,
   sunPosition: [80, 110, 60],
-  fillColor: '#313244',
+  fillColor: catppuccinMocha.surface0,
   fillIntensity: 0.28,
   fillPosition: [-60, 40, -40],
-  ambientColor: '#bac2de',
+  ambientColor: catppuccinMocha.subtext1,
   ambientIntensity: 0.16,
 
-  groundGrass: '#6F8732',
-  groundEarth: '#4A2E18',
-  groundBoundary: '#FFE8C8',
-  gridColor: '#8B6B3E',
-  watermarkColor: '#e8d5b0',
+  groundGrass: catppuccinMocha.overlay0,
+  groundEarth: catppuccinMocha.surface2,
+  groundBoundary: catppuccinMocha.subtext0,
+  gridColor: catppuccinMocha.subtext1,
+  watermarkColor: catppuccinMocha.text,
 
-  flightPath: '#FF8B5A',
+  flightPath: catppuccinMocha.peach,
 
   gates: {
-    'standard': { normal: '#5B8CFF', selected: '#39C8FF' },
-    'h-gate': { normal: '#FF5C8A', selected: '#FF7A9E' },
-    'double-h': { normal: '#A86BFF', selected: '#E86DCE' },
-    'dive': { normal: '#FF6FD8', selected: '#FF9AE6' },
-    'double': { normal: '#FFD35A', selected: '#FF9D4A' },
-    'ladder': { normal: '#FF9D4A', selected: '#FFD35A' },
-    'start-finish': { normal: '#E6ECFF', selected: '#74D7FF' },
-    'flag': { normal: '#FF5C8A', selected: '#FF6FD8' },
-    'octagonal-tunnel': { normal: '#4FE8D8', selected: '#39C8FF' },
+    'standard': { normal: '#4FA8FF', selected: '#89DCFF' },
+    'h-gate': { normal: '#FF4F7B', selected: '#FF8EA8' },
+    'double-h': { normal: '#B975FF', selected: '#FF7BEF' },
+    'dive': { normal: '#FF6CE7', selected: '#FFC2F1' },
+    'double': { normal: '#FFE66D', selected: '#FFB45C' },
+    'ladder': { normal: '#FFB45C', selected: '#FFE66D' },
+    'start-finish': { normal: '#F2F5FF', selected: '#89DCFF' },
+    'flag': { normal: '#FF4F7B', selected: '#FF6CE7' },
+    'octagonal-tunnel': { normal: '#5CFFE8', selected: '#89DCFF' },
   },
 
-  selectionEmissive: '#cba6f7',
-  selectionEmissiveIntensity: 1.15,
+  selectionEmissive: catppuccinMocha.mauve,
+  selectionEmissiveIntensity: 2.3,
+  gateEmissiveIntensity: 0.45,
 
-  indicatorEntryPlane: '#6CEB68',
-  indicatorExitPlane: '#FF5C8A',
-  indicatorEntryLabel: '#6CEB68',
-  indicatorExitLabel: '#FF7A9E',
-  indicatorEntryOutline: '#4FE8D8',
-  indicatorExitOutline: '#FF7A9E',
+  indicatorEntryPlane: '#4FAF68',
+  indicatorExitPlane: '#C8536B',
+  indicatorEntryLabel: catppuccinMocha.green,
+  indicatorExitLabel: catppuccinMocha.red,
+  indicatorEntryOutline: catppuccinMocha.teal,
+  indicatorExitOutline: catppuccinMocha.maroon,
 }
 
 // ── Realistic ─────────────────────────────────────────────────────
@@ -405,7 +447,7 @@ const nightColors: ThemeColors = {
   ambientColor: '#1A1A3A',
   ambientIntensity: 0.1,
 
-  groundGrass: '#8B5CF6',
+  groundGrass: '#4F5C36',
   groundEarth: '#4C1D95',
   groundBoundary: '#FF00E5',
   gridColor: '#C4B5FD',
