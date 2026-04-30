@@ -86,6 +86,18 @@ describe('TopBar', () => {
     expect(mobileFpvButton.className).toContain('md:hidden')
   })
 
+  it('hides undo and redo controls on mobile widths', () => {
+    renderTopBar()
+
+    const undoButton = screen.getByRole('button', { name: 'Rückgängig' })
+    const redoButton = screen.getByRole('button', { name: 'Wiederholen' })
+    const historyControls = undoButton.closest('div')
+
+    expect(historyControls?.className).toContain('hidden')
+    expect(historyControls?.className).toContain('md:flex')
+    expect(redoButton.closest('div')).toBe(historyControls)
+  })
+
   it('switches header labels to English via the language toggle', () => {
     renderTopBar()
 

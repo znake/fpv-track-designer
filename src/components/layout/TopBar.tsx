@@ -115,7 +115,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
       <Separator orientation="vertical" className="hidden h-6 sm:block" />
 
       {/* Center: Undo/Redo */}
-      <div className="flex items-center gap-0.5 md:gap-1">
+      <div className="hidden items-center gap-0.5 md:flex md:gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -123,6 +123,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
               size="icon"
               onClick={undo}
               disabled={past.length === 0}
+              aria-label={t('undo')}
             >
               <Undo2 className="size-4" />
             </Button>
@@ -139,6 +140,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
               size="icon"
               onClick={redo}
               disabled={future.length === 0}
+              aria-label={t('redo')}
             >
               <Redo2 className="size-4" />
             </Button>
