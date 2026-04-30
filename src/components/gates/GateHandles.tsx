@@ -7,6 +7,7 @@ import type { GateType } from '../../types'
 import { useAppStore } from '../../store'
 import { calculateFlightPath } from '../../utils/flightPath'
 import { Button } from '../ui/button'
+import { useTranslation } from '@/i18n'
 
 interface GateHandlesProps {
   gateId: string
@@ -118,6 +119,7 @@ function getGateTopOffset(gateType: GateType): number {
 }
 
 export function GateHandles({ gateId, gateType, position, rotation }: GateHandlesProps) {
+  const { t } = useTranslation()
   const { camera, gl, controls } = useThree()
   const modeRef = useRef<DragMode>('none')
   const [activeMode, setActiveMode] = useState<DragMode>('none')
@@ -455,7 +457,7 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
               closeDeleteDialog()
               handleOpenInsertDialog(control)
             }}
-            aria-label={`${gateId} ${control.direction === 'before' ? 'vorher' : 'nachher'} einfügen`}
+            aria-label={`${gateId} ${control.direction === 'before' ? t('before') : t('after')} ${t('insert')}`}
           >
             <Plus className="size-4" />
           </Button>
@@ -466,8 +468,8 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
 
   return (
     <>
-      {renderInsertControl(beforeInsertControl, 'Vorher')}
-      {renderInsertControl(afterInsertControl, 'Nachher')}
+      {renderInsertControl(beforeInsertControl, t('before'))}
+      {renderInsertControl(afterInsertControl, t('after'))}
 
       <Html
         position={[position.x, moveRotateHandleY, position.z]}
@@ -480,7 +482,7 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
           {/* Move handle (left) */}
           <button
             type="button"
-            aria-label={`${gateId} bewegen`}
+            aria-label={`${gateId} ${t('move')}`}
             onPointerDown={handleMoveDown}
             className={`${HANDLE_BUTTON_CLASSNAME} ${activeMode === 'move'
               ? 'border-primary bg-primary text-primary-foreground'
@@ -494,7 +496,7 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
           {/* Elevation handle (middle) */}
           <button
             type="button"
-            aria-label={`${gateId} Höhe verstellen`}
+            aria-label={`${gateId} ${t('adjustHeight')}`}
             onPointerDown={handleElevateDown}
             className={`${HANDLE_BUTTON_CLASSNAME} ${activeMode === 'elevate'
               ? 'border-accent bg-accent text-accent-foreground'
@@ -508,7 +510,7 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
           {/* Rotate handle (right) */}
           <button
             type="button"
-            aria-label={`${gateId} drehen`}
+            aria-label={`${gateId} ${t('rotate')}`}
             onPointerDown={handleRotateDown}
             className={`${HANDLE_BUTTON_CLASSNAME} ${activeMode === 'rotate'
               ? 'border-secondary bg-secondary text-secondary-foreground'
@@ -522,7 +524,7 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
           {isSingleSelectedGate && (
             <button
               type="button"
-              aria-label={`${gateId} löschen`}
+              aria-label={`${gateId} ${t('delete')}`}
               onPointerDown={stopHtmlInteraction}
               onClick={(event) => {
                 stopHtmlInteraction(event)
