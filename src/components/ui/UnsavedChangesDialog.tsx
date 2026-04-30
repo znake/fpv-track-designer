@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { useTranslation } from '@/i18n'
 
 /**
  * Globally-mounted confirmation dialog shown whenever a destructive action
@@ -25,6 +26,7 @@ import { Button } from '@/components/ui/button'
  * staged action automatically.
  */
 export const UnsavedChangesDialog: FC = () => {
+  const { t } = useTranslation()
   const pending = useAppStore((state) => state.pendingDestructiveAction)
   const isSaveDialogOpen = useAppStore((state) => state.isSaveDialogOpen)
   const cancelDestructiveAction = useAppStore((state) => state.cancelDestructiveAction)
@@ -42,10 +44,10 @@ export const UnsavedChangesDialog: FC = () => {
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{pending?.title ?? 'Ungespeicherte Änderungen'}</DialogTitle>
+          <DialogTitle>{pending?.title ?? t('unsavedChanges')}</DialogTitle>
           <DialogDescription>
             {pending?.description
-              ?? 'Die aktuellen Änderungen gehen verloren, wenn du fortfährst. Möchtest du sie zuerst speichern?'}
+              ?? t('unsavedChangesDescription')}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4 gap-2 sm:gap-2">
@@ -54,14 +56,14 @@ export const UnsavedChangesDialog: FC = () => {
             variant="outline"
             onClick={cancelDestructiveAction}
           >
-            Abbrechen
+            {t('cancel')}
           </Button>
           <Button
             type="button"
             variant="secondary"
             onClick={saveBeforeDestructiveAction}
           >
-            Zuerst speichern
+            {t('saveFirst')}
           </Button>
           <Button
             type="button"
@@ -69,7 +71,7 @@ export const UnsavedChangesDialog: FC = () => {
             autoFocus
             onClick={confirmDestructiveAction}
           >
-            Verwerfen
+            {t('discard')}
           </Button>
         </DialogFooter>
       </DialogContent>

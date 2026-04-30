@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { useTranslation } from '@/i18n'
 
 interface SaveTrackDialogProps {
   /**
@@ -27,6 +28,7 @@ interface SaveTrackDialogProps {
 }
 
 export const SaveTrackDialog: FC<SaveTrackDialogProps> = ({ open: openProp, onOpenChange }) => {
+  const { t } = useTranslation()
   const currentTrack = useAppStore((state) => state.currentTrack)
   const syncCurrentTrack = useAppStore((state) => state.syncCurrentTrack)
   const config = useAppStore((state) => state.config)
@@ -84,9 +86,9 @@ export const SaveTrackDialog: FC<SaveTrackDialogProps> = ({ open: openProp, onOp
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Strecke speichern</DialogTitle>
+          <DialogTitle>{t('saveTrackTitle')}</DialogTitle>
           <DialogDescription>
-            Vergib einen Namen und speichere die aktuelle Strecke lokal im Browser.
+            {t('saveTrackDescription')}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -97,22 +99,22 @@ export const SaveTrackDialog: FC<SaveTrackDialogProps> = ({ open: openProp, onOp
         >
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="track-name">Streckenname</Label>
+              <Label htmlFor="track-name">{t('trackName')}</Label>
               <Input
                 id="track-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Streckenname eingeben"
+                placeholder={t('trackNamePlaceholder')}
                 autoFocus
               />
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-              Abbrechen
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={!currentTrack}>
-              Speichern
+              {t('save')}
             </Button>
           </DialogFooter>
         </form>

@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useTranslation } from '@/i18n'
 
 interface ShareTrackDialogProps {
   open: boolean
@@ -29,6 +30,7 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
   isShortening = false,
   shortenError = null,
 }) => {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState<string | null>(null)
   const [prevOpen, setPrevOpen] = useState(open)
@@ -51,7 +53,7 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
       setCopyError(null)
     } catch {
       setCopied(false)
-      setCopyError('Der Link konnte nicht automatisch kopiert werden. Bitte kopiere ihn manuell.')
+      setCopyError(t('copyLinkError'))
     }
   }
 
@@ -59,34 +61,34 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Track teilen</DialogTitle>
+          <DialogTitle>{t('shareDialogTitle')}</DialogTitle>
           <DialogDescription>
-            Kopiere diesen Link und schicke ihn an Freunde. Der Track öffnet sich im reinen Ansichtsmodus ohne Bearbeitungsfunktionen.
+            {t('shareDialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2 py-2">
-          <Label htmlFor="share-track-url">Teilbarer Link</Label>
+          <Label htmlFor="share-track-url">{t('shareableLink')}</Label>
           <Input
             id="share-track-url"
             value={shareUrl}
             readOnly
-            aria-label="Teilbarer Link"
+            aria-label={t('shareableLink')}
             onFocus={(event) => event.currentTarget.select()}
           />
           {isShortening && (
             <p className="text-xs text-muted-foreground">
-              Kurzlink wird erstellt. Bis dahin ist der lange Link bereits nutzbar.
+              {t('shortLinkCreating')}
             </p>
           )}
           {!isShortening && hasShortLink && (
             <p className="text-xs text-muted-foreground">
-              Kurzlink erstellt.
+              {t('shortLinkCreated')}
             </p>
           )}
           {!isShortening && !hasShortLink && !shortenError && (
             <p className="text-xs text-muted-foreground">
-              Der Track öffnet sich über diesen Link im reinen Ansichtsmodus.
+              {t('readonlyLinkInfo')}
             </p>
           )}
           {shortenError && <p className="text-xs text-destructive">{shortenError}</p>}
@@ -95,10 +97,10 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Schließen
+            {t('close')}
           </Button>
           <Button type="button" onClick={handleCopy} disabled={!shareUrl}>
-            {copied ? 'Kopiert!' : 'Link kopieren'}
+            {copied ? t('copied') : t('copyLink')}
           </Button>
         </DialogFooter>
       </DialogContent>
