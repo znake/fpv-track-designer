@@ -10,7 +10,7 @@ export interface ConfigSlice {
   setShowGrid: (value: boolean) => void
   setShowFlightPath: (value: boolean) => void
   setShowOpeningLabels: (value: boolean) => void
-  setTheme: (theme: string) => void;
+  setTheme: (theme: ThemeId) => void
   resetToDefault: () => void
 }
 
@@ -58,8 +58,8 @@ export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> =
   setShowOpeningLabels: (value) => set((state) => ({
     config: { ...state.config, showOpeningLabels: value },
   })),
-  setTheme: (value) => set((state) => ({
-    config: { ...state.config, theme: value as ThemeId },
+  setTheme: (theme) => set((state) => ({
+    config: { ...state.config, theme },
   })),
   resetToDefault: () => set({ config: defaultConfig }),
 })

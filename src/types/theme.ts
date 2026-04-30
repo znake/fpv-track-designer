@@ -1,6 +1,12 @@
 import type { GateType } from './gate'
 
-export type ThemeId = 'minimal' | 'realistic' | 'night'
+export type ThemeId =
+  | 'minimal'
+  | 'minimal-solarized-light'
+  | 'minimal-solarized-dark'
+  | 'minimal-catppuccin-mocha'
+  | 'realistic'
+  | 'night'
 
 export interface ThemeColors {
   // Sky / Background
@@ -136,6 +142,190 @@ const minimalColors: ThemeColors = {
   indicatorExitOutline: '#f87171',
 }
 
+const solarized = {
+  base03: '#002b36',
+  base02: '#073642',
+  base01: '#586e75',
+  base00: '#657b83',
+  base0: '#839496',
+  base1: '#93a1a1',
+  base2: '#eee8d5',
+  base3: '#fdf6e3',
+  yellow: '#b58900',
+  orange: '#cb4b16',
+  red: '#dc322f',
+  magenta: '#d33682',
+  violet: '#6c71c4',
+  blue: '#268bd2',
+  cyan: '#2aa198',
+  green: '#859900',
+} as const
+
+// ── Minimal / Solarized Light ─────────────────────────────────────
+const minimalSolarizedLightColors: ThemeColors = {
+  skyTop: solarized.base3,
+  skyMid: solarized.base2,
+  skyHorizon: solarized.base1,
+  skyBottom: solarized.base0,
+  skySun: solarized.yellow,
+
+  fogColor: solarized.base2,
+  fogNear: 160,
+  fogFar: 380,
+
+  hemisphereSky: solarized.base3,
+  hemisphereGround: solarized.base01,
+  hemisphereIntensity: 0.72,
+  sunColor: solarized.base3,
+  sunIntensity: 1.35,
+  sunPosition: [80, 110, 60],
+  fillColor: solarized.base1,
+  fillIntensity: 0.38,
+  fillPosition: [-60, 40, -40],
+  ambientColor: solarized.base3,
+  ambientIntensity: 0.3,
+
+  groundGrass: '#5F6F3A',
+  groundEarth: solarized.base0,
+  groundBoundary: solarized.blue,
+  gridColor: solarized.cyan,
+  watermarkColor: solarized.base00,
+
+  flightPath: solarized.orange,
+
+  gates: {
+    'standard': { normal: '#1E9CF0', selected: '#24C6D8' },
+    'h-gate': { normal: '#F0443E', selected: '#F46A28' },
+    'double-h': { normal: '#7D80E8', selected: '#EA4A9A' },
+    'dive': { normal: '#E64AA0', selected: '#8588F0' },
+    'double': { normal: '#D8A400', selected: '#F47A24' },
+    'ladder': { normal: '#F46A24', selected: '#F0443E' },
+    'start-finish': { normal: '#073642', selected: '#0B4A5A' },
+    'flag': { normal: '#9DB800', selected: '#D8A400' },
+    'octagonal-tunnel': { normal: '#21B7AA', selected: '#1E9CF0' },
+  },
+
+  selectionEmissive: solarized.yellow,
+  selectionEmissiveIntensity: 0.75,
+
+  indicatorEntryPlane: solarized.green,
+  indicatorExitPlane: solarized.red,
+  indicatorEntryLabel: solarized.cyan,
+  indicatorExitLabel: solarized.orange,
+  indicatorEntryOutline: solarized.green,
+  indicatorExitOutline: solarized.red,
+}
+
+// ── Minimal / Solarized Dark ──────────────────────────────────────
+const minimalSolarizedDarkColors: ThemeColors = {
+  skyTop: solarized.base02,
+  skyMid: solarized.base01,
+  skyHorizon: solarized.base00,
+  skyBottom: solarized.base0,
+  skySun: solarized.yellow,
+
+  fogColor: solarized.base02,
+  fogNear: 160,
+  fogFar: 380,
+
+  hemisphereSky: solarized.base1,
+  hemisphereGround: solarized.base02,
+  hemisphereIntensity: 0.68,
+  sunColor: solarized.base2,
+  sunIntensity: 1.18,
+  sunPosition: [80, 110, 60],
+  fillColor: solarized.base0,
+  fillIntensity: 0.42,
+  fillPosition: [-60, 40, -40],
+  ambientColor: solarized.base1,
+  ambientIntensity: 0.36,
+
+  groundGrass: '#6F8732',
+  groundEarth: solarized.base02,
+  groundBoundary: solarized.base2,
+  gridColor: solarized.base0,
+  watermarkColor: solarized.base1,
+
+  flightPath: solarized.yellow,
+
+  gates: {
+    'standard': { normal: '#2EA6FF', selected: '#5FD7FF' },
+    'h-gate': { normal: '#FF4A47', selected: '#FF7A3D' },
+    'double-h': { normal: '#8A90FF', selected: '#F05AAF' },
+    'dive': { normal: '#F05AAF', selected: '#A7ACFF' },
+    'double': { normal: '#FFD12A', selected: '#FF9A3D' },
+    'ladder': { normal: '#FF7A3D', selected: '#FF5F5C' },
+    'start-finish': { normal: solarized.base2, selected: solarized.base3 },
+    'flag': { normal: '#A7C700', selected: '#FFD12A' },
+    'octagonal-tunnel': { normal: '#36D1C6', selected: '#2EA6FF' },
+  },
+
+  selectionEmissive: solarized.base1,
+  selectionEmissiveIntensity: 0.9,
+
+  indicatorEntryPlane: solarized.green,
+  indicatorExitPlane: solarized.red,
+  indicatorEntryLabel: solarized.cyan,
+  indicatorExitLabel: solarized.orange,
+  indicatorEntryOutline: solarized.green,
+  indicatorExitOutline: solarized.red,
+}
+
+// ── Minimal / Catppuccin Mocha ─────────────────────────────────────
+const minimalCatppuccinMochaColors: ThemeColors = {
+  skyTop: '#11111b',
+  skyMid: '#181825',
+  skyHorizon: '#1e1e2e',
+  skyBottom: '#313244',
+  skySun: '#fab387',
+
+  fogColor: '#181825',
+  fogNear: 160,
+  fogFar: 380,
+
+  hemisphereSky: '#1e1e2e',
+  hemisphereGround: '#181825',
+  hemisphereIntensity: 0.58,
+  sunColor: '#f9e2af',
+  sunIntensity: 1.28,
+  sunPosition: [80, 110, 60],
+  fillColor: '#313244',
+  fillIntensity: 0.28,
+  fillPosition: [-60, 40, -40],
+  ambientColor: '#bac2de',
+  ambientIntensity: 0.16,
+
+  groundGrass: '#6F8732',
+  groundEarth: '#4A2E18',
+  groundBoundary: '#FFE8C8',
+  gridColor: '#8B6B3E',
+  watermarkColor: '#e8d5b0',
+
+  flightPath: '#FF8B5A',
+
+  gates: {
+    'standard': { normal: '#5B8CFF', selected: '#39C8FF' },
+    'h-gate': { normal: '#FF5C8A', selected: '#FF7A9E' },
+    'double-h': { normal: '#A86BFF', selected: '#E86DCE' },
+    'dive': { normal: '#FF6FD8', selected: '#FF9AE6' },
+    'double': { normal: '#FFD35A', selected: '#FF9D4A' },
+    'ladder': { normal: '#FF9D4A', selected: '#FFD35A' },
+    'start-finish': { normal: '#E6ECFF', selected: '#74D7FF' },
+    'flag': { normal: '#FF5C8A', selected: '#FF6FD8' },
+    'octagonal-tunnel': { normal: '#4FE8D8', selected: '#39C8FF' },
+  },
+
+  selectionEmissive: '#cba6f7',
+  selectionEmissiveIntensity: 1.15,
+
+  indicatorEntryPlane: '#6CEB68',
+  indicatorExitPlane: '#FF5C8A',
+  indicatorEntryLabel: '#6CEB68',
+  indicatorExitLabel: '#FF7A9E',
+  indicatorEntryOutline: '#4FE8D8',
+  indicatorExitOutline: '#FF7A9E',
+}
+
 // ── Realistic ─────────────────────────────────────────────────────
 const realisticColors: ThemeColors = {
   skyTop: '#C8E2EE',
@@ -264,7 +454,7 @@ const nightColors: ThemeColors = {
 export const THEME_PRESETS: Record<ThemeId, ThemeConfig> = {
   minimal: {
     id: 'minimal',
-    name: 'Minimal',
+    name: 'Minimal Standard',
     description: 'Optimiert für schwächere Geräte — reduzierter Detailgrad, kein Schattenwurf.',
     dpr: [1, 1],
     antialias: false,
@@ -279,10 +469,61 @@ export const THEME_PRESETS: Record<ThemeId, ThemeConfig> = {
     colors: minimalColors,
   },
 
+  'minimal-solarized-light': {
+    id: 'minimal-solarized-light',
+    name: 'Minimal Solarized Light',
+    description: 'Solarized Light Palette auf dem reduzierten Minimal-Renderer.',
+    dpr: [1, 1],
+    antialias: false,
+    toneMappingExposure: 1.02,
+    useSkyDome: true,
+    useSky: false,
+    useStars: false,
+    useClouds: false,
+    useEnvironment: false,
+    useBloom: false,
+    useShadows: false,
+    colors: minimalSolarizedLightColors,
+  },
+
+  'minimal-solarized-dark': {
+    id: 'minimal-solarized-dark',
+    name: 'Minimal Solarized Dark',
+    description: 'Solarized Dark Palette auf dem reduzierten Minimal-Renderer.',
+    dpr: [1, 1],
+    antialias: false,
+    toneMappingExposure: 0.92,
+    useSkyDome: true,
+    useSky: false,
+    useStars: false,
+    useClouds: false,
+    useEnvironment: false,
+    useBloom: false,
+    useShadows: false,
+    colors: minimalSolarizedDarkColors,
+  },
+
+  'minimal-catppuccin-mocha': {
+    id: 'minimal-catppuccin-mocha',
+    name: 'Minimal Catppuccin Mocha',
+    description: 'Catppuccin-Mocha-Palette auf dem reduzierten Minimal-Renderer.',
+    dpr: [1, 1],
+    antialias: false,
+    toneMappingExposure: 1.02,
+    useSkyDome: true,
+    useSky: false,
+    useStars: false,
+    useClouds: false,
+    useEnvironment: false,
+    useBloom: false,
+    useShadows: false,
+    colors: minimalCatppuccinMochaColors,
+  },
+
   realistic: {
     id: 'realistic',
     name: 'Realistisch',
-    description: 'Sonnenuntergang mit Wolken, Schatten und atmosphärischer Beleuchtung — für leistungsstarke Rechner.',
+    description: 'Sonne mit Wolken, Schatten und atmosphärischer Beleuchtung — für leistungsstarke Rechner.',
     dpr: [1, 2],
     antialias: true,
     toneMappingExposure: 1.1,

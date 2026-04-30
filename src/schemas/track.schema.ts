@@ -6,6 +6,20 @@ import { normalizeGateSequence } from '../utils/gateSequence'
 
 export const SCHEMA_VERSION = '1.2.0'
 
+const VALID_THEME_IDS = [
+  'minimal',
+  'minimal-solarized-light',
+  'minimal-solarized-dark',
+  'minimal-catppuccin-mocha',
+  'realistic',
+  'night',
+] as const
+type ValidThemeId = (typeof VALID_THEME_IDS)[number]
+
+function isValidThemeId(candidate: string): candidate is ValidThemeId {
+  return VALID_THEME_IDS.includes(candidate as ValidThemeId)
+}
+
 export interface TrackExportSchema {
   version: string
   track: {
@@ -349,8 +363,8 @@ export function validateTrack(data: unknown): { valid: boolean; errors: Validati
 
     if (config.theme !== undefined && typeof config.theme !== 'string') {
       errors.push({ field: 'config.theme', message: 'Theme must be a string when provided' })
-    } else if (config.theme !== undefined && !['minimal', 'realistic', 'night'].includes(config.theme)) {
-      errors.push({ field: 'config.theme', message: 'Theme must be one of: minimal, realistic, night' })
+    } else if (config.theme !== undefined && !isValidThemeId(config.theme)) {
+      errors.push({ field: 'config.theme', message: `Theme must be one of: ${VALID_THEME_IDS.join(', ')}` })
     }
   }
 

@@ -169,4 +169,22 @@ describe('track schema', () => {
       message: 'Gate quantity for octagonal-tunnel must be a non-negative integer',
     })
   })
+
+  it('accepts the new Catppuccin minimal theme id in track payload', () => {
+    const catppuccinPayload = JSON.stringify({
+      version: '1.2.0',
+      track,
+      config: {
+        ...config,
+        theme: 'minimal-catppuccin-mocha',
+      },
+    })
+
+    const result = deserializeTrack(catppuccinPayload)
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+
+    expect(result.config.theme).toBe('minimal-catppuccin-mocha')
+  })
 })

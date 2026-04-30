@@ -33,6 +33,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
   const currentTrack = track !== undefined ? track : storeTrack
   const config = configOverride ?? storeConfig
   const theme = useMemo(() => getThemeConfig(config.theme), [config.theme])
+  const usesMinimalScene = theme.useSkyDome
   const flightPath = useMemo(() => {
     if (!currentTrack) return null
     return calculateFlightPath(currentTrack.gates, currentTrack.gateSequence)
@@ -168,8 +169,8 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
       camera={{ position: [0, 30, 30], fov: 50, near: 0.1, far: 1000 }}
       style={{ width: '100%', height: '100%', touchAction: 'none' }}
     >
-      {/* ── MINIMAL THEME ───────────────────────────────────────────────────── */}
-      {theme.id === 'minimal' && (
+      {/* ── MINIMAL THEMES ──────────────────────────────────────────────────── */}
+      {usesMinimalScene && (
         <>
           <SkyDome
             topColor={theme.colors.skyTop}
