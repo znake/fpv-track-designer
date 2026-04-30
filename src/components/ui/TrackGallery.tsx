@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
+import { useTranslation } from '@/i18n'
 
 interface TrackGalleryProps {
   open: boolean
@@ -32,6 +33,7 @@ interface TrackGalleryProps {
 }
 
 export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
+  const { t } = useTranslation()
   const currentTrack = useAppStore((state) => state.currentTrack)
   const replaceTrack = useAppStore((state) => state.replaceTrack)
   const setConfig = useAppStore((state) => state.setConfig)
@@ -65,8 +67,8 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
         }
         refreshTracks()
       },
-      'Aktuelle Strecke verwerfen?',
-      'Beim Laden einer gespeicherten Strecke wird die aktuelle Strecke ersetzt. Die ungespeicherten Änderungen gehen dabei verloren. Möchtest du sie zuerst speichern?',
+      t('discardCurrentTrackTitle'),
+      t('dirtyLoadDescription'),
     )
   }
 
@@ -76,7 +78,7 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
 
   const handleDuplicateClick = (track: SavedTrackInfo) => {
     setTrackToDuplicate(track)
-    setDuplicateName(`${track.name} Kopie`)
+    setDuplicateName(`${track.name} ${t('copySuffix')}`)
   }
 
   const handleDuplicateDialogOpenChange = (newOpen: boolean) => {
@@ -114,7 +116,7 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
     const copiedTrack = {
       ...saved.track,
       id: crypto.randomUUID(),
-      name: duplicateName.trim() || `${trackToDuplicate.name} Kopie`,
+      name: duplicateName.trim() || `${trackToDuplicate.name} ${t('copySuffix')}`,
       createdAt: now,
       updatedAt: now,
     }
@@ -133,8 +135,8 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
         replaceTrack(copiedTrack)
         onOpenChange(false)
       },
-      'Aktuelle Strecke verwerfen?',
-      'Nach dem Duplizieren wird zur Kopie gewechselt und die aktuelle Strecke ersetzt. Die ungespeicherten Änderungen gehen dabei verloren. Möchtest du sie zuerst speichern?',
+      t('discardCurrentTrackTitle'),
+      t('dirtyDuplicateDescription'),
     )
   }
 
@@ -145,12 +147,12 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="left" className="w-[min(100dvw,24rem)] sm:max-w-md">
         <SheetHeader className="flex-row items-center justify-between">
-          <SheetTitle>Strecken-Galerie</SheetTitle>
+          <SheetTitle>{t('galleryTitle')}</SheetTitle>
           <Button
             variant="ghost"
             size="icon-xs"
             onClick={refresh}
-            title="Aktualisieren"
+            title={t('refresh')}
           >
             <RefreshCw />
           </Button>
@@ -162,15 +164,15 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
           {tracks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Ghost className="mb-3 size-10 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">Noch keine gespeicherten Strecken</p>
+              <p className="text-sm text-muted-foreground">{t('noSavedTracks')}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3 py-4">
-              {tracks.map((t) => {
-                const isCurrent = currentTrack?.id === t.id
+              {tracks.map((trackInfo) => {
+                const isCurrent = currentTrack?.id === trackInfo.id
                 return (
                   <Card
-                    key={t.id}
+                    key={trackInfo.id}
                     className={
                       isCurrent
                         ? 'border-primary ring-1 ring-primary'
@@ -181,10 +183,10 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-semibold text-foreground">
-                            {t.name}
+                            {trackInfo.name}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {new Date(t.updatedAt).toLocaleDateString(undefined, {
+                            {new Date(trackInfo.updatedAt).toLocaleDateString(undefined, {
                               year: 'numeric',
                               month: 'short',
                               day: 'numeric',
@@ -193,7 +195,7 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
                         </div>
                         {isCurrent && (
                           <Badge variant="default" className="text-[10px]">
-                            Aktuell
+                            {t('current')}
                           </Badge>
                         )}
                       </div>
@@ -202,29 +204,29 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => handleLoad(t.id)}
+                          onClick={() => handleLoad(trackInfo.id)}
                           className="sm:flex-1"
                         >
                           <Play />
-                          Laden
+                          {t('load')}
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDuplicateClick(t)}
+                          onClick={() => handleDuplicateClick(trackInfo)}
                           className="w-full sm:w-auto"
                         >
                           <Copy />
-                          Duplizieren
+                          {t('duplicate')}
                         </Button>
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleDeleteClick(t)}
+                          onClick={() => handleDeleteClick(trackInfo)}
                           className="w-full sm:w-auto"
                         >
                           <Trash2 />
-                          Löschen
+                          {t('delete')}
                         </Button>
                       </div>
                     </CardContent>
@@ -252,11 +254,11 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
             }}
           >
             <DialogHeader>
-              <DialogTitle>Gespeicherte Strecke löschen?</DialogTitle>
+              <DialogTitle>{t('deleteSavedTrackTitle')}</DialogTitle>
               <DialogDescription>
                 {trackToDelete
-                  ? `„${trackToDelete.name}“ wird aus der Galerie entfernt. Dies kann nicht rückgängig gemacht werden.`
-                  : 'Diese gespeicherte Strecke wird aus der Galerie entfernt. Dies kann nicht rückgängig gemacht werden.'}
+                  ? t('deleteNamedSavedTrackDescription', { name: trackToDelete.name })
+                  : t('deleteSavedTrackDescription')}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">
@@ -265,10 +267,10 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
                 variant="outline"
                 onClick={() => handleDeleteDialogOpenChange(false)}
               >
-                Abbrechen
+                {t('cancel')}
               </Button>
               <Button type="submit" variant="destructive" autoFocus>
-                Strecke löschen
+                {t('deleteTrack')}
               </Button>
             </DialogFooter>
           </form>
@@ -284,18 +286,18 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
             }}
           >
             <DialogHeader>
-              <DialogTitle>Strecke duplizieren</DialogTitle>
+              <DialogTitle>{t('duplicateTrackTitle')}</DialogTitle>
               <DialogDescription>
-                Vergib einen Namen für die Kopie von „{trackToDuplicate?.name ?? 'dieser Strecke'}“.
+                {t('duplicateTrackDescription', { name: trackToDuplicate?.name ?? t('thisTrack') })}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2 py-4">
-              <Label htmlFor="duplicate-track-name">Neuer Streckenname</Label>
+              <Label htmlFor="duplicate-track-name">{t('newTrackName')}</Label>
               <Input
                 id="duplicate-track-name"
                 value={duplicateName}
                 onChange={(event) => setDuplicateName(event.target.value)}
-                placeholder="Name der duplizierten Strecke"
+                placeholder={t('duplicateNamePlaceholder')}
                 autoFocus
               />
             </div>
@@ -305,10 +307,10 @@ export function TrackGallery({ open, onOpenChange }: TrackGalleryProps) {
                 variant="outline"
                 onClick={() => handleDuplicateDialogOpenChange(false)}
               >
-                Abbrechen
+                {t('cancel')}
               </Button>
               <Button type="submit">
-                Duplizieren
+                {t('duplicate')}
               </Button>
             </DialogFooter>
           </form>
