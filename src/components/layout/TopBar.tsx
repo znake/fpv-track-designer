@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
+import { useTranslation } from '@/i18n'
 import { PoleCounter } from './PoleCounter'
 
 interface TopBarProps {
@@ -29,6 +30,7 @@ interface TopBarProps {
 }
 
 export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDisabled, onFpvToggle }) => {
+  const { language, t, toggleLanguage } = useTranslation()
   const past = useAppStore((state) => state.past)
   const future = useAppStore((state) => state.future)
   const undo = useAppStore((state) => state.undo)
@@ -89,8 +91,8 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
         }
         reader.readAsText(file)
       },
-      'Aktuelle Strecke verwerfen?',
-      'Beim Import einer JSON-Datei wird die aktuelle Strecke ersetzt. Die ungespeicherten Änderungen gehen dabei verloren. Möchtest du sie zuerst speichern?',
+      t('discardCurrentTrackTitle'),
+      t('dirtyImportDescription'),
     )
   }
 
@@ -126,7 +128,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            Rückgängig{past.length > 0 && ` (${past.length})`}
+            {t('undo')}{past.length > 0 && ` (${past.length})`}
           </TooltipContent>
         </Tooltip>
 
@@ -142,7 +144,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            Wiederholen{future.length > 0 && ` (${future.length})`}
+            {t('redo')}{future.length > 0 && ` (${future.length})`}
           </TooltipContent>
         </Tooltip>
       </div>
@@ -157,15 +159,15 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
             className="md:hidden"
             onClick={onFpvToggle}
             disabled={fpvDisabled}
-            aria-label={fpvModeActive ? 'FPV-Flug stoppen' : 'FPV-Flug starten'}
+            aria-label={fpvModeActive ? t('fpvStop') : t('fpvStart')}
           >
             {fpvModeActive ? <Square className="size-4" /> : <Play className="size-4" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
           {fpvModeActive
-            ? 'Stoppt den Kameraflug und stellt die Editor-Kamera wieder her.'
-            : 'Fliegt die Ideallinie automatisch aus der First-Person-Perspektive durch alle Gates.'}
+            ? t('fpvStopDescription')
+            : t('fpvStartDescription')}
         </TooltipContent>
       </Tooltip>
 
@@ -179,13 +181,13 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
             disabled={fpvDisabled}
           >
             {fpvModeActive ? <Square className="size-3.5" /> : <Play className="size-3.5" />}
-            <span>{fpvModeActive ? 'FPV stoppen' : 'FPV-Flug'}</span>
+            <span>{fpvModeActive ? t('fpvStopShort') : t('fpvFlight')}</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
           {fpvModeActive
-            ? 'Stoppt den Kameraflug und stellt die Editor-Kamera wieder her.'
-            : 'Fliegt die Ideallinie automatisch aus der First-Person-Perspektive durch alle Gates.'}
+            ? t('fpvStopDescription')
+            : t('fpvStartDescription')}
         </TooltipContent>
       </Tooltip>
 
@@ -207,11 +209,11 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
                 checked={config.showGrid}
                 onChange={(e) => setShowGrid(e.target.checked)}
               />
-              <span>Grid anzeigen</span>
+              <span>{t('showGrid')}</span>
             </label>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
-            Blendet das Boden-Grid mit 1m-Zellen und 5m-Markierungen ein. Standardmäßig deaktiviert für eine ruhige, grüne Fläche.
+            {t('showGridDescription')}
           </TooltipContent>
         </Tooltip>
         <Tooltip>
@@ -223,11 +225,11 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
                 checked={config.snapGatesToGrid}
                 onChange={(e) => handleSnapGatesToGridChange(e.target.checked)}
               />
-              <span>Grid-Snap</span>
+              <span>{t('gridSnap')}</span>
             </label>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
-            Gates rasten auf einem festen Grid ein und drehen sich nur in 15°-Schritten – ideal, um eigene Gate-Kombinationen exakt auszurichten.
+            {t('gridSnapDescription')}
           </TooltipContent>
         </Tooltip>
         <Tooltip>
@@ -239,11 +241,11 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
                 checked={config.showFlightPath}
                 onChange={(e) => setShowFlightPath(e.target.checked)}
               />
-              <span>Flugbahn</span>
+              <span>{t('flightPath')}</span>
             </label>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
-            Zeigt die Ideallinie als Flugpfad durch alle Gates an, inklusive Richtungspfeilen, in welcher Reihenfolge der Track geflogen wird.
+            {t('flightPathDescription')}
           </TooltipContent>
         </Tooltip>
         <Tooltip>
@@ -255,11 +257,11 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
                 checked={config.showOpeningLabels}
                 onChange={(e) => setShowOpeningLabels(e.target.checked)}
               />
-              <span>Durchflüge</span>
+              <span>{t('passThroughs')}</span>
             </label>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
-            Markiert an jedem Gate die Reihenfolge der Durchflüge sowie die Einflug- und Ausflug-Seite – so siehst du auf einen Blick, wo du rein- und rauskommst.
+            {t('passThroughsDescription')}
           </TooltipContent>
         </Tooltip>
       </div>
@@ -277,7 +279,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
               #fpvooe
             </a>
           </TooltipTrigger>
-          <TooltipContent>Zurück zu unserer Webseite (fpvooe.com)</TooltipContent>
+          <TooltipContent>{t('backToWebsite')}</TooltipContent>
         </Tooltip>
 
         {currentTrack && (
@@ -310,7 +312,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
               />
             </label>
           </TooltipTrigger>
-          <TooltipContent className="max-w-xs">JSON importieren – lade eine Strecke, die du zuvor exportiert oder von einem anderen Piloten erhalten hast.</TooltipContent>
+          <TooltipContent className="max-w-xs">{t('importJson')}</TooltipContent>
         </Tooltip>
 
         {/* Export */}
@@ -320,10 +322,26 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
               <Download className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent className="max-w-xs">JSON exportieren – speichert die aktuell geladene Strecke als JSON-Datei zum Teilen oder Sichern.</TooltipContent>
+          <TooltipContent className="max-w-xs">{t('exportJson')}</TooltipContent>
         </Tooltip>
 
         <Separator orientation="vertical" className="hidden h-6 sm:block" />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleLanguage}
+              aria-label={t('languageToggleLabel')}
+            >
+              <span aria-hidden="true" className="text-base leading-none">
+                {language === 'de' ? '🇬🇧' : '🇩🇪'}
+              </span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('languageToggleTooltip')}</TooltipContent>
+        </Tooltip>
 
         {/* Help */}
         <Tooltip>
@@ -332,7 +350,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
               <CircleHelp className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Hilfe</TooltipContent>
+          <TooltipContent>{t('help')}</TooltipContent>
         </Tooltip>
       </div>
     </header>

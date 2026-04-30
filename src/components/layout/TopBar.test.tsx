@@ -7,6 +7,28 @@ import { useAppStore } from '@/store'
 
 import { TopBar } from './TopBar'
 
+const localStorageMock = (() => {
+  let store: Record<string, string> = {}
+
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
+  }
+})()
+
+Object.defineProperty(globalThis, 'localStorage', {
+  value: localStorageMock,
+  configurable: true,
+})
+
 const resetStore = () => {
   useAppStore.setState({
     config: defaultConfig,
@@ -40,6 +62,7 @@ const renderTopBar = ({
 describe('TopBar', () => {
   beforeEach(() => {
     resetStore()
+    localStorage.clear()
     vi.clearAllMocks()
   })
 
@@ -61,5 +84,15 @@ describe('TopBar', () => {
 
     const mobileFpvButton = screen.getByRole('button', { name: 'FPV-Flug stoppen' })
     expect(mobileFpvButton.className).toContain('md:hidden')
+  })
+
+  it('switches header labels to English via the language toggle', () => {
+    renderTopBar()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sprache auf Englisch umstellen' }))
+
+    expect(screen.getByRole('button', { name: 'Switch language to German' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Start FPV flight' })).not.toBeNull()
+    expect(window.localStorage.getItem('fpv-track-designer-language')).toBe('en')
   })
 })
