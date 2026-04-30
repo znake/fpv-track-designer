@@ -33,11 +33,13 @@ import {
 import { ScrollArea } from './components/ui/scroll-area'
 import { Separator } from './components/ui/separator'
 import { GateConfigPanel } from './components/ui/GateConfigPanel'
+import { ThemeConfigPanel } from './components/ui/ThemeConfigPanel'
 import { ApplyConfigFooter } from './components/ui/ApplyConfigFooter'
 import { Scene } from './components/scene/Scene'
 import { TopBar } from './components/layout/TopBar'
 import { LeftToolPanel } from './components/layout/LeftToolPanel'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { useTranslation } from '@/i18n'
 
 const FIRST_VISIT_COOKIE = 'fpv-track-designer-visited'
 const FIRST_VISIT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
@@ -57,6 +59,7 @@ function setFirstVisitCookie() {
 }
 
 function App() {
+  const { t, gateTypeLabel } = useTranslation()
   const currentTrack = useAppStore((state) => state.currentTrack)
   const setTrack = useAppStore((state) => state.setTrack)
   const config = useAppStore((state) => state.config)
@@ -77,6 +80,7 @@ function App() {
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [designOpen, setDesignOpen] = useState(false)
   const [fpvModeActive, setFpvModeActive] = useState(false)
   const [sequenceDraft, setSequenceDraft] = useState<{ editorKey: string | null; value: string }>({
     editorKey: null,
@@ -89,12 +93,13 @@ function App() {
     onShuffle: () => {
       requestDestructiveAction(
         () => setTrack(generateTrack(config), extractGenerationConfig(config)),
-        'Aktuelle Strecke verwerfen?',
-        'Die aktuelle Strecke enthält ungespeicherte Änderungen, die beim Shuffle verloren gehen. Möchtest du sie zuerst speichern?',
+        t('discardCurrentTrackTitle'),
+        t('dirtyShuffleDescription'),
       )
     },
     onOpenGallery: () => {
       setSettingsOpen(false)
+      setDesignOpen(false)
       setGalleryOpen(true)
     },
     onEscape: () => setFpvModeActive(false),
@@ -166,15 +171,15 @@ function App() {
   const nextSequenceNumber = Number(sequenceValue.trim())
   const sequenceInputError = (() => {
     if (!sequenceEditor || sequenceValue.trim().length === 0) {
-      return 'Bitte eine Zahl eingeben.'
+      return t('enterNumber')
     }
 
     if (!Number.isInteger(nextSequenceNumber)) {
-      return 'Bitte eine ganze Zahl eingeben.'
+      return t('enterInteger')
     }
 
     if (nextSequenceNumber < 1 || nextSequenceNumber > sequenceLength) {
-      return `Bitte eine Nummer zwischen 1 und ${sequenceLength} wählen.`
+      return t('numberBetween', { count: sequenceLength })
     }
 
     return null
@@ -212,11 +217,18 @@ function App() {
             onSaveClick={() => openSaveDialog()}
             onGalleryClick={() => {
               setSettingsOpen(false)
+              setDesignOpen(false)
               setGalleryOpen(true)
             }}
             onSettingsClick={() => {
               setGalleryOpen(false)
+              setDesignOpen(false)
               setSettingsOpen(true)
+            }}
+            onDesignClick={() => {
+              setGalleryOpen(false)
+              setSettingsOpen(false)
+              setDesignOpen(true)
             }}
           />
           <main className="relative min-w-0 flex-1 touch-none pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0">
@@ -227,9 +239,9 @@ function App() {
       <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
         <SheetContent side="left" className="flex w-[min(100dvw,28rem)] flex-col gap-0 p-0 sm:max-w-md">
           <SheetHeader className="pr-12">
-            <SheetTitle>Strecken-Einstellungen</SheetTitle>
+            <SheetTitle>{t('settingsTitle')}</SheetTitle>
             <SheetDescription>
-              Passe Gate-Anzahl und Feldmaße an oder setze die Standardeinstellungen zurück.
+              {t('settingsDescription')}
             </SheetDescription>
           </SheetHeader>
           <Separator />
@@ -241,6 +253,22 @@ function App() {
           <ApplyConfigFooter />
         </SheetContent>
       </Sheet>
+      <Sheet open={designOpen} onOpenChange={setDesignOpen}>
+        <SheetContent side="left" className="flex w-[min(100dvw,28rem)] flex-col gap-0 p-0 sm:max-w-md">
+          <SheetHeader className="pr-12">
+            <SheetTitle>{t('design')}</SheetTitle>
+            <SheetDescription>
+              {t('designDescription')}
+            </SheetDescription>
+          </SheetHeader>
+          <Separator />
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="p-4">
+              <ThemeConfigPanel />
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
       <SaveTrackDialog />
       <UnsavedChangesDialog />
       <TrackGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
@@ -250,9 +278,9 @@ function App() {
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Gate einfügen</DialogTitle>
+            <DialogTitle>{t('insertGateTitle')}</DialogTitle>
             <DialogDescription>
-              Wähle den Gate-Typ aus. Das neue Gate wird an der berechneten Position in die Durchflugreihenfolge eingefügt.
+              {t('insertGateDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
@@ -271,14 +299,14 @@ function App() {
                   <span className="flex w-10 shrink-0 justify-center">
                     <GateIcon type={option.type} className="size-6" />
                   </span>
-                  <span>{option.label}</span>
+                  <span>{gateTypeLabel(option.type)}</span>
                 </Button>
               )
             })}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={closeGateInsertionDialog}>
-              Abbrechen
+              {t('cancel')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -294,13 +322,13 @@ function App() {
             }}
           >
             <DialogHeader>
-              <DialogTitle>Durchflugnummer ändern</DialogTitle>
+              <DialogTitle>{t('changePassNumberTitle')}</DialogTitle>
               <DialogDescription>
-                Neue Position in der Durchflugreihenfolge zwischen 1 und {sequenceLength} eingeben.
+                {t('changePassNumberDescription', { count: sequenceLength })}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2 py-4">
-              <Label htmlFor="sequence-number">Durchflugnummer</Label>
+              <Label htmlFor="sequence-number">{t('passNumber')}</Label>
               <Input
                 id="sequence-number"
                 ref={sequenceInputRef}
@@ -316,10 +344,10 @@ function App() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={closeSequenceDialog}>
-                Abbrechen
+                {t('cancel')}
               </Button>
               <Button type="submit" disabled={Boolean(sequenceInputError)}>
-                Übernehmen
+                {t('apply')}
               </Button>
             </DialogFooter>
           </form>
@@ -340,9 +368,9 @@ function App() {
             }}
           >
             <DialogHeader>
-              <DialogTitle>Ausgewähltes Gate löschen?</DialogTitle>
+              <DialogTitle>{t('deleteSelectedGateTitle')}</DialogTitle>
               <DialogDescription>
-                Dadurch wird das ausgewählte Gate aus der Strecke entfernt und die aktuelle Auswahl gelöscht.
+                {t('deleteSelectedGateDescription')}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">
@@ -351,10 +379,10 @@ function App() {
                 variant="outline"
                 onClick={closeDeleteDialog}
               >
-                Abbrechen
+                {t('cancel')}
               </Button>
               <Button type="submit" variant="destructive" autoFocus>
-                Gate löschen
+                {t('deleteGate')}
               </Button>
             </DialogFooter>
           </form>

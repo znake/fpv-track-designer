@@ -20,9 +20,11 @@ import {
 } from '@/components/ui/collapsible'
 import { Separator } from '@/components/ui/separator'
 import { RotateCcw, ChevronDown } from 'lucide-react'
+import { useTranslation } from '@/i18n'
 
 
 export function GateConfigPanel() {
+  const { t, gateTypeLabel } = useTranslation()
   const config = useAppStore((state) => state.config)
   const setGateQuantity = useAppStore((state) => state.setGateQuantity)
   const setFieldSize = useAppStore((state) => state.setFieldSize)
@@ -30,7 +32,6 @@ export function GateConfigPanel() {
 
   const [quantitiesOpen, setQuantitiesOpen] = useState(true)
   const [fieldOpen, setFieldOpen] = useState(true)
-  const [themeOpen, setThemeOpen] = useState(true)
 
   const normalizeFieldSizeValue = (value: string): string | null => {
     const parsedValue = parseInt(value, 10)
@@ -71,29 +72,29 @@ export function GateConfigPanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Kurskonfiguration</CardTitle>
+        <CardTitle>{t('courseConfig')}</CardTitle>
         <CardDescription>
-          Verwalten Sie die Gate-Anzahl und die Feldabmessungen für neue Layouts.
+          {t('courseConfigDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Gate Quantities */}
         <Collapsible open={quantitiesOpen} onOpenChange={setQuantitiesOpen}>
           <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-foreground">
-            Gate-Anzahl
+            {t('gateQuantity')}
             <ChevronDown
               className={`h-4 w-4 transition-transform ${quantitiesOpen ? 'rotate-180' : ''}`}
             />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3 pt-3">
-            {gateTypeOptions.map(({ type, label }) => (
+            {gateTypeOptions.map(({ type }) => (
               <div
                 key={type}
                 className="flex items-center justify-between gap-2"
               >
                 <Label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <GateIcon type={type} className="size-5 shrink-0" />
-                  <span>{label}</span>
+                  <span>{gateTypeLabel(type)}</span>
                 </Label>
                 <Input
                   type="number"
@@ -117,7 +118,7 @@ export function GateConfigPanel() {
         {/* Field Settings */}
         <Collapsible open={fieldOpen} onOpenChange={setFieldOpen}>
           <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-foreground">
-            Feldeinstellungen
+            {t('fieldSettings')}
             <ChevronDown
               className={`h-4 w-4 transition-transform ${fieldOpen ? 'rotate-180' : ''}`}
             />
@@ -126,12 +127,12 @@ export function GateConfigPanel() {
             {/* Field Size */}
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">
-                Feldgröße (m)
+                {t('fieldSize')}
               </Label>
               <div className="flex gap-2">
                 <div className="flex-1 space-y-1">
                   <Label htmlFor="field-width" className="text-xs">
-                    Breite
+                    {t('width')}
                   </Label>
                   <Input
                     id="field-width"
@@ -144,7 +145,7 @@ export function GateConfigPanel() {
                 </div>
                 <div className="flex-1 space-y-1">
                   <Label htmlFor="field-height" className="text-xs">
-                    Länge
+                    {t('length')}
                   </Label>
                   <Input
                     id="field-height"
@@ -165,50 +166,8 @@ export function GateConfigPanel() {
               className="w-full"
             >
               <RotateCcw className="mr-2 h-4 w-4" />
-              Auf Standard zurücksetzen
+              {t('resetDefaults')}
             </Button>
-          </CollapsibleContent>
-        </Collapsible>
-
-        <Separator />
-
-        {/* Theme Selection */}
-        <Collapsible open={themeOpen} onOpenChange={setThemeOpen}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-foreground">
-            Design
-            <ChevronDown
-              className={`h-4 w-4 transition-transform ${themeOpen ? 'rotate-180' : ''}`}
-            />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-3 pt-3">
-            <Label className="text-sm text-muted-foreground">
-              Visuelles Erscheinungsbild
-            </Label>
-            <div className="grid gap-2">
-              {([
-                { id: 'minimal', label: 'Minimal', desc: 'Für schwächere Geräte' },
-                { id: 'realistic', label: 'Realistisch', desc: 'Sonnenuntergang & Schatten' },
-                { id: 'night', label: 'Nacht', desc: 'Neon & Sternenhimmel' },
-              ] as const).map(({ id, label, desc }) => {
-                const isSelected = config.theme === id
-
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => useAppStore.getState().setTheme(id)}
-                    className={`flex flex-col items-start gap-0.5 rounded-lg border p-3 text-left transition-colors ${
-                      isSelected
-                        ? 'border-primary bg-primary/10 ring-1 ring-primary/70'
-                        : 'border-border hover:border-primary/50 hover:bg-accent/30'
-                    }`}
-                  >
-                    <span className={`text-sm font-medium ${isSelected ? 'text-primary' : ''}`}>{label}</span>
-                    <span className={`text-xs ${isSelected ? 'text-foreground/80' : 'text-muted-foreground'}`}>{desc}</span>
-                  </button>
-                )
-              })}
-            </div>
           </CollapsibleContent>
         </Collapsible>
       </CardContent>

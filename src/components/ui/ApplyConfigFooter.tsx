@@ -3,6 +3,7 @@ import { Separator } from '@/components/ui/separator'
 import { useAppStore } from '@/store'
 import { generateTrack } from '@/utils/generator'
 import { extractGenerationConfig, hasConfigDrift } from '@/utils/generationConfig'
+import { useTranslation } from '@/i18n'
 
 /**
  * Footer rendered inside the Settings sheet when the live config differs from
@@ -12,6 +13,7 @@ import { extractGenerationConfig, hasConfigDrift } from '@/utils/generationConfi
  * unsaved changes – matching Shuffle, Import and Gallery Load behaviour.
  */
 export function ApplyConfigFooter() {
+  const { t } = useTranslation()
   const config = useAppStore((s) => s.config)
   const generationConfig = useAppStore((s) => s.generationConfig)
   const setTrack = useAppStore((s) => s.setTrack)
@@ -23,8 +25,8 @@ export function ApplyConfigFooter() {
   const handleClick = () => {
     requestDestructiveAction(
       () => setTrack(generateTrack(config), extractGenerationConfig(config)),
-      'Aktuelle Strecke verwerfen?',
-      'Beim Anwenden der neuen Kurskonfiguration wird die aktuelle Strecke neu generiert. Die ungespeicherten Änderungen gehen dabei verloren. Möchtest du sie zuerst speichern?',
+      t('discardCurrentTrackTitle'),
+      t('applyConfigDirtyDescription'),
     )
   }
 
@@ -33,10 +35,10 @@ export function ApplyConfigFooter() {
       <Separator />
       <div className="flex flex-col gap-2 p-4 animate-in slide-in-from-bottom-2 fade-in-0 duration-200">
         <p className="text-xs text-muted-foreground">
-          Die Kurskonfiguration wurde geändert. Wende die neuen Einstellungen an, um die Strecke neu zu generieren.
+          {t('configChanged')}
         </p>
         <Button type="button" className="w-full" onClick={handleClick}>
-          Neue Kurskonfiguration anwenden
+          {t('applyConfig')}
         </Button>
       </div>
     </>

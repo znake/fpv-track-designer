@@ -1,6 +1,6 @@
 import type { FC } from 'react'
 import { useState, useCallback } from 'react'
-import { Dice5, Save, Settings2, GalleryVertical, Share2 } from 'lucide-react'
+import { Dice5, Save, Settings2, GalleryVertical, Share2, Palette } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { generateTrack } from '@/utils/generator'
 import { extractGenerationConfig } from '@/utils/generationConfig'
@@ -13,18 +13,22 @@ import {
 } from '@/components/ui/tooltip'
 import { SaveTrackDialog } from '@/components/ui/SaveTrackDialog'
 import { ShareTrackDialog } from '@/components/ui/ShareTrackDialog'
+import { useTranslation } from '@/i18n'
 
 interface LeftToolPanelProps {
   onSaveClick?: () => void
   onGalleryClick?: () => void
   onSettingsClick?: () => void
+  onDesignClick?: () => void
 }
 
 export const LeftToolPanel: FC<LeftToolPanelProps> = ({
   onSaveClick,
   onGalleryClick,
   onSettingsClick,
+  onDesignClick,
 }) => {
+  const { t } = useTranslation()
   const config = useAppStore((state) => state.config)
   const currentTrack = useAppStore((state) => state.currentTrack)
   const setTrack = useAppStore((state) => state.setTrack)
@@ -40,10 +44,10 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
   const handleShuffle = useCallback(() => {
     requestDestructiveAction(
       () => setTrack(generateTrack(config), extractGenerationConfig(config)),
-      'Aktuelle Strecke verwerfen?',
-      'Die aktuelle Strecke enthält ungespeicherte Änderungen, die beim Shuffle verloren gehen. Möchtest du sie zuerst speichern?',
+      t('discardCurrentTrackTitle'),
+      t('dirtyShuffleDescription'),
     )
-  }, [config, requestDestructiveAction, setTrack])
+  }, [config, requestDestructiveAction, setTrack, t])
 
   const handleSaveClick = useCallback(() => {
     if (onSaveClick) {
@@ -74,16 +78,20 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
       })
       .catch(() => {
         setShareUrl(longUrl)
-        setShareError('Der Kurzlink konnte nicht erstellt werden. Du kannst den langen Link trotzdem teilen.')
+        setShareError(t('shareDialogError'))
       })
       .finally(() => {
         setShareLoading(false)
       })
-  }, [config, currentTrack])
+  }, [config, currentTrack, t])
 
   const handleSettingsClick = useCallback(() => {
     onSettingsClick?.()
   }, [onSettingsClick])
+
+  const handleDesignClick = useCallback(() => {
+    onDesignClick?.()
+  }, [onDesignClick])
 
   const primaryTools: Array<{
     icon: typeof Dice5
@@ -97,34 +105,39 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
       icon: Dice5,
       label: 'Shuffle',
       shortcut: 'S',
-      description:
-        'Ordnet alle Gates neu an – basierend auf den Settings wird ein neuer Track zufällig generiert.',
+      description: t('shuffleDescription'),
       action: handleShuffle,
     },
     {
       icon: Save,
-      label: 'Speichern',
+      label: t('save'),
       shortcut: 'Ctrl+S',
       action: handleSaveClick,
     },
     {
       icon: Share2,
-      label: 'Track Teilen',
+      label: t('shareTrack'),
       shortcut: '',
       action: handleShareClick,
       disabled: !currentTrack,
     },
     {
       icon: GalleryVertical,
-      label: 'Galerie',
+      label: t('gallery'),
       shortcut: 'G',
       action: handleGalleryClick,
     },
     {
       icon: Settings2,
-      label: 'Einstellungen',
+      label: t('settings'),
       shortcut: '',
       action: handleSettingsClick,
+    },
+    {
+      icon: Palette,
+      label: t('design'),
+      shortcut: '',
+      action: handleDesignClick,
     },
   ]
 

@@ -77,7 +77,7 @@ describe('LeftToolPanel', () => {
 
     const buttonNames = screen.getAllByRole('button').map((button) => button.getAttribute('aria-label'))
 
-    expect(buttonNames).toEqual(['Shuffle', 'Speichern', 'Track Teilen', 'Galerie', 'Einstellungen'])
+    expect(buttonNames).toEqual(['Shuffle', 'Speichern', 'Track Teilen', 'Galerie', 'Einstellungen', 'Design'])
     expect(screen.queryByRole('button', { name: 'Neue Strecke' })).toBeNull()
   })
 
