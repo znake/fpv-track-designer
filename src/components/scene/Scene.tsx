@@ -192,7 +192,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
             color={theme.colors.fillColor}
           />
           <ambientLight intensity={theme.colors.ambientIntensity} color={theme.colors.ambientColor} />
-          <Grid fieldSize={config.fieldSize} />
+          <Grid fieldSize={config.fieldSize} colors={theme.colors} showGrid={config.showGrid} />
           {trackContent}
           {cameraControls}
         </>
@@ -244,7 +244,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
             color={theme.colors.fillColor}
           />
           <ambientLight intensity={theme.colors.ambientIntensity} color={theme.colors.ambientColor} />
-          <Grid fieldSize={config.fieldSize} />
+          <Grid fieldSize={config.fieldSize} colors={theme.colors} showGrid={config.showGrid} />
           {trackContent}
           {cameraControls}
         </>
@@ -269,7 +269,8 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
             color={theme.colors.fillColor}
           />
           <ambientLight intensity={theme.colors.ambientIntensity} color={theme.colors.ambientColor} />
-          <Grid fieldSize={config.fieldSize} />
+          {/* Night field colors use the unlit Grid path so ThemeColors.groundGrass is visible as authored. */}
+          <Grid fieldSize={config.fieldSize} colors={theme.colors} showGrid={config.showGrid} useUnlitGround />
           {currentTrack && (
             <EffectComposer>
               <Bloom mipmapBlur intensity={1.6} luminanceThreshold={1} luminanceSmoothing={0.2} />

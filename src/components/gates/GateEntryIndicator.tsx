@@ -46,15 +46,15 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
   const canEditLabel = !!onLabelClick
   const showOpeningHighlight = isSelected || isOpeningHovered
   const canShowSwapIcon = isSelected || isOpeningHovered || isLabelHovered || isSwapIconHovered
-  const swapIconHoverColor = '#f59e0b'
+  const swapIconHoverColor = theme.colors.selectionEmissive
   const isLabelBright = isLabelHovered
-  const labelHoverColor = '#fde68a'
+  const labelHoverColor = theme.colors.selectionEmissive
   const labelFillOpacity = isLabelBright ? 0.9 : 0.12
   const labelOutlineWidth = isLabelBright ? fontSize * 0.03 : fontSize * 0.006
   const labelEntryColor = isLabelBright ? labelHoverColor : entryLabelColor
   const labelExitColor = isLabelBright ? labelHoverColor : exitLabelColor
-  const labelEntryOutlineColor = isLabelBright ? '#fcd34d' : entryOutlineColor
-  const labelExitOutlineColor = isLabelBright ? '#fcd34d' : exitOutlineColor
+  const labelEntryOutlineColor = isLabelBright ? theme.colors.selectionEmissive : entryOutlineColor
+  const labelExitOutlineColor = isLabelBright ? theme.colors.selectionEmissive : exitOutlineColor
   const entryZ = reverse ? 0.02 : -0.02
   const exitZ = reverse ? -0.02 : 0.02
   const entryLabelZ = reverse ? 0.03 : -0.03
@@ -62,10 +62,10 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
   const entryLabelRotationY = reverse ? 0 : Math.PI
   const exitLabelRotationY = reverse ? Math.PI : 0
 
-  const openingHoverOpacity = isOpeningHovered ? 0.72 : 0.5
+  const openingHoverOpacity = isOpeningHovered ? 0.68 : 0.48
   const showSwapIcon = !!canToggleDirection && canShowSwapIcon
   const swapIconFontSize = Math.min(width, height) * 0.18
-  const swapIconColor = isSwapIconHovered ? swapIconHoverColor : '#ffffff'
+  const swapIconColor = isSwapIconHovered ? swapIconHoverColor : theme.colors.indicatorEntryLabel
   const swapIconFillOpacity = isSwapIconHovered ? 0.9 : 0.78
   const swapIconOutlineWidth = isSwapIconHovered ? swapIconFontSize * 0.09 : swapIconFontSize * 0.06
   const swapIconEntryZ = reverse ? 0.045 : -0.045
@@ -117,7 +117,7 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
       anchorX="center"
       anchorY="middle"
       outlineWidth={swapIconOutlineWidth}
-      outlineColor={isSwapIconHovered ? swapIconHoverColor : '#0f172a'}
+      outlineColor={isSwapIconHovered ? swapIconHoverColor : theme.colors.indicatorEntryOutline}
       fillOpacity={swapIconFillOpacity}
       material-depthTest={false}
       material-depthWrite={false}
@@ -168,12 +168,13 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
         onPointerOut={handleOpeningPointerOut}
       >
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial
+        <meshBasicMaterial
           color={theme.colors.indicatorEntryPlane}
           transparent
-          opacity={showOpeningHighlight ? openingHoverOpacity : 0.5}
+          opacity={showOpeningHighlight ? openingHoverOpacity : 0.48}
           side={THREE.DoubleSide}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
 
@@ -185,12 +186,13 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
         onPointerOut={handleOpeningPointerOut}
       >
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial
+        <meshBasicMaterial
           color={theme.colors.indicatorExitPlane}
           transparent
-          opacity={showOpeningHighlight ? openingHoverOpacity : 0.5}
+          opacity={showOpeningHighlight ? openingHoverOpacity : 0.48}
           side={THREE.DoubleSide}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
 

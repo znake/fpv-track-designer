@@ -1,8 +1,8 @@
 import type { ThreeEvent } from '@react-three/fiber'
 import { Grid as DreiGrid, Text } from '@react-three/drei'
-import { useTheme } from '../../hooks/useTheme'
 import { useAppStore } from '../../store'
 import { GATE_BASE_WIDTH } from '../../constants/gateDimensions'
+import type { ThemeColors } from '../../types/theme'
 
 function isCameraTouchGesture(e: ThreeEvent<MouseEvent>) {
   const target = e.nativeEvent.target
@@ -14,16 +14,18 @@ function isCameraTouchGesture(e: ThreeEvent<MouseEvent>) {
 
 interface GridProps {
   fieldSize?: { width: number; height: number }
+  colors: ThemeColors
+  showGrid: boolean
+  // Used by themes whose field color must bypass scene lighting/tone mapping/fog.
+  useUnlitGround?: boolean
 }
 
-export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
+export function Grid({ fieldSize = { width: 100, height: 100 }, colors, showGrid, useUnlitGround = false }: GridProps) {
   const halfW = fieldSize.width / 2
   const halfH = fieldSize.height / 2
   const watermarkSize = Math.max(6, Math.min(fieldSize.width / 5.2, fieldSize.height * 0.32))
   const selectGate = useAppStore((state) => state.selectGate)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
-  const theme = useTheme()
-  const showGrid = useAppStore((state) => state.config.showGrid)
   const cellSize = GATE_BASE_WIDTH
   const boundaryThickness = 0.035
 
@@ -38,10 +40,10 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
       {/* Earth-toned underside makes the floating field read like soil from the side. */}
       <mesh position={[0, -0.06, 0]}>
         <boxGeometry args={[fieldSize.width, 0.1, fieldSize.height]} />
-        <meshStandardMaterial color={theme.colors.groundEarth} roughness={0.94} metalness={0} />
+        <meshStandardMaterial color={colors.groundEarth} roughness={0.94} metalness={0} />
       </mesh>
 
-      {/* Ground plane - grass */}
+      {/* Ground plane - grass. Theme colors come from Scene; do not read the store here. */}
       <mesh
         rotation-x={-Math.PI / 2}
         position={[0, 0, 0]}
@@ -49,26 +51,30 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
         onClick={handleGroundClick}
       >
         <planeGeometry args={[fieldSize.width, fieldSize.height]} />
-        <meshStandardMaterial color={theme.colors.groundGrass} roughness={0.95} metalness={0} />
+        {useUnlitGround ? (
+          <meshBasicMaterial color={colors.groundGrass} toneMapped={false} fog={false} />
+        ) : (
+          <meshStandardMaterial color={colors.groundGrass} roughness={0.95} metalness={0} />
+        )}
       </mesh>
 
       {/* Field boundary — always visible, independent from the optional inner grid. */}
       <group position={[0, 0.025, 0]}>
         <mesh position={[0, 0, -halfH]}>
           <boxGeometry args={[fieldSize.width, 0.01, boundaryThickness]} />
-          <meshBasicMaterial color={theme.colors.groundBoundary} toneMapped={false} />
+          <meshBasicMaterial color={colors.groundBoundary} toneMapped={false} />
         </mesh>
         <mesh position={[halfW, 0, 0]}>
           <boxGeometry args={[boundaryThickness, 0.01, fieldSize.height]} />
-          <meshBasicMaterial color={theme.colors.groundBoundary} toneMapped={false} />
+          <meshBasicMaterial color={colors.groundBoundary} toneMapped={false} />
         </mesh>
         <mesh position={[0, 0, halfH]}>
           <boxGeometry args={[fieldSize.width, 0.01, boundaryThickness]} />
-          <meshBasicMaterial color={theme.colors.groundBoundary} toneMapped={false} />
+          <meshBasicMaterial color={colors.groundBoundary} toneMapped={false} />
         </mesh>
         <mesh position={[-halfW, 0, 0]}>
           <boxGeometry args={[boundaryThickness, 0.01, fieldSize.height]} />
-          <meshBasicMaterial color={theme.colors.groundBoundary} toneMapped={false} />
+          <meshBasicMaterial color={colors.groundBoundary} toneMapped={false} />
         </mesh>
       </group>
 
@@ -80,10 +86,10 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
             args={[fieldSize.width, fieldSize.height]}
             cellSize={cellSize}
             cellThickness={0.5}
-            cellColor={theme.colors.gridColor}
+            cellColor={colors.gridColor}
             sectionSize={5}
             sectionThickness={0}
-            sectionColor={theme.colors.gridColor}
+            sectionColor={colors.gridColor}
             fadeDistance={200}
             fadeStrength={1}
           />
@@ -101,7 +107,7 @@ export function Grid({ fieldSize = { width: 100, height: 100 } }: GridProps) {
       >
         #FPVOOE
         <meshBasicMaterial
-          color={theme.colors.watermarkColor}
+          color={colors.watermarkColor}
           transparent
           opacity={0.035}
           depthWrite={false}
