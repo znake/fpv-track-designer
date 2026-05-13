@@ -408,7 +408,7 @@ function isLanguage(value: string | null): value is Language {
 
 function readStoredLanguage(): Language {
   if (typeof window === 'undefined') return 'de'
-  if (typeof window.localStorage.getItem !== 'function') return 'de'
+  if (typeof window.localStorage?.getItem !== 'function') return 'de'
   const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
   return isLanguage(stored) ? stored : 'de'
 }
