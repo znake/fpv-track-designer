@@ -15,6 +15,7 @@ export const POLES_PER_GATE: Record<GateType, number> = {
   'start-finish': 3,
   'h-gate': 4,
   'double-h': 7,
+  'hurdle': 0,
   'double': 6,
   'ladder': 9,
   'flag': 2,
