@@ -1,5 +1,6 @@
 import type { FC } from 'react'
 import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,7 @@ interface ShareTrackDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   shareUrl: string
-  originalShareUrl?: string
+  shortShareUrl?: string
   isShortening?: boolean
   shortenError?: string | null
 }
@@ -26,7 +27,7 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
   open,
   onOpenChange,
   shareUrl,
-  originalShareUrl = '',
+  shortShareUrl = '',
   isShortening = false,
   shortenError = null,
 }) => {
@@ -35,20 +36,23 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
   const [copyError, setCopyError] = useState<string | null>(null)
   const [prevOpen, setPrevOpen] = useState(open)
   const [prevShareUrl, setPrevShareUrl] = useState(shareUrl)
-  const hasShortLink = Boolean(originalShareUrl && shareUrl && originalShareUrl !== shareUrl)
+  const [prevShortShareUrl, setPrevShortShareUrl] = useState(shortShareUrl)
+  const hasShortLink = Boolean(shortShareUrl)
+  const copyTarget = shortShareUrl || shareUrl
 
-  if (open !== prevOpen || shareUrl !== prevShareUrl) {
+  if (open !== prevOpen || shareUrl !== prevShareUrl || shortShareUrl !== prevShortShareUrl) {
     setPrevOpen(open)
     setPrevShareUrl(shareUrl)
+    setPrevShortShareUrl(shortShareUrl)
     setCopied(false)
     setCopyError(null)
   }
 
   const handleCopy = async () => {
-    if (!shareUrl) return
+    if (!copyTarget) return
 
     try {
-      await navigator.clipboard.writeText(shareUrl)
+      await navigator.clipboard.writeText(copyTarget)
       setCopied(true)
       setCopyError(null)
     } catch {
@@ -67,39 +71,59 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2 py-2">
-          <Label htmlFor="share-track-url">{t('shareableLink')}</Label>
-          <Input
-            id="share-track-url"
-            value={shareUrl}
-            readOnly
-            aria-label={t('shareableLink')}
-            onFocus={(event) => event.currentTarget.select()}
-          />
-          {isShortening && (
-            <p className="text-xs text-muted-foreground">
-              {t('shortLinkCreating')}
-            </p>
-          )}
-          {!isShortening && hasShortLink && (
-            <p className="text-xs text-muted-foreground">
-              {t('shortLinkCreated')}
-            </p>
-          )}
-          {!isShortening && !hasShortLink && !shortenError && (
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="share-track-long-url">{t('longShareLink')}</Label>
+            <Input
+              id="share-track-long-url"
+              value={shareUrl}
+              readOnly
+              aria-label={t('longShareLink')}
+              onFocus={(event) => event.currentTarget.select()}
+            />
             <p className="text-xs text-muted-foreground">
               {t('readonlyLinkInfo')}
             </p>
-          )}
-          {shortenError && <p className="text-xs text-destructive">{shortenError}</p>}
-          {copyError && <p className="text-xs text-destructive">{copyError}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="share-track-short-url">{t('shareableLink')}</Label>
+            <div className="relative">
+              <Input
+                id="share-track-short-url"
+                value={shortShareUrl}
+                readOnly
+                aria-label={t('shareableLink')}
+                className={isShortening ? 'pr-9' : undefined}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+              {isShortening && (
+                <Loader2
+                  className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground"
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+            {isShortening && (
+              <p className="text-xs text-muted-foreground">
+                {t('shortLinkCreating')}
+              </p>
+            )}
+            {!isShortening && hasShortLink && (
+              <p className="text-xs text-muted-foreground">
+                {t('shortLinkCreated')}
+              </p>
+            )}
+            {shortenError && <p className="text-xs text-destructive">{shortenError}</p>}
+            {copyError && <p className="text-xs text-destructive">{copyError}</p>}
+          </div>
         </div>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t('close')}
           </Button>
-          <Button type="button" onClick={handleCopy} disabled={!shareUrl}>
+          <Button type="button" onClick={handleCopy} disabled={!copyTarget}>
             {copied ? t('copied') : t('copyLink')}
           </Button>
         </DialogFooter>

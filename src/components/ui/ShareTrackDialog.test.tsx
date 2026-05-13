@@ -15,7 +15,7 @@ describe('ShareTrackDialog', () => {
     writeText.mockResolvedValue(undefined)
   })
 
-  it('shows the share URL in a readonly input', () => {
+  it('shows the long share URL in a readonly input', () => {
     render(
       <ShareTrackDialog
         open
@@ -25,7 +25,7 @@ describe('ShareTrackDialog', () => {
     )
 
     expect(screen.getByText('Track teilen')).not.toBeNull()
-    expect(screen.getByLabelText('Teilbarer Link')).toHaveProperty('readOnly', true)
+    expect(screen.getByLabelText('Langer Link')).toHaveProperty('readOnly', true)
     expect(screen.getByDisplayValue('https://sharedtrack.fpvooe.com/#abc')).not.toBeNull()
     expect(screen.getByText('Der Track öffnet sich über diesen Link im reinen Ansichtsmodus.')).not.toBeNull()
   })
@@ -51,26 +51,26 @@ describe('ShareTrackDialog', () => {
         open
         onOpenChange={vi.fn()}
         shareUrl="https://sharedtrack.fpvooe.com/#abc"
-        originalShareUrl="https://sharedtrack.fpvooe.com/#abc"
         isShortening
       />,
     )
 
     expect(screen.getByDisplayValue('https://sharedtrack.fpvooe.com/#abc')).not.toBeNull()
+    expect(screen.getByLabelText('Teilbarer Link')).toHaveProperty('value', '')
     expect(screen.getByText(/Kurzlink wird erstellt/)).not.toBeNull()
-    expect(screen.queryByRole('link', { name: 'Shortlink erzeugen' })).toBeNull()
   })
 
-  it('shows successful short-link feedback', () => {
+  it('shows successful short-link feedback without replacing the long link', () => {
     render(
       <ShareTrackDialog
         open
         onOpenChange={vi.fn()}
-        shareUrl="http://go.fpvooe.com/viMbW"
-        originalShareUrl="https://sharedtrack.fpvooe.com/#abc"
+        shareUrl="https://sharedtrack.fpvooe.com/#abc"
+        shortShareUrl="http://go.fpvooe.com/viMbW"
       />,
     )
 
+    expect(screen.getByDisplayValue('https://sharedtrack.fpvooe.com/#abc')).not.toBeNull()
     expect(screen.getByDisplayValue('http://go.fpvooe.com/viMbW')).not.toBeNull()
     expect(screen.getByText('Kurzlink erstellt.')).not.toBeNull()
   })
@@ -81,7 +81,6 @@ describe('ShareTrackDialog', () => {
         open
         onOpenChange={vi.fn()}
         shareUrl="https://sharedtrack.fpvooe.com/#abc"
-        originalShareUrl="https://sharedtrack.fpvooe.com/#abc"
         shortenError="Der Kurzlink konnte nicht erstellt werden."
       />,
     )
