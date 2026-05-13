@@ -7,6 +7,7 @@ import { useAppStore } from '../../store'
 import { StandardGate } from './StandardGate'
 import { HGate } from './HGate'
 import { DoubleHGate } from './DoubleHGate'
+import { HurdleGate } from './HurdleGate'
 import { DiveGate } from './DiveGate'
 import { DoubleGate } from './DoubleGate'
 import { LadderGate } from './LadderGate'
@@ -88,6 +89,9 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly =
       break
     case 'double-h':
       gateComponent = <DoubleHGate {...commonProps} gateId={gate.id} />
+      break
+    case 'hurdle':
+      gateComponent = <HurdleGate {...commonProps} />
       break
     case 'dive':
       gateComponent = <DiveGate {...commonProps} />

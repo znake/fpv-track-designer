@@ -103,6 +103,8 @@ function getGateTopOffset(gateType: GateType): number {
       return height * H_GATE_BACKREST_HEIGHT_MULTIPLIER
     case 'double-h':
       return height + height * H_GATE_BACKREST_HEIGHT_MULTIPLIER
+    case 'hurdle':
+      return height + height * 0.9
     case 'double':
       return height * 2 + topBarHalfThickness
     case 'ladder':
