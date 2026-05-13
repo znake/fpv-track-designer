@@ -37,7 +37,7 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
   const [saveOpen, setSaveOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [shareUrl, setShareUrl] = useState('')
-  const [originalShareUrl, setOriginalShareUrl] = useState('')
+  const [shortShareUrl, setShortShareUrl] = useState('')
   const [shareLoading, setShareLoading] = useState(false)
   const [shareError, setShareError] = useState<string | null>(null)
 
@@ -66,18 +66,17 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
 
     const longUrl = createTrackShareUrl(currentTrack, config, import.meta.env.VITE_VIEWER_DOMAIN)
     setShareUrl(longUrl)
-    setOriginalShareUrl(longUrl)
+    setShortShareUrl('')
     setShareError(null)
     setShareLoading(true)
     setShareOpen(true)
 
     void shortenTrackShareUrl(longUrl, { endpoint: getTrackShortenerEndpoint() })
       .then((shortUrl) => {
-        setShareUrl(shortUrl)
+        setShortShareUrl(shortUrl)
         setShareError(null)
       })
       .catch(() => {
-        setShareUrl(longUrl)
         setShareError(t('shareDialogError'))
       })
       .finally(() => {
@@ -183,7 +182,7 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
         open={shareOpen}
         onOpenChange={setShareOpen}
         shareUrl={shareUrl}
-        originalShareUrl={originalShareUrl}
+        shortShareUrl={shortShareUrl}
         isShortening={shareLoading}
         shortenError={shareError}
       />

@@ -87,7 +87,7 @@ describe('LeftToolPanel', () => {
     expect(screen.getByRole('button', { name: 'Track Teilen' })).toHaveProperty('disabled', true)
   })
 
-  it('opens a share dialog and replaces the long viewer URL with a short URL', async () => {
+  it('opens a share dialog and keeps the long viewer URL when the short URL arrives', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
       new Response(JSON.stringify({ shortUrl: 'http://go.fpvooe.com/viMbW' }), {
         status: 200,
@@ -101,11 +101,14 @@ describe('LeftToolPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Track Teilen' }))
 
-    const shareInput = screen.getByLabelText('Teilbarer Link')
-    expect(shareInput).toHaveProperty('value')
-    expect((shareInput as HTMLInputElement).value.startsWith('https://sharedtrack.fpvooe.com/#')).toBe(true)
+    const longShareInput = screen.getByLabelText('Langer Link')
+    const shortShareInput = screen.getByLabelText('Teilbarer Link')
+    expect(longShareInput).toHaveProperty('value')
+    expect((longShareInput as HTMLInputElement).value.startsWith('https://sharedtrack.fpvooe.com/#')).toBe(true)
+    expect(shortShareInput).toHaveProperty('value', '')
 
-    await waitFor(() => expect(shareInput).toHaveProperty('value', 'http://go.fpvooe.com/viMbW'))
+    await waitFor(() => expect(shortShareInput).toHaveProperty('value', 'http://go.fpvooe.com/viMbW'))
+    expect((longShareInput as HTMLInputElement).value.startsWith('https://sharedtrack.fpvooe.com/#')).toBe(true)
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/shorten-track',
       expect.objectContaining({
