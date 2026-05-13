@@ -32,24 +32,13 @@ describe('ThemeConfigPanel', () => {
     expect(useAppStore.getState().config.theme).toBe('night')
   })
 
-it('offers the Solarized minimal theme variants', () => {
+it('offers only the supported theme options', () => {
   render(<ThemeConfigPanel />)
 
   expect(screen.getByRole('button', { name: /Minimal Standard/i })).toBeTruthy()
-  expect(screen.getByRole('button', { name: /Minimal Solarized Light/i })).toBeTruthy()
-  expect(screen.getByRole('button', { name: /Minimal Solarized Dark/i })).toBeTruthy()
-  expect(screen.getByRole('button', { name: /Minimal Catppuccin Mocha/i })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Realistisch/i })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Nacht/i })).toBeTruthy()
 
-  fireEvent.click(screen.getByRole('button', { name: /Minimal Solarized Dark/i }))
-
-  expect(useAppStore.getState().config.theme).toBe('minimal-solarized-dark')
-})
-
-it('offers the Catppuccin minimal theme variant', () => {
-  render(<ThemeConfigPanel />)
-
-  fireEvent.click(screen.getByRole('button', { name: /Minimal Catppuccin Mocha/i }))
-
-  expect(useAppStore.getState().config.theme).toBe('minimal-catppuccin-mocha')
+  expect(screen.getAllByRole('button')).toHaveLength(3)
 })
 })

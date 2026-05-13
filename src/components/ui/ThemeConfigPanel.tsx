@@ -17,9 +17,6 @@ export function ThemeConfigPanel() {
 
   const themeOptions: Array<{ id: ThemeId; label: string; description: string }> = [
   { id: 'minimal', label: t('themeMinimal'), description: t('themeMinimalDescription') },
-  { id: 'minimal-solarized-light', label: t('themeMinimalSolarizedLight'), description: t('themeMinimalSolarizedLightDescription') },
-  { id: 'minimal-solarized-dark', label: t('themeMinimalSolarizedDark'), description: t('themeMinimalSolarizedDarkDescription') },
-  { id: 'minimal-catppuccin-mocha', label: t('themeMinimalCatppuccinMocha'), description: t('themeMinimalCatppuccinMochaDescription') },
   { id: 'realistic', label: t('themeRealistic'), description: t('themeRealisticDescription') },
   { id: 'night', label: t('themeNight'), description: t('themeNightDescription') },
 ]
