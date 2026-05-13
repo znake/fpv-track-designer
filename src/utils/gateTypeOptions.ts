@@ -5,6 +5,7 @@ export const gateTypeOptions: { type: GateType; label: string }[] = [
   { type: 'standard', label: 'Standard-Gate' },
   { type: 'h-gate', label: 'h-Gate' },
   { type: 'double-h', label: 'Doppel-h-Gate' },
+  { type: 'hurdle', label: 'Hurdle' },
   { type: 'dive', label: 'Dive-Gate' },
   { type: 'double', label: 'Doppel-Gate' },
   { type: 'ladder', label: 'Leiter-Gate' },

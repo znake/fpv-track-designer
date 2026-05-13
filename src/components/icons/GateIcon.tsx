@@ -46,6 +46,13 @@ const GATE_PATHS: Record<GateType, ReactElement> = {
       <line x1="18" y1="3" x2="18" y2="22" />
     </>
   ),
+  hurdle: (
+    <>
+      <rect x="5" y="14" width="14" height="8" />
+      <line x1="5" y1="5" x2="5" y2="22" />
+      <line x1="19" y1="5" x2="19" y2="22" />
+    </>
+  ),
   // dive: cube frame with depth (3/4 isometric), open bottom.
   dive: (
     <>
