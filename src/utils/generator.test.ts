@@ -8,6 +8,7 @@ const createTestConfig = (overrides: Partial<Config> = {}): Config => ({
     standard: 4,
     'h-gate': 2,
     'double-h': 1,
+    hurdle: 1,
     dive: 1,
     double: 1,
     ladder: 1,
@@ -153,6 +154,7 @@ const config: Config = {
         standard: 3,
         'h-gate': 0,
         'double-h': 0,
+        hurdle: 0,
         dive: 0,
         double: 0,
         ladder: 0,
@@ -213,6 +215,7 @@ const config: Config = {
         standard: 0,
         'h-gate': 0,
         'double-h': 0,
+        hurdle: 0,
         dive: 0,
         double: 1,
         ladder: 0,
@@ -238,6 +241,7 @@ const config: Config = {
         standard: 0,
         'h-gate': 1,
         'double-h': 0,
+        hurdle: 0,
         dive: 0,
         double: 0,
         ladder: 0,
@@ -263,6 +267,7 @@ const config: Config = {
         standard: 0,
         'h-gate': 0,
         'double-h': 0,
+        hurdle: 0,
         dive: 0,
         double: 0,
         ladder: 1,
@@ -289,6 +294,7 @@ const config: Config = {
         standard: 0,
         'h-gate': 0,
         'double-h': 0,
+        hurdle: 0,
         dive: 0,
         double: 0,
         ladder: 0,
@@ -303,6 +309,31 @@ const config: Config = {
     expect(tunnelGate.type).toBe('octagonal-tunnel')
     expect(track.gateSequence).toEqual([
       { gateId: tunnelGate.id, openingId: 'main', reverse: false },
+    ])
+  })
+
+  it('adds hurdle gates to the default sequence with one upper opening', () => {
+    const config = createTestConfig({
+      gateQuantities: {
+        'start-finish': 0,
+        standard: 0,
+        'h-gate': 0,
+        'double-h': 0,
+        hurdle: 1,
+        dive: 0,
+        double: 0,
+        ladder: 0,
+        flag: 0,
+        'octagonal-tunnel': 0,
+      },
+    })
+
+    const track = generateTrack(config)
+    const hurdleGate = track.gates[0]
+
+    expect(hurdleGate.type).toBe('hurdle')
+    expect(track.gateSequence).toEqual([
+      { gateId: hurdleGate.id, openingId: 'main', reverse: false },
     ])
   })
 })
