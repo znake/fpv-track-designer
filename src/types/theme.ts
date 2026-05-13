@@ -121,7 +121,7 @@ const minimalColors: ThemeColors = {
   ambientIntensity: 0.28,
 
   groundGrass: '#6F8732',
-  groundEarth: '#4A2E18',
+  groundEarth: '#7A4A24',
   groundBoundary: '#FFE8C8',
   gridColor: '#8B6B3E',
   watermarkColor: '#e8d5b0',
