@@ -78,6 +78,19 @@ describe('createDefaultGateOpenings', () => {
     expect(openings[1].id).toMatch(/^exit-(front|back|left|right)$/)
   })
 
+  it('creates one upper opening for hurdles above the closed lower body', () => {
+    const openings = createDefaultGateOpenings('hurdle')
+
+    expect(openings).toHaveLength(1)
+    expect(openings[0]).toMatchObject({
+      id: 'main',
+      position: { x: 0, y: 1.74, z: 0 },
+      width: 2.4,
+      height: 1.08,
+      rotation: 0,
+    })
+  })
+
   it('uses deterministic dive exit side for the same gate id', () => {
     const a = createDefaultGateOpenings('dive', 'same-id')
     const b = createDefaultGateOpenings('dive', 'same-id')

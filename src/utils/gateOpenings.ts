@@ -4,6 +4,8 @@ import { GATE_BASE_HEIGHT, GATE_BASE_WIDTH } from '../constants/gateDimensions'
 const BASE_WIDTH = GATE_BASE_WIDTH
 const BASE_HEIGHT = GATE_BASE_HEIGHT
 const STACK_DISTANCE = BASE_HEIGHT
+const HURDLE_WIDTH_MULTIPLIER = 2
+const HURDLE_OPENING_HEIGHT_MULTIPLIER = 0.9
 
 type DiveExitSide = 'front' | 'back' | 'left' | 'right'
 const DIVE_EXIT_SIDES: DiveExitSide[] = ['front', 'back', 'left', 'right']
@@ -215,6 +217,10 @@ export function createDefaultGateOpenings(type: GateType, gateId?: string): Gate
       ]
     case 'double-h':
       return createDoubleHGateOpenings()
+    case 'hurdle':
+      return [
+        createOpening('main', 0, height + (height * HURDLE_OPENING_HEIGHT_MULTIPLIER) / 2, 0, width * HURDLE_WIDTH_MULTIPLIER, height * HURDLE_OPENING_HEIGHT_MULTIPLIER),
+      ]
     case 'flag':
       return [
         createOpening('main', -0.45, 1.1, 0, 0.8, 1.6),
