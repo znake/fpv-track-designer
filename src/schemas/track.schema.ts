@@ -48,7 +48,7 @@ const LEGACY_GATE_TYPE_MAP = {
   asymmetric: 'double-h' as const,
 } as const
 
-const VALID_GATE_TYPES: GateType[] = ['standard', 'h-gate', 'double-h', 'dive', 'double', 'ladder', 'start-finish', 'flag', 'octagonal-tunnel']
+const VALID_GATE_TYPES: GateType[] = ['standard', 'h-gate', 'double-h', 'hurdle', 'dive', 'double', 'ladder', 'start-finish', 'flag', 'octagonal-tunnel']
 
 function isValidGateRotation(rotation: unknown): rotation is number {
   return typeof rotation === 'number' && Number.isFinite(rotation) && rotation >= 0 && rotation < 360

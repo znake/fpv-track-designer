@@ -2,6 +2,7 @@ export type GateType =
   | 'standard'
   | 'h-gate'
   | 'double-h'
+  | 'hurdle'
   | 'dive'
   | 'double'
   | 'ladder'

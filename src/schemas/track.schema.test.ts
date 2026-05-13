@@ -9,6 +9,7 @@ const config: Config = {
     standard: 1,
     'h-gate': 0,
     'double-h': 0,
+    hurdle: 0,
     dive: 0,
     double: 0,
     ladder: 0,
@@ -144,6 +145,42 @@ describe('track schema', () => {
 
     expect(result.config.gateQuantities['octagonal-tunnel']).toBe(0)
     expect(result.config.gateQuantities.standard).toBe(1)
+  })
+
+  it('round-trips hurdle gates through serialization and deserialization', () => {
+    const hurdleTrack: Track = {
+      ...track,
+      gates: [
+        {
+          id: 'hurdle-1',
+          type: 'hurdle',
+          position: { x: 0, y: 0, z: 0 },
+          rotation: 0,
+          openings: createDefaultGateOpenings('hurdle', 'hurdle-1'),
+        },
+      ],
+      gateSequence: [{ gateId: 'hurdle-1', openingId: 'main', reverse: false }],
+    }
+    const hurdleConfig: Config = {
+      ...config,
+      gateQuantities: {
+        ...config.gateQuantities,
+        standard: 0,
+        hurdle: 1,
+      },
+    }
+
+    const result = deserializeTrack(serializeTrack(hurdleTrack, hurdleConfig))
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+
+    expect(result.track.gates[0].type).toBe('hurdle')
+    expect(result.track.gates[0].openings[0]).toMatchObject({
+      id: 'main',
+      position: { x: 0, y: 1.74, z: 0 },
+    })
+    expect(result.config.gateQuantities.hurdle).toBe(1)
   })
 
   it('still rejects invalid legacy gate quantity values when the key is present', () => {
