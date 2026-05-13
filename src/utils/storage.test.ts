@@ -42,6 +42,7 @@ const createTestConfig = (): Config => ({
     standard: 6,
     'h-gate': 2,
     'double-h': 1,
+    hurdle: 1,
     dive: 1,
     double: 1,
     ladder: 1,

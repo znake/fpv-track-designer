@@ -8,6 +8,7 @@ const baseConfig: Config = {
     'start-finish': 1,
     'h-gate': 1,
     'double-h': 1,
+    'hurdle': 1,
     'dive': 1,
     'double': 1,
     'ladder': 1,

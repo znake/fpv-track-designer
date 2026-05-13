@@ -13,10 +13,11 @@ describe('ConfigSlice - default settings', () => {
     expect(defaultConfig.fieldSize.height).toBe(15)
   })
 
-  it('defines double-h, dive, flag and octagonal tunnel as 1 by default, ladder as 0 and flag as 2', () => {
+  it('defines double-h, hurdle, dive and octagonal tunnel as 1 by default, ladder as 0 and flag as 2', () => {
     const config = defaultConfig
 
     expect(config.gateQuantities['double-h']).toBe(1)
+    expect(config.gateQuantities.hurdle).toBe(1)
     expect(config.gateQuantities.dive).toBe(1)
     expect(config.gateQuantities.ladder).toBe(0)
     expect(config.gateQuantities.flag).toBe(2)
@@ -34,6 +35,7 @@ describe('ConfigSlice - default settings', () => {
     store.getState().resetToDefault()
 
     expect(store.getState().config.gateQuantities['double-h']).toBe(1)
+    expect(store.getState().config.gateQuantities.hurdle).toBe(1)
     expect(store.getState().config.gateQuantities.dive).toBe(1)
     expect(store.getState().config.gateQuantities.ladder).toBe(0)
     expect(store.getState().config.gateQuantities.flag).toBe(2)
@@ -49,6 +51,7 @@ describe('ConfigSlice - default settings', () => {
         'start-finish': 1,
         'h-gate': 0,
         'double-h': 2,
+        hurdle: 1,
         dive: 1,
         double: 0,
         ladder: 4,
