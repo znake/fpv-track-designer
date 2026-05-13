@@ -22,6 +22,14 @@ const createOctagonalTunnelGate = (id: string, x: number, z: number, reverse = f
   })),
 })
 
+const createHurdleGate = (id: string, x: number, z: number): Gate => ({
+  id,
+  type: 'hurdle',
+  position: { x, y: 0, z },
+  rotation: 0,
+  openings: createDefaultGateOpenings('hurdle'),
+})
+
 describe('calculateFlightPath', () => {
   it('returns empty path for less than 2 gates', () => {
     expect(calculateFlightPath([])).toEqual({
@@ -259,6 +267,20 @@ describe('calculateFlightPath', () => {
     expect(tunnelPass[tunnelPass.length - 1].x).toBeCloseTo(0, 5)
     expect(tunnelPass[tunnelPass.length - 1].z).toBeCloseTo(1.45, 5)
     expect(tunnelPass.every(point => Math.abs(point.x) < 0.00001)).toBe(true)
+  })
+
+  it('passes through a hurdle upper opening above the closed lower body', () => {
+    const gates = [
+      createHurdleGate('hurdle-1', 0, 0),
+      createGate('g2', 0, 0, 10),
+    ]
+
+    const path = calculateFlightPath(gates)
+    const hurdlePass = path.sampledSegments[0]
+
+    expect(hurdlePass[0].y).toBeCloseTo(1.74, 5)
+    expect(hurdlePass[hurdlePass.length - 1].y).toBeCloseTo(1.74, 5)
+    expect(hurdlePass.every(point => point.y > GATE_BASE_HEIGHT)).toBe(true)
   })
 
   it('passes through both octagonal tunnel ends when direction is reversed', () => {
