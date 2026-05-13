@@ -170,21 +170,24 @@ describe('track schema', () => {
     })
   })
 
-  it('accepts the new Catppuccin minimal theme id in track payload', () => {
-    const catppuccinPayload = JSON.stringify({
+  it('rejects unsupported theme ids in track payload', () => {
+    const unsupportedThemePayload = JSON.stringify({
       version: '1.2.0',
       track,
       config: {
         ...config,
-        theme: 'minimal-catppuccin-mocha',
+        theme: 'unsupported-theme',
       },
     })
 
-    const result = deserializeTrack(catppuccinPayload)
+    const result = deserializeTrack(unsupportedThemePayload)
 
-    expect('error' in result).toBe(false)
-    if ('error' in result) return
+    expect('error' in result).toBe(true)
+    if (!('error' in result)) return
 
-    expect(result.config.theme).toBe('minimal-catppuccin-mocha')
+    expect(result.errors).toContainEqual({
+      field: 'config.theme',
+      message: 'Theme must be one of: minimal, realistic, night',
+    })
   })
 })

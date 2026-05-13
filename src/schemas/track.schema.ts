@@ -8,9 +8,6 @@ export const SCHEMA_VERSION = '1.2.0'
 
 const VALID_THEME_IDS = [
   'minimal',
-  'minimal-solarized-light',
-  'minimal-solarized-dark',
-  'minimal-catppuccin-mocha',
   'realistic',
   'night',
 ] as const
