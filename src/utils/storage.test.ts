@@ -52,6 +52,7 @@ const createTestConfig = (): Config => ({
   },
   fieldSize: { width: 100, height: 100 },
   snapGatesToGrid: false,
+  snapGridSize: 0.3,
   showFlightPath: true,
   showOpeningLabels: true,
   showGrid: false,
@@ -120,6 +121,7 @@ describe('storage', () => {
       expect(result?.track.id).toBe('test-track-id')
       expect(result?.track.name).toBe('Test Track')
       expect(result?.config.fieldSize).toEqual({ width: 100, height: 100 })
+      expect(result?.config.snapGridSize).toBe(0.3)
     })
   })
 

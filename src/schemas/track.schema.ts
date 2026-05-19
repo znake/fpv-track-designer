@@ -1,4 +1,5 @@
 import type { Config } from '../types/config'
+import { SNAP_GRID_SIZES } from '../types/config'
 import type { Gate, GateOpening, GateType } from '../types/gate'
 import type { GateSequenceItem, Track } from '../types/track'
 import { normalizeGates } from '../utils/gateOpenings'
@@ -32,6 +33,7 @@ export interface TrackExportSchema {
     gateQuantities: Record<GateType, number>
     fieldSize: { width: number; height: number }
     snapGatesToGrid?: boolean
+    snapGridSize?: Config['snapGridSize']
     showGrid?: boolean
     showFlightPath?: boolean
     showOpeningLabels?: boolean
@@ -201,6 +203,17 @@ function validateBooleanFlag(flag: unknown, field: string): ValidationError[] {
     : [{ field, message: 'Config value must be a boolean when provided' }]
 }
 
+function isValidSnapGridSize(candidate: unknown): candidate is Config['snapGridSize'] {
+  return typeof candidate === 'number' && SNAP_GRID_SIZES.includes(candidate as Config['snapGridSize'])
+}
+
+function validateSnapGridSize(value: unknown): ValidationError[] {
+  if (value === undefined) return []
+  return isValidSnapGridSize(value)
+    ? []
+    : [{ field: 'config.snapGridSize', message: `Snap grid size must be one of: ${SNAP_GRID_SIZES.join(', ')}` }]
+}
+
 function validateGateQuantities(quantities: unknown): ValidationError[] {
   const errors: ValidationError[] = []
   const candidate = quantities as Record<string, unknown>
@@ -354,6 +367,7 @@ export function validateTrack(data: unknown): { valid: boolean; errors: Validati
     errors.push(...validateFieldSize(config.fieldSize, 'config.fieldSize'))
 
     errors.push(...validateBooleanFlag(config.snapGatesToGrid, 'config.snapGatesToGrid'))
+    errors.push(...validateSnapGridSize(config.snapGridSize))
     errors.push(...validateBooleanFlag(config.showGrid, 'config.showGrid'))
     errors.push(...validateBooleanFlag(config.showFlightPath, 'config.showFlightPath'))
     errors.push(...validateBooleanFlag(config.showOpeningLabels, 'config.showOpeningLabels'))
@@ -384,6 +398,7 @@ export function serializeTrack(track: Track, config: Config): string {
       gateQuantities: config.gateQuantities,
       fieldSize: config.fieldSize,
       snapGatesToGrid: config.snapGatesToGrid,
+      snapGridSize: config.snapGridSize,
       showGrid: config.showGrid,
       showFlightPath: config.showFlightPath,
       showOpeningLabels: config.showOpeningLabels,
@@ -429,6 +444,7 @@ export function deserializeTrack(jsonString: string): { track: Track; config: Co
       gateQuantities: normalizeGateQuantities(data.config.gateQuantities),
       fieldSize: data.config.fieldSize,
       snapGatesToGrid: data.config.snapGatesToGrid ?? false,
+      snapGridSize: data.config.snapGridSize ?? 0.3,
       showGrid: data.config.showGrid ?? false,
       showFlightPath: data.config.showFlightPath ?? true,
       showOpeningLabels: data.config.showOpeningLabels ?? true,

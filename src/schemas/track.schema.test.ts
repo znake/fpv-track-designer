@@ -19,6 +19,7 @@ const config: Config = {
   },
   fieldSize: { width: 30, height: 15 },
   snapGatesToGrid: false,
+  snapGridSize: 0.3,
   showFlightPath: true,
   showOpeningLabels: true,
   showGrid: false,
@@ -75,6 +76,7 @@ describe('track schema', () => {
     if ('error' in result) return
 
     expect(result.config.snapGatesToGrid).toBe(false)
+    expect(result.config.snapGridSize).toBe(0.3)
     expect(result.config.showGrid).toBe(false)
     expect(result.config.showFlightPath).toBe(true)
     expect(result.config.showOpeningLabels).toBe(true)
@@ -225,6 +227,37 @@ describe('track schema', () => {
     expect(result.errors).toContainEqual({
       field: 'config.theme',
       message: 'Theme must be one of: minimal, realistic, night',
+    })
+  })
+
+  it('round-trips configured snap grid size', () => {
+    const result = deserializeTrack(serializeTrack(track, { ...config, snapGatesToGrid: true, snapGridSize: 1 }))
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+
+    expect(result.config.snapGatesToGrid).toBe(true)
+    expect(result.config.snapGridSize).toBe(1)
+  })
+
+  it('rejects unsupported snap grid sizes', () => {
+    const invalidPayload = JSON.stringify({
+      version: '1.2.0',
+      track,
+      config: {
+        ...config,
+        snapGridSize: 0.25,
+      },
+    })
+
+    const result = deserializeTrack(invalidPayload)
+
+    expect('error' in result).toBe(true)
+    if (!('error' in result)) return
+
+    expect(result.errors).toContainEqual({
+      field: 'config.snapGridSize',
+      message: 'Snap grid size must be one of: 0.3, 0.5, 1',
     })
   })
 })
