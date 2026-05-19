@@ -107,4 +107,38 @@ describe('TopBar', () => {
     expect(screen.getByRole('button', { name: 'Start FPV flight' })).not.toBeNull()
     expect(window.localStorage.getItem('fpv-track-designer-language')).toBe('en')
   })
+
+  it('toggles the ground grid display setting', () => {
+    renderTopBar()
+
+    const showGridToggle = screen.getByLabelText('Grid anzeigen')
+    expect(useAppStore.getState().config.showGrid).toBe(false)
+
+    fireEvent.click(showGridToggle)
+    expect(useAppStore.getState().config.showGrid).toBe(true)
+
+    fireEvent.click(showGridToggle)
+    expect(useAppStore.getState().config.showGrid).toBe(false)
+  })
+
+  it('reveals a three-step snap precision control only when grid snap is enabled', () => {
+    renderTopBar()
+
+    expect(screen.queryByText('Snap-Genauigkeit')).toBeNull()
+
+    fireEvent.click(screen.getByLabelText('Grid-Snap'))
+
+    expect(screen.getByText('Snap-Genauigkeit')).not.toBeNull()
+    expect(screen.getByText('0,3 m')).not.toBeNull()
+    expect(screen.getByText('0,5 m')).not.toBeNull()
+    expect(screen.getByText('1 m')).not.toBeNull()
+    expect(useAppStore.getState().config.snapGatesToGrid).toBe(true)
+    expect(useAppStore.getState().config.snapGridSize).toBe(0.3)
+
+    fireEvent.click(screen.getByRole('button', { name: '1/2 Feld · 0,5 m' }))
+    expect(useAppStore.getState().config.snapGridSize).toBe(0.5)
+
+    fireEvent.click(screen.getByRole('button', { name: '1 Feld · 1,0 m' }))
+    expect(useAppStore.getState().config.snapGridSize).toBe(1)
+  })
 })

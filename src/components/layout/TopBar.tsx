@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { serializeTrack, deserializeTrack } from '@/schemas/track.schema'
+import { SNAP_GRID_SIZES, type SnapGridSize } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -41,6 +42,7 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
   const setConfig = useAppStore((state) => state.setConfig)
   const requestDestructiveAction = useAppStore((state) => state.requestDestructiveAction)
   const setSnapGatesToGrid = useAppStore((state) => state.setSnapGatesToGrid)
+  const setSnapGridSize = useAppStore((state) => state.setSnapGridSize)
   const snapAllGatesToGrid = useAppStore((state) => state.snapAllGatesToGrid)
   const setShowFlightPath = useAppStore((state) => state.setShowFlightPath)
   const setShowOpeningLabels = useAppStore((state) => state.setShowOpeningLabels)
@@ -51,6 +53,17 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
     if (enabled) {
       snapAllGatesToGrid()
     }
+  }
+
+  const snapGridSizeLabels: Record<SnapGridSize, string> = {
+    0.3: t('gridSnapPrecisionFine'),
+    0.5: t('gridSnapPrecisionHalfField'),
+    1: t('gridSnapPrecisionFullField'),
+  }
+
+  const handleSnapGridSizeChange = (nextSize: SnapGridSize) => {
+    setSnapGridSize(nextSize)
+    snapAllGatesToGrid()
   }
 
   const handleExport = () => {
@@ -234,6 +247,39 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
             {t('gridSnapDescription')}
           </TooltipContent>
         </Tooltip>
+        {config.snapGatesToGrid && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1.5 rounded-full border border-border/80 bg-surface/80 px-2 py-1 shadow-sm">
+                <span className="whitespace-nowrap text-[11px] font-medium text-foreground">
+                  {t('gridSnapPrecision')}
+                </span>
+                <div className="flex rounded-full bg-background/70 p-0.5" role="group" aria-label={t('gridSnapPrecision')}>
+                  {SNAP_GRID_SIZES.map((size) => {
+                    const isActive = config.snapGridSize === size
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => handleSnapGridSizeChange(size)}
+                        aria-pressed={isActive}
+                        aria-label={snapGridSizeLabels[size]}
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums transition-colors ${isActive
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                      >
+                        {`${size.toLocaleString(language === 'de' ? 'de-DE' : 'en-US')} m`}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              {t('gridSnapPrecisionDescription')}
+            </TooltipContent>
+          </Tooltip>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <label className="flex items-center gap-1.5">
