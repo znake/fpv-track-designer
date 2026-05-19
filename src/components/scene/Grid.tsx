@@ -107,13 +107,13 @@ export function Grid({ fieldSize = { width: 100, height: 100 }, colors, showGrid
             <bufferGeometry>
               <bufferAttribute attach="attributes-position" args={[cellPositions, 3]} />
             </bufferGeometry>
-            <lineBasicMaterial color={colors.groundBoundary} transparent opacity={0.52} depthWrite={false} toneMapped={false} />
+            <lineBasicMaterial color={colors.groundBoundary} transparent opacity={0.24} depthWrite={false} toneMapped={false} />
           </lineSegments>
           <lineSegments>
             <bufferGeometry>
               <bufferAttribute attach="attributes-position" args={[sectionPositions, 3]} />
             </bufferGeometry>
-            <lineBasicMaterial color={colors.groundBoundary} transparent opacity={0.82} depthWrite={false} toneMapped={false} />
+            <lineBasicMaterial color={colors.groundBoundary} transparent opacity={0.46} depthWrite={false} toneMapped={false} />
           </lineSegments>
         </group>
       )}
