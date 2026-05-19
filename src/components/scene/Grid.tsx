@@ -1,7 +1,7 @@
+import { useMemo } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
-import { Grid as DreiGrid, Text } from '@react-three/drei'
+import { Text } from '@react-three/drei'
 import { useAppStore } from '../../store'
-import { GATE_BASE_WIDTH } from '../../constants/gateDimensions'
 import type { ThemeColors } from '../../types/theme'
 
 function isCameraTouchGesture(e: ThreeEvent<MouseEvent>) {
@@ -26,8 +26,31 @@ export function Grid({ fieldSize = { width: 100, height: 100 }, colors, showGrid
   const watermarkSize = Math.max(6, Math.min(fieldSize.width / 5.2, fieldSize.height * 0.32))
   const selectGate = useAppStore((state) => state.selectGate)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
-  const cellSize = GATE_BASE_WIDTH
+  const gridCellSize = 1
+  const sectionSize = 5
   const boundaryThickness = 0.035
+
+  const { cellPositions, sectionPositions } = useMemo(() => {
+    const cells: number[] = []
+    const sections: number[] = []
+
+    const pushLine = (target: number[], startX: number, startZ: number, endX: number, endZ: number) => {
+      target.push(startX, 0, startZ, endX, 0, endZ)
+    }
+
+    for (let x = Math.ceil(-halfW); x <= Math.floor(halfW); x += gridCellSize) {
+      pushLine(x % sectionSize === 0 ? sections : cells, x, -halfH, x, halfH)
+    }
+
+    for (let z = Math.ceil(-halfH); z <= Math.floor(halfH); z += gridCellSize) {
+      pushLine(z % sectionSize === 0 ? sections : cells, -halfW, z, halfW, z)
+    }
+
+    return {
+      cellPositions: new Float32Array(cells),
+      sectionPositions: new Float32Array(sections),
+    }
+  }, [halfH, halfW])
 
   const handleGroundClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
@@ -79,21 +102,20 @@ export function Grid({ fieldSize = { width: 100, height: 100 }, colors, showGrid
       </group>
 
       {showGrid && (
-        <>
-          {/* Grid lines using drei Grid helper */}
-          <DreiGrid
-            position={[0, 0.01, 0]}
-            args={[fieldSize.width, fieldSize.height]}
-            cellSize={cellSize}
-            cellThickness={0.5}
-            cellColor={colors.gridColor}
-            sectionSize={5}
-            sectionThickness={0}
-            sectionColor={colors.gridColor}
-            fadeDistance={200}
-            fadeStrength={1}
-          />
-        </>
+        <group position={[0, 0.035, 0]} renderOrder={1}>
+          <lineSegments>
+            <bufferGeometry>
+              <bufferAttribute attach="attributes-position" args={[cellPositions, 3]} />
+            </bufferGeometry>
+            <lineBasicMaterial color={colors.groundBoundary} transparent opacity={0.52} depthWrite={false} toneMapped={false} />
+          </lineSegments>
+          <lineSegments>
+            <bufferGeometry>
+              <bufferAttribute attach="attributes-position" args={[sectionPositions, 3]} />
+            </bufferGeometry>
+            <lineBasicMaterial color={colors.groundBoundary} transparent opacity={0.82} depthWrite={false} toneMapped={false} />
+          </lineSegments>
+        </group>
       )}
 
       {/* Subtle field branding */}
