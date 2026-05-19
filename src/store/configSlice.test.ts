@@ -60,6 +60,7 @@ describe('ConfigSlice - default settings', () => {
       },
       fieldSize: { width: 42, height: 24 },
       snapGatesToGrid: true,
+      snapGridSize: 0.5,
       showFlightPath: false,
       showOpeningLabels: false,
       showGrid: true,
@@ -68,7 +69,17 @@ describe('ConfigSlice - default settings', () => {
 
     expect(store.getState().config.fieldSize).toEqual({ width: 42, height: 24 })
     expect(store.getState().config.snapGatesToGrid).toBe(true)
+    expect(store.getState().config.snapGridSize).toBe(0.5)
     expect(store.getState().config.showFlightPath).toBe(false)
     expect(store.getState().config.gateQuantities.ladder).toBe(4)
+  })
+
+  it('updates the snap grid size independently from the snap toggle', () => {
+    const store = createTestStore()
+
+    store.getState().setSnapGridSize(1)
+
+    expect(store.getState().config.snapGridSize).toBe(1)
+    expect(store.getState().config.snapGatesToGrid).toBe(false)
   })
 })

@@ -17,6 +17,7 @@ const baseConfig: Config = {
   },
   fieldSize: { width: 30, height: 15 },
   snapGatesToGrid: false,
+  snapGridSize: 0.3,
   showGrid: false,
   showFlightPath: true,
   showOpeningLabels: true,
@@ -84,6 +85,7 @@ describe('hasConfigDrift', () => {
   it('ignores non-generation config fields', () => {
     const config = makeConfig({
       snapGatesToGrid: true,
+      snapGridSize: 1,
       showFlightPath: false,
       showOpeningLabels: false,
     })

@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand'
-import type { Config, GateType, ThemeId } from '../types'
+import type { Config, GateType, SnapGridSize, ThemeId } from '../types'
 
 export interface ConfigSlice {
   config: Config
@@ -7,6 +7,7 @@ export interface ConfigSlice {
   setGateQuantity: (type: GateType, quantity: number) => void
   setFieldSize: (width: number, height: number) => void
   setSnapGatesToGrid: (value: boolean) => void
+  setSnapGridSize: (value: SnapGridSize) => void
   setShowGrid: (value: boolean) => void
   setShowFlightPath: (value: boolean) => void
   setShowOpeningLabels: (value: boolean) => void
@@ -29,6 +30,7 @@ export const defaultConfig: Config = {
   },
   fieldSize: { width: 30, height: 15 },
   snapGatesToGrid: false,
+  snapGridSize: 0.3,
   showGrid: false,
   showFlightPath: true,
   showOpeningLabels: true,
@@ -49,6 +51,9 @@ export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> =
   })),
   setSnapGatesToGrid: (value) => set((state) => ({
     config: { ...state.config, snapGatesToGrid: value },
+  })),
+  setSnapGridSize: (value) => set((state) => ({
+    config: { ...state.config, snapGridSize: value },
   })),
   setShowGrid: (value) => set((state) => ({
     config: { ...state.config, showGrid: value },
