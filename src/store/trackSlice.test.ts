@@ -30,9 +30,9 @@ const createTestStore = () => {
   }))
 }
 
-const createSnapTestStore = (config: Pick<Config, 'snapGatesToGrid'>) => {
-  return create<TrackSlice & { config: Pick<Config, 'fieldSize' | 'snapGatesToGrid'> }>()((set, get, store) => ({
-    config: { fieldSize: { width: 100, height: 100 }, ...config },
+const createSnapTestStore = (config: Pick<Config, 'snapGatesToGrid'> & Partial<Pick<Config, 'snapGridSize'>>) => {
+  return create<TrackSlice & { config: Pick<Config, 'fieldSize' | 'snapGatesToGrid' | 'snapGridSize'> }>()((set, get, store) => ({
+    config: { fieldSize: { width: 100, height: 100 }, snapGridSize: 0.3, ...config },
     ...createTrackSlice(set, get, store),
   }))
 }
@@ -196,6 +196,36 @@ describe('TrackSlice - Undo/Redo', () => {
     const gate = snapStore.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
     expect(gate?.position.x).toBeCloseTo(0.3, 9)
     expect(gate?.position.z).toBeCloseTo(0.6, 9)
+  })
+
+  it('should use the configured half-field snap size for position and height', () => {
+    const snapStore = createSnapTestStore({ snapGatesToGrid: true, snapGridSize: 0.5 })
+    const track = createTestTrack([
+      createTestGate('gate-1'),
+    ])
+
+    snapStore.getState().setTrack(track)
+    snapStore.getState().setGatePosition('gate-1', { x: 0.76, y: 1.24, z: -0.26 })
+
+    const gate = snapStore.getState().currentTrack?.gates.find(g => g.id === 'gate-1')
+    expect(gate?.position).toEqual({ x: 1, y: 1, z: -0.5 })
+  })
+
+  it('should use the configured full-field snap size for all-gate alignment', () => {
+    const snapStore = createSnapTestStore({ snapGatesToGrid: true, snapGridSize: 1 })
+    const track = createTestTrack([
+      createTestGate('gate-1', { position: { x: 1.4, y: 0.6, z: -1.6 } }),
+      createTestGate('gate-2', { position: { x: 2.49, y: 2.51, z: 2.49 } }),
+    ])
+
+    snapStore.getState().setTrack(track)
+    snapStore.getState().snapAllGatesToGrid()
+
+    const positions = snapStore.getState().currentTrack?.gates.map((gate) => gate.position) ?? []
+    expect(positions).toEqual([
+      { x: 1, y: 1, z: -2 },
+      { x: 2, y: 3, z: 2 },
+    ])
   })
 
   it('should clamp vertical drag positions before snapping them to the active grid', () => {

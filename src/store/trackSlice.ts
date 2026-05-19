@@ -65,7 +65,7 @@ export interface PendingDestructiveAction {
 }
 
 interface SnapGridState {
-  config?: Pick<Config, 'fieldSize' | 'snapGatesToGrid'>
+  config?: Pick<Config, 'fieldSize' | 'snapGatesToGrid' | 'snapGridSize'>
 }
 
 export interface TrackSlice {
@@ -174,26 +174,25 @@ function getSelectionState(track: Track, selectedGateId: string | null, selected
 }
 
 // Gates share their base footprint with the gate opening geometry.
-// The snap step is 1/4 of the gate footprint so gates can be aligned edge-to-edge
-// (every 4 steps) while still allowing finer placement in between for fine-tuning.
+// The default snap step is 1/4 of the gate footprint (0.3m), while the user can
+// choose coarser 0.5m or 1m field-cell steps for faster alignment.
 const GATE_BASE_FOOTPRINT = GATE_BASE_WIDTH
-const SNAP_SUBDIVISIONS = 4
+const DEFAULT_SNAP_STEP = GATE_BASE_FOOTPRINT / 4
 
-function getSnapStep(): number {
-  return GATE_BASE_FOOTPRINT / SNAP_SUBDIVISIONS
+function getSnapStep(state: SnapGridState): number {
+  return state.config?.snapGridSize ?? DEFAULT_SNAP_STEP
 }
 
-function snapCoordinate(value: number): number {
-  const step = getSnapStep()
+function snapCoordinate(value: number, step: number): number {
   return Math.round(value / step) * step
 }
 
-function snapGatePosition(position: Gate['position']): Gate['position'] {
+function snapGatePosition(position: Gate['position'], step: number): Gate['position'] {
   return {
     ...position,
-    x: snapCoordinate(position.x),
-    y: snapCoordinate(position.y),
-    z: snapCoordinate(position.z),
+    x: snapCoordinate(position.x, step),
+    y: snapCoordinate(position.y, step),
+    z: snapCoordinate(position.z, step),
   }
 }
 
@@ -219,9 +218,10 @@ function prepareGatePosition(
   position: Gate['position'],
   snapToGrid: boolean,
   fieldSize: Config['fieldSize'],
+  snapStep: number,
 ): Gate['position'] {
   const clampedPosition = clampGateHeight(position)
-  const snappedPosition = snapToGrid ? snapGatePosition(clampedPosition) : clampedPosition
+  const snappedPosition = snapToGrid ? snapGatePosition(clampedPosition, snapStep) : clampedPosition
   return clampGatePositionToField(snappedPosition, fieldSize)
 }
 
@@ -330,9 +330,10 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
   setGatePosition: (gateId, position) => set((state) => {
     if (!state.currentTrack) return state
     const snapToGrid = shouldSnapToGrid(state)
+    const snapStep = getSnapStep(state)
     const fieldSize = getActiveFieldSize(state)
     if (!fieldSize) return state
-    const nextPosition = prepareGatePosition(position, snapToGrid, fieldSize)
+    const nextPosition = prepareGatePosition(position, snapToGrid, fieldSize, snapStep)
     const dragHistoryEntry = state.dragHistoryEntry ?? createHistoryEntry(state)
     return {
       currentTrack: {
@@ -347,6 +348,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
   snapAllGatesToGrid: () => set((state) => {
     if (!state.currentTrack) return state
     if (!shouldSnapToGrid(state)) return state
+    const snapStep = getSnapStep(state)
     const fieldSize = getActiveFieldSize(state)
     if (!fieldSize) return state
 
@@ -357,7 +359,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
         ...state.currentTrack,
         gates: state.currentTrack.gates.map((gate) => ({
           ...gate,
-          position: prepareGatePosition(gate.position, true, fieldSize),
+          position: prepareGatePosition(gate.position, true, fieldSize, snapStep),
         })),
         updatedAt: new Date().toISOString(),
       }),
@@ -391,6 +393,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
     const deltas = { N: { z: -distance }, S: { z: distance }, E: { x: distance }, W: { x: -distance } }
     const delta = deltas[direction]
     const snapToGrid = shouldSnapToGrid(state)
+    const snapStep = getSnapStep(state)
     const fieldSize = getActiveFieldSize(state)
     if (!fieldSize) return state
     return {
@@ -398,7 +401,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
         ...state.currentTrack,
         gates: state.currentTrack.gates.map((g) =>
           g.id === gateId
-            ? { ...g, position: prepareGatePosition(translateGatePosition(g.position, delta), snapToGrid, fieldSize) }
+            ? { ...g, position: prepareGatePosition(translateGatePosition(g.position, delta), snapToGrid, fieldSize, snapStep) }
             : g,
         ),
         updatedAt: new Date().toISOString(),
@@ -415,6 +418,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
     const deltas = { N: { z: -distance }, S: { z: distance }, E: { x: distance }, W: { x: -distance } }
     const delta = deltas[direction]
     const snapToGrid = shouldSnapToGrid(state)
+    const snapStep = getSnapStep(state)
     const fieldSize = getActiveFieldSize(state)
     if (!fieldSize) return state
 
@@ -423,7 +427,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
         ...state.currentTrack,
         gates: state.currentTrack.gates.map((g) =>
           selectedIds.has(g.id)
-            ? { ...g, position: prepareGatePosition(translateGatePosition(g.position, delta), snapToGrid, fieldSize) }
+            ? { ...g, position: prepareGatePosition(translateGatePosition(g.position, delta), snapToGrid, fieldSize, snapStep) }
             : g,
         ),
         updatedAt: new Date().toISOString(),
