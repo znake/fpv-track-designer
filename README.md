@@ -149,4 +149,5 @@ Der Build führt zuerst den TypeScript-Projektcheck aus und erstellt danach die 
 
 ## Lizenz
 
-Falls du das Projekt veröffentlichst, ergänze hier noch die gewünschte Lizenz, zum Beispiel MIT.
+Dieses Projekt ist unter der GNU General Public License v3.0 lizenziert.
+Details stehen in der Datei [LICENSE](./LICENSE).
