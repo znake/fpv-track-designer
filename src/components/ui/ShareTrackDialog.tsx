@@ -1,6 +1,6 @@
 import type { FC } from 'react'
-import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Download, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useTranslation } from '@/i18n'
+import { createTrackQrCodeSvg, downloadTrackQrCodePng, downloadTrackQrCodeSvg } from '@/utils/qrCode'
 
 interface ShareTrackDialogProps {
   open: boolean
@@ -34,6 +35,9 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState<string | null>(null)
+  const [qrError, setQrError] = useState<string | null>(null)
+  const [qrPreviewSvg, setQrPreviewSvg] = useState<string | null>(null)
+  const [qrPreviewFailed, setQrPreviewFailed] = useState(false)
   const [prevOpen, setPrevOpen] = useState(open)
   const [prevShareUrl, setPrevShareUrl] = useState(shareUrl)
   const [prevShortShareUrl, setPrevShortShareUrl] = useState(shortShareUrl)
@@ -46,7 +50,33 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
     setPrevShortShareUrl(shortShareUrl)
     setCopied(false)
     setCopyError(null)
+    setQrError(null)
+    setQrPreviewSvg(null)
+    setQrPreviewFailed(false)
   }
+
+  useEffect(() => {
+    if (!open || isShortening || !shortShareUrl) return
+
+    let cancelled = false
+    createTrackQrCodeSvg(shortShareUrl)
+      .then((svg) => {
+        if (!cancelled) {
+          setQrPreviewSvg(svg)
+          setQrPreviewFailed(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setQrPreviewSvg(null)
+          setQrPreviewFailed(true)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, isShortening, shortShareUrl])
 
   const handleCopy = async () => {
     if (!copyTarget) return
@@ -61,9 +91,24 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
     }
   }
 
+  const handleQrDownload = async (format: 'png' | 'svg') => {
+    if (!shortShareUrl) return
+
+    try {
+      setQrError(null)
+      if (format === 'png') {
+        await downloadTrackQrCodePng(shortShareUrl)
+      } else {
+        await downloadTrackQrCodeSvg(shortShareUrl)
+      }
+    } catch {
+      setQrError(t('qrCodeError'))
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[calc(100dvh-2rem)]">
         <DialogHeader>
           <DialogTitle>{t('shareDialogTitle')}</DialogTitle>
           <DialogDescription>
@@ -116,6 +161,45 @@ export const ShareTrackDialog: FC<ShareTrackDialogProps> = ({
             )}
             {shortenError && <p className="text-xs text-destructive">{shortenError}</p>}
             {copyError && <p className="text-xs text-destructive">{copyError}</p>}
+            {!isShortening && hasShortLink && (
+              <div className="space-y-2 pt-1">
+                <Label>{t('qrCodeSection')}</Label>
+                {qrPreviewSvg && (
+                  <div
+                    data-qr-preview=""
+                    className="flex justify-center rounded-lg border bg-white p-2 [&_svg]:h-36 [&_svg]:w-36"
+                    dangerouslySetInnerHTML={{ __html: qrPreviewSvg }}
+                  />
+                )}
+                <div className="flex justify-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label={t('downloadQrPng')}
+                    onClick={() => void handleQrDownload('png')}
+                  >
+                  <Download aria-hidden="true" />
+                  {t('qrCodePng')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label={t('downloadQrSvg')}
+                    onClick={() => void handleQrDownload('svg')}
+                  >
+                  <Download aria-hidden="true" />
+                  {t('qrCodeSvg')}
+                  </Button>
+                </div>
+                {(qrPreviewFailed || qrError) && (
+                  <p className="text-xs text-destructive">
+                    {qrPreviewFailed ? t('qrCodeError') : qrError}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
