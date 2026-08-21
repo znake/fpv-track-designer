@@ -32,6 +32,7 @@ interface InsertControlConfig {
 const RAYCASTER = new Raycaster()
 const BASE_GATE_HEIGHT = 1.2
 const FLAG_BASE_HEIGHT = 2
+const FLAG_SMALL_BASE_HEIGHT = 1.2
 const POST_THICKNESS = 0.06
 const H_GATE_BACKREST_HEIGHT_MULTIPLIER = 1.85
 const HANDLE_CLEARANCE_ABOVE_GATE = 0.5
@@ -113,6 +114,8 @@ function getGateTopOffset(gateType: GateType): number {
       return height + 0.375
     case 'flag':
       return FLAG_BASE_HEIGHT
+    case 'flag-small':
+      return FLAG_SMALL_BASE_HEIGHT
     case 'octagonal-tunnel':
     case 'dive':
     case 'standard':

@@ -13,6 +13,7 @@ import { DoubleGate } from './DoubleGate'
 import { LadderGate } from './LadderGate'
 import { StartFinishGate } from './StartFinishGate'
 import { Flag } from './Flag'
+import { FlagSmall } from './FlagSmall'
 import { OctagonalTunnelGate } from './OctagonalTunnelGate'
 import { GateHandles } from './GateHandles'
 
@@ -107,6 +108,9 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly =
       break
     case 'flag':
       gateComponent = <Flag {...commonProps} />
+      break
+    case 'flag-small':
+      gateComponent = <FlagSmall {...commonProps} />
       break
     case 'octagonal-tunnel':
       gateComponent = <OctagonalTunnelGate {...commonProps} />

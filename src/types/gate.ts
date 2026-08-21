@@ -8,6 +8,7 @@ export type GateType =
   | 'ladder'
   | 'start-finish'
   | 'flag'
+  | 'flag-small'
   | 'octagonal-tunnel';
 
 export interface GateOpening {

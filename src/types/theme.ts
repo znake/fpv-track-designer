@@ -138,6 +138,7 @@ const minimalColors: ThemeColors = {
     'ladder': { normal: '#F97316', selected: '#FB923C' },
     'start-finish': { normal: '#F5F5F5', selected: '#F5F5F5' },
     'flag': { normal: '#DC2626', selected: '#EF4444' },
+    'flag-small': { normal: '#DC2626', selected: '#EF4444' },
     'octagonal-tunnel': { normal: '#06B6D4', selected: '#22D3EE' },
   },
 
@@ -194,6 +195,7 @@ const realisticColors: ThemeColors = {
     'ladder': { normal: '#F97316', selected: '#FB923C' },
     'start-finish': { normal: '#F5F5F5', selected: '#F5F5F5' },
     'flag': { normal: '#DC2626', selected: '#EF4444' },
+    'flag-small': { normal: '#DC2626', selected: '#EF4444' },
     'octagonal-tunnel': { normal: '#06B6D4', selected: '#22D3EE' },
   },
 
@@ -251,6 +253,7 @@ const nightColors: ThemeColors = {
     'ladder': { normal: '#FF9100', selected: '#FFB74D' },
     'start-finish': { normal: '#E0E0E0', selected: '#FFFFFF' },
     'flag': { normal: '#FF3D00', selected: '#FF6E40' },
+    'flag-small': { normal: '#FF3D00', selected: '#FF6E40' },
     'octagonal-tunnel': { normal: '#00E676', selected: '#69F0AE' },
   },
 
@@ -267,6 +270,7 @@ const nightColors: ThemeColors = {
     'ladder': 1.9,
     'start-finish': 1.4,
     'flag': 3.6,
+    'flag-small': 3.6,
     'octagonal-tunnel': 1.25,
   },
 

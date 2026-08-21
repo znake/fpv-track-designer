@@ -10,7 +10,8 @@ import type { GateType } from '@/types'
  *
  * - Posts/crossbars are 1.2m, stacks are 1.2m apart, h-gate backrest is +1.02m,
  *   the start-finish gate has a sign panel on top, the flag is just a 2m pole
- *   with a small plate, and the octagonal tunnel is a flat-bottom regular
+ *   with a small plate, the small flag is a 1m pole with a proportionally
+ *   smaller plate, and the octagonal tunnel is a flat-bottom regular
  *   octagon (with an inset octagon hinting at the tunnel depth).
  *
  * View is a clean front-view (or 3/4 isometric for the dive cube) so the
@@ -102,6 +103,13 @@ const GATE_PATHS: Record<GateType, ReactElement> = {
     <>
       <line x1="9" y1="2" x2="9" y2="22" />
       <rect x="9" y="3" width="9" height="6" />
+    </>
+  ),
+  // flag-small: standard-height pole + proportionally smaller flag plate on top of it.
+  'flag-small': (
+    <>
+      <line x1="9" y1="7" x2="9" y2="22" />
+      <rect x="9" y="7" width="8" height="5" />
     </>
   ),
   // octagonal-tunnel: flat-bottom regular octagon + inset octagon for depth hint.

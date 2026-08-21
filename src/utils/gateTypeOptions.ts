@@ -10,5 +10,6 @@ export const gateTypeOptions: { type: GateType; label: string }[] = [
   { type: 'double', label: 'Doppel-Gate' },
   { type: 'ladder', label: 'Leiter-Gate' },
   { type: 'flag', label: 'Flaggen-Gate' },
+  { type: 'flag-small', label: 'Flaggen-Gate klein' },
   { type: 'octagonal-tunnel', label: 'Tunnel' },
 ]

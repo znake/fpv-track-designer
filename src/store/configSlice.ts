@@ -26,6 +26,7 @@ export const defaultConfig: Config = {
     'double': 1,
     'ladder': 0,
     'flag': 2,
+    'flag-small': 0,
     'octagonal-tunnel': 1,
   },
   fieldSize: { width: 30, height: 15 },

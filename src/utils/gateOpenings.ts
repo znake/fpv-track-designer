@@ -225,6 +225,10 @@ export function createDefaultGateOpenings(type: GateType, gateId?: string): Gate
       return [
         createOpening('main', -0.45, 1.1, 0, 0.8, 1.6),
       ]
+    case 'flag-small':
+      return [
+        createOpening('main', -0.35, 0.6, 0, 0.6, 1.2),
+      ]
     case 'octagonal-tunnel':
       return [createOpening('main', 0, height / 2, -1, width, height)]
     case 'standard':

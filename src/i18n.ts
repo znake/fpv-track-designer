@@ -400,6 +400,7 @@ const gateTypeLabels: Record<Language, Record<GateType, string>> = {
     double: 'Doppel-Gate',
     ladder: 'Leiter-Gate',
     flag: 'Flaggen-Gate',
+    'flag-small': 'Flaggen-Gate klein',
     'octagonal-tunnel': 'Tunnel',
   },
   en: {
@@ -412,6 +413,7 @@ const gateTypeLabels: Record<Language, Record<GateType, string>> = {
     double: 'Double Gate',
     ladder: 'Ladder Gate',
     flag: 'Flag Gate',
+    'flag-small': 'Small Flag Gate',
     'octagonal-tunnel': 'Tunnel',
   },
 }
