@@ -276,7 +276,7 @@ function App() {
       <Dialog open={pendingGateInsertion !== null} onOpenChange={(open) => {
         if (!open) closeGateInsertionDialog()
       }}>
-        <DialogContent>
+        <DialogContent className="max-h-[calc(100dvh-2rem)]">
           <DialogHeader>
             <DialogTitle>{t('insertGateTitle')}</DialogTitle>
             <DialogDescription>
