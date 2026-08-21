@@ -17,16 +17,16 @@ export interface ConfigSlice {
 
 export const defaultConfig: Config = {
   gateQuantities: {
-    'standard': 4,
+    'standard': 3,
     'start-finish': 1,
-    'h-gate': 3,
-    'double-h': 1,
-    'hurdle': 1,
+    'h-gate': 2,
+    'double-h': 0,
+    'hurdle': 0,
     'dive': 1,
     'double': 1,
     'ladder': 0,
-    'flag': 2,
-    'flag-small': 0,
+    'flag': 1,
+    'flag-small': 1,
     'octagonal-tunnel': 1,
   },
   fieldSize: { width: 30, height: 15 },
