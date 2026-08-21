@@ -13,6 +13,7 @@ const baseConfig: Config = {
     'double': 1,
     'ladder': 1,
     'flag': 1,
+    'flag-small': 0,
     'octagonal-tunnel': 1,
   },
   fieldSize: { width: 30, height: 15 },

@@ -15,6 +15,7 @@ const config: Config = {
     ladder: 0,
     'start-finish': 0,
     flag: 0,
+    'flag-small': 0,
     'octagonal-tunnel': 0,
   },
   fieldSize: { width: 30, height: 15 },
@@ -52,6 +53,42 @@ describe('track schema', () => {
     if ('error' in result) return
 
     expect(result.track.gates[0].rotation).toBe(91.5999755859375)
+  })
+
+  it('imports small flag gates and fills missing flag-small quantities with 0', () => {
+    const smallFlagPayload = JSON.stringify({
+      version: '1.2.0',
+      track: {
+        ...track,
+        gates: [
+          {
+            id: 'gate-small-1',
+            type: 'flag-small',
+            position: { x: 2, y: 0, z: 1 },
+            rotation: 90,
+            openings: createDefaultGateOpenings('flag-small', 'gate-small-1'),
+          },
+        ],
+        gateSequence: [{ gateId: 'gate-small-1', openingId: 'main', reverse: false }],
+      },
+      config: {
+        gateQuantities: { standard: 1 },
+        fieldSize: { width: 30, height: 15 },
+      },
+    })
+
+    const result = deserializeTrack(smallFlagPayload)
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+
+    expect(result.track.gates[0].type).toBe('flag-small')
+    expect(result.track.gates[0].openings[0]).toMatchObject({
+      id: 'main',
+      width: 0.6,
+      height: 1.2,
+    })
+    expect(result.config.gateQuantities['flag-small']).toBe(0)
   })
 
   it('fills missing optional config display flags with defaults when importing legacy payloads', () => {

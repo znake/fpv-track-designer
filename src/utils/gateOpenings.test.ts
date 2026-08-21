@@ -176,4 +176,18 @@ describe('createDefaultGateOpenings', () => {
     expect(normalized.openings[1].reverse).toBe(true)
     expect(normalized.openings[2].reverse).toBeUndefined()
   })
+
+  it('creates a half-width, standard-height opening for small flags with a standard-height pole', () => {
+    const openings = createDefaultGateOpenings('flag-small')
+
+    expect(openings).toHaveLength(1)
+    expect(openings.map((opening) => opening.id)).toEqual(['main'])
+    // Opening sits beside the pole, right edge adjacent like the regular flag
+    expect(openings[0].position.x).toBe(-0.35)
+    // Vertically centered on the 1.2m pole (same ground clearance as the flag gate)
+    expect(openings[0].position.y).toBeCloseTo(0.6, 9)
+    // Half the width of a standard gate opening (1.2), same height (1.2)
+    expect(openings[0].width).toBeCloseTo(0.6, 9)
+    expect(openings[0].height).toBeCloseTo(1.2, 9)
+  })
 })

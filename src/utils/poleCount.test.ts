@@ -22,6 +22,7 @@ describe('POLES_PER_GATE', () => {
       'double': 6,
       'ladder': 9,
       'flag': 2,
+      'flag-small': 1,
       'dive': 0,
       'octagonal-tunnel': 0,
     })

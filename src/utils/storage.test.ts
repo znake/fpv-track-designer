@@ -48,6 +48,7 @@ const createTestConfig = (): Config => ({
     ladder: 1,
     'start-finish': 1,
     flag: 1,
+    'flag-small': 0,
     'octagonal-tunnel': 1,
   },
   fieldSize: { width: 100, height: 100 },

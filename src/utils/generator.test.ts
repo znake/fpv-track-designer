@@ -13,6 +13,7 @@ const createTestConfig = (overrides: Partial<Config> = {}): Config => ({
     double: 1,
     ladder: 1,
     flag: 0,
+    'flag-small': 0,
     'octagonal-tunnel': 1,
   },
   fieldSize: { width: 50, height: 50 },
@@ -160,6 +161,7 @@ const config: Config = {
         double: 0,
         ladder: 0,
         flag: 0,
+        'flag-small': 0,
         'octagonal-tunnel': 0,
   },
   fieldSize: { width: 50, height: 50 },
@@ -222,6 +224,7 @@ const config: Config = {
         double: 1,
         ladder: 0,
         flag: 0,
+        'flag-small': 0,
         'octagonal-tunnel': 0,
       },
     })
@@ -248,6 +251,7 @@ const config: Config = {
         double: 0,
         ladder: 0,
         flag: 0,
+        'flag-small': 0,
         'octagonal-tunnel': 0,
       },
     })
@@ -274,6 +278,7 @@ const config: Config = {
         double: 0,
         ladder: 1,
         flag: 0,
+        'flag-small': 0,
         'octagonal-tunnel': 0,
       },
     })
@@ -301,6 +306,7 @@ const config: Config = {
         double: 0,
         ladder: 0,
         flag: 0,
+        'flag-small': 0,
         'octagonal-tunnel': 1,
       },
     })
@@ -326,6 +332,7 @@ const config: Config = {
         double: 0,
         ladder: 0,
         flag: 0,
+        'flag-small': 0,
         'octagonal-tunnel': 0,
       },
     })
