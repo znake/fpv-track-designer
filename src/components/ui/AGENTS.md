@@ -1,11 +1,12 @@
 # UI Components — Panels, Dialogs & shadcn Primitives
 
-**Domain:** 34 UI files: editor panels/dialogs, shadcn/Radix primitives, variant helpers
+**Domain:** 36 UI files: editor panels/dialogs, shadcn/Radix primitives, variant helpers
 
 ## STRUCTURE
 ```
 ui/
-├── GateConfigPanel.tsx       # Gate quantities, field size, theme settings
+├── GateConfigPanel.tsx       # Gate quantities + field size settings
+├── ThemeConfigPanel.tsx      # Theme preset picker (minimal/realistic/night)
 ├── ApplyConfigFooter.tsx     # Apply/discard footer for config changes
 ├── SaveTrackDialog.tsx       # Name + save track to localStorage
 ├── TrackGallery.tsx          # Saved tracks list with load/delete/duplicate
@@ -23,13 +24,14 @@ ui/
 - shadcn primitives import `cn` from `@/lib/utils` and keep Radix composition patterns.
 - Variant files (`button-variants.ts`, `badge-variants.ts`, `tabs-variants.ts`, `toggle-variants.ts`) own `cva` class maps.
 - Theme-aware visual language uses dark cockpit surfaces, sky-blue/slate panels, and warm yellow primary accents.
-- Dialog copy is currently German; keep user-facing viewer/editor strings consistent.
+- All user-facing copy goes through `useTranslation()`; add DE + EN keys together in `src/i18n.ts`.
 - Destructive editor actions use `UnsavedChangesDialog`, not ad-hoc confirm dialogs.
 
 ## WHERE TO LOOK
 | Task | File |
 |------|------|
-| Gate quantities / field / theme settings | `GateConfigPanel.tsx`, `ApplyConfigFooter.tsx` |
+| Gate quantities / field size | `GateConfigPanel.tsx`, `ApplyConfigFooter.tsx` |
+| Theme preset picker | `ThemeConfigPanel.tsx`, `src/types/theme.ts` |
 | Save current track | `SaveTrackDialog.tsx` |
 | Load/delete/duplicate saved tracks | `TrackGallery.tsx` |
 | Share current track | `ShareTrackDialog.tsx`, `src/utils/shareTrack.ts` |
@@ -38,6 +40,6 @@ ui/
 | Primitive styling | primitive file + matching `*-variants.ts` if present |
 
 ## TESTING
-- Co-located RTL tests exist for `GateConfigPanel`, `TrackGallery`, and `ShareTrackDialog`.
+- Co-located RTL tests exist for `GateConfigPanel`, `ThemeConfigPanel`, `TrackGallery`, and `ShareTrackDialog`.
 - Mock browser APIs locally in the relevant suite (`localStorage`, clipboard, URL, random UUID).
 - Do not snapshot broad shadcn output; test app behavior and accessible labels instead.

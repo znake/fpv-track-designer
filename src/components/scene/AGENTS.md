@@ -8,6 +8,7 @@ scene/
 ├── Scene.tsx              # Single Canvas owner and theme-specific scene composition
 ├── Grid.tsx               # Ground plane + field boundary + drei Grid
 ├── FlightPath.tsx         # Native THREE.Line segments + direction arrows
+├── FpvFlyThrough.tsx      # Automated first-person flight along the path
 ├── SkyDome.tsx            # Shader sky dome anchored to camera
 ├── CameraPan.tsx          # Space+click or right-click drag pan
 ├── CameraVerticalPan.tsx  # Shift+click vertical pan
@@ -29,6 +30,7 @@ scene/
 | Change theme environments | `Scene.tsx`, `SkyDome.tsx`, `src/types/theme.ts` |
 | Change camera behavior | `CameraPan.tsx`, `CameraVerticalPan.tsx`, `SmoothZoom.tsx` |
 | Modify flight path rendering | `FlightPath.tsx`, `src/utils/flightPath.ts` |
+| Change FPV fly-through | `FpvFlyThrough.tsx` (route sampling, look-ahead camera, completion callback) |
 | Change ground/grid appearance | `Grid.tsx`, `src/types/theme.ts` |
 | Support viewer read-only mode | `Scene.tsx`, `src/components/viewer/ViewerApp.tsx` |
 

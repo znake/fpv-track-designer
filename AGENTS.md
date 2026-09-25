@@ -1,7 +1,7 @@
 # FPV TRACK DESIGNER - PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-04-30
-**Commit:** 283b0ec
+**Generated:** 2026-09-25
+**Commit:** 3c85ea4
 **Branch:** main
 
 ## OVERVIEW
@@ -23,7 +23,8 @@ fpv-track-designer/
 │   │   ├── layout/            # TopBar, LeftToolPanel, PoleCounter app shell
 │   │   ├── scene/             # single R3F Canvas owner, camera controllers, themes
 │   │   ├── ui/                # shadcn primitives + editor panels/dialogs
-│   │   └── viewer/            # read-only share viewer UI
+│   │   ├── viewer/            # read-only share viewer UI
+│   │   └── icons/             # gate-type SVG icon
 │   ├── hooks/                 # keyboard shortcuts, R3F selection, theme selector
 │   ├── schemas/               # track export/import validation boundary
 │   ├── store/                 # editor Zustand config + track slices
@@ -34,7 +35,8 @@ fpv-track-designer/
 ├── vite.config.ts             # editor build + Vitest config
 ├── vite.config.viewer.ts      # single-file viewer build to dist-viewer/
 ├── Dockerfile                 # editor nginx container
-└── Dockerfile.viewer          # static viewer nginx container
+├── Dockerfile.viewer          # static viewer nginx container
+└── docs/                      # Coolify deploy + share-viewer notes
 ```
 
 ## WHERE TO LOOK
@@ -63,7 +65,7 @@ fpv-track-designer/
 | `TopBar` / `LeftToolPanel` | components | `src/components/layout/` | Shell controls, import/export, share, shuffle, settings |
 | `ViewerApp` | component | `src/components/viewer/ViewerApp.tsx` | Read-only viewer shell, export/help controls |
 | `loadTrackFromHash` | function | `src/viewer-main.tsx` | Decodes shared-track hash into viewer store |
-| `createAppStore` / `useAppStore` | Zustand store | `src/store/index.ts` | Combines config + track slices with devtools |
+| `useAppStore` | Zustand store | `src/store/index.ts` | Combined editor store (config + track slices) with devtools |
 | `useViewerStore` | Zustand store | `src/viewer-store.ts` | Viewer-only `{ track, config, error }` state |
 | `createTrackSlice` | Zustand slice | `src/store/trackSlice.ts` | Selection, undo/redo, dirty-state, destructive actions |
 | `generateTrack` | function | `src/utils/generator.ts` | Random track generation and initial sequence |
@@ -73,10 +75,13 @@ fpv-track-designer/
 | `serializeTrack` / `deserializeTrack` | functions | `src/schemas/track.schema.ts` | Export/import shape validation and normalization |
 | `encodeTrackSharePayload` / `decodeTrackSharePayload` | functions | `src/utils/shareTrack.ts` | Compressed share link payload boundary |
 | `THEME_PRESETS` | constant | `src/types/theme.ts` | Minimal/realistic/night renderer and color presets |
+| `downloadTrackQrCodePng` / `createTrackQrCodeSvg` | functions | `src/utils/qrCode.ts` | Share QR PNG/SVG generation |
+| `FpvFlyThrough` | component | `src/components/scene/FpvFlyThrough.tsx` | Automated FPV camera flight |
 
 ## CONVENTIONS
 - Named exports by default. `App.tsx` is the lone default export.
 - `import type` for type-only imports. `verbatimModuleSyntax` is enabled.
+- `erasableSyntaxOnly` is enabled: no enums, namespaces, or constructor parameter properties.
 - `@/*` aliases cross-domain imports; nearby gate/scene/store/type files often use relative imports.
 - Tests are co-located as `*.test.ts` or `*.test.tsx`; no shared Vitest setup file.
 - Vitest config lives in `vite.config.ts` with `globals: true` and `environment: 'jsdom'`.
@@ -96,7 +101,7 @@ fpv-track-designer/
 - Do not duplicate schema validation in storage/import/share flows; route through `src/schemas`.
 - Do not bypass the unsaved-changes flow for destructive editor actions.
 - Do not expose editor mutation actions in the read-only viewer store/UI.
-- Do not assume `src/components/gates/index.ts` is authoritative; `Scene.tsx` bypasses the incomplete barrel.
+- Do not assume `src/components/gates/index.ts` is authoritative; it is incomplete (missing `LadderGate`, `FlagSmall`) and bypassed by `Scene.tsx`/`Gate.tsx`.
 
 ## UNIQUE STYLES
 - Gate rotation: 0-330 in 30 degree steps.
@@ -125,8 +130,11 @@ npm run preview        # preview production editor build only
 - Docker deploys editor and viewer separately; editor nginx proxies `/api/shorten-track`, viewer is static-only.
 - Chunk size warning from R3F/Drei bundle is acceptable for MVP.
 - `src/assets/hero.png`, `react.svg`, `vite.svg` are template/unused leftovers.
-- `src/components/gates/index.ts` barrel is incomplete (missing `LadderGate`) and currently bypassed by `Scene.tsx`.
-- `trackSlice.ts` duplicates `moveGate`/`rotateGate` logic from `utils/gateOperations.ts`.
+- `src/components/gates/index.ts` barrel is incomplete (missing `LadderGate`, `FlagSmall`) and has no importers; `Scene.tsx` and `Gate.tsx` import gate files directly.
+- `utils/gateOperations.ts` is dead in production (only its own test imports it); `trackSlice.ts` reimplements `moveGate`/`rotateGate` inline.
 - Test libraries live in `dependencies`; they would normally be `devDependencies`.
 - Root has generated QA/build artifacts at times (`qa-*.png`, `dist/`, `dist-viewer/`); keep generated artifacts out of commits unless intentionally requested.
 - Avoid creating visual QA screenshots unless explicitly requested.
+- `docs/coolify-track-sharing.md` documents the two-service Coolify deploy and the n8n short-link proxy.
+- `utils/qrCode.ts` generates share QR PNG/SVG via `qrcode`; `ShareTrackDialog` previews via `dangerouslySetInnerHTML`.
+- No CI workflows exist; build/test/lint are run manually.

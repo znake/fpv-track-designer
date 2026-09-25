@@ -11,7 +11,7 @@ src/
 ├── viewer-store.ts      # read-only viewer Zustand state
 ├── i18n.ts              # DE/EN translations, localStorage language, hook helpers
 ├── index.css            # Tailwind v4 CSS-first theme tokens
-├── components/          # gates, layout, scene, ui, viewer
+├── components/          # gates, layout, scene, ui, viewer, icons
 ├── hooks/               # shortcuts, theme, gate selection
 ├── schemas/             # trusted import/export validation
 ├── store/               # editor-only Zustand slices
@@ -29,6 +29,8 @@ src/
 | Editor state | `store/`, `store/AGENTS.md` | Mutations/history/destructive flow live here |
 | Import/export boundary | `schemas/`, `schemas/AGENTS.md` | Unknown JSON must pass through schema helpers |
 | Core calculations | `utils/`, `utils/AGENTS.md` | Generator, flight path, storage, share links |
+| Keyboard/selection/theme hooks | `hooks/`, `hooks/AGENTS.md` | Shortcut map, R3F gate selection, active theme hook |
+| Domain contracts / theme presets | `types/`, `types/AGENTS.md` | Gate/config/track contracts + `THEME_PRESETS` |
 
 ## CONVENTIONS
 - `main.tsx` imports `App` as the only default export; new top-level modules should use named exports.

@@ -8,17 +8,19 @@ gates/
 ├── StandardGate.tsx          # Blue square frame
 ├── HGate.tsx                 # H-gate with deterministic side backrest
 ├── DoubleHGate.tsx           # Stacked H-gate pair
+├── HurdleGate.tsx            # Raised bar; lower body + opening above
 ├── DiveGate.tsx              # Cube-like dive gate with top approach behavior
 ├── DoubleGate.tsx            # Two stacked gates
 ├── LadderGate.tsx            # Three stacked gates
 ├── StartFinishGate.tsx       # Start panel + text
 ├── Flag.tsx                  # Pole + flag marker
+├── FlagSmall.tsx             # 1m pole + proportionally smaller plate
 ├── OctagonalTunnelGate.tsx   # Octagonal tunnel / legacy asymmetric replacement
 ├── Gate.tsx                  # Dispatcher: GateType → component
 ├── GateHandles.tsx           # Html overlay: move/rotate/elevate/insert/delete
 ├── GateOpeningIndicators.tsx # Maps openings to entry/exit indicators
 ├── GateEntryIndicator.tsx    # Per-opening planes, labels, swap icon
-└── index.ts                  # Barrel export (incomplete — missing LadderGate)
+└── index.ts                  # Incomplete barrel; no importers (missing LadderGate, FlagSmall)
 ```
 
 ## CONVENTIONS
@@ -43,9 +45,11 @@ gates/
 - Do not add user-defined/custom gate types.
 - Do not add per-gate sizing; dimensions are shared constants/global behavior.
 - Do not bypass `Gate.tsx` when adding a fixed gate type.
-- Do not trust the barrel for all imports until `LadderGate` is exported there.
+- Do not trust the barrel; it lacks `LadderGate`/`FlagSmall` and has no importers — import gate files directly.
 
 ## NOTES
 - `Scene.tsx` imports `Gate` directly (`../gates/Gate`) and bypasses the barrel.
 - `GateHandles.tsx` is the largest component; it coordinates drag refs, OrbitControls disabling, insert positions, and history commits.
 - Insert handles prefer flight-path samples when available and fall back to rotated gate offsets.
+- `GateType` set (`src/types/gate.ts`): standard, h-gate, double-h, hurdle, dive, double, ladder, start-finish, flag, flag-small, octagonal-tunnel.
+- `src/components/icons/GateIcon.tsx` mirrors each gate's 3D geometry as a front-view SVG silhouette; keep it in sync when geometry changes.
