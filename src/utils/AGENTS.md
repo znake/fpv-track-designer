@@ -32,7 +32,7 @@ utils/
 |------|------|---------------|
 | Change generation algorithm | `generator.ts` | `generateTrack(config)` |
 | Modify flight path | `flightPath.ts` | `calculateFlightPath(gates, sequence)` |
-| Change gate movement | `gateOperations.ts` | `moveGate()`, `rotateGate()` |
+| Change gate movement | `src/store/trackSlice.ts` (inline `moveGate`/`rotateGate`); `gateOperations.ts` is dead code | `moveGate()`, `rotateGate()` |
 | Modify gate openings | `gateOpenings.ts` | `createDefaultGateOpenings()`, `normalizeGates()` |
 | Modify gate sequence | `gateSequence.ts` | `buildDefaultGateSequenceEntries()`, `normalizeGateSequence()` |
 | Modify persistence | `storage.ts` | `saveTrack()`, `loadTrack()`, `listTracks()`, `deleteTrack()` |
@@ -47,6 +47,7 @@ utils/
 - Max placement attempts: 100 per gate.
 - Flight-path curve sampling is dense and gate-specific; preserve same-gate, dive, H-gate, double-H, and octagonal tunnel cases.
 - Share payload prefix: `z.` for compressed payloads; keep legacy base64-url decode fallback.
+- Gate rotation is applied in ±30° steps by the store actions (0-330), even though `types/gate.ts` comments it as continuous (0-359).
 - Storage key prefix: `fpv-track-`.
 - Storage/import/share code must call schema helpers, not trust raw JSON.
 

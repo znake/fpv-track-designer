@@ -11,7 +11,7 @@ src/
 ├── viewer-store.ts      # read-only viewer Zustand state
 ├── i18n.ts              # DE/EN translations, localStorage language, hook helpers
 ├── index.css            # Tailwind v4 CSS-first theme tokens
-├── components/          # gates, layout, scene, ui, viewer, icons
+├── components/          # gates, layout, scene, ui, viewer, icons, ErrorBoundary
 ├── hooks/               # shortcuts, theme, gate selection
 ├── schemas/             # trusted import/export validation
 ├── store/               # editor-only Zustand slices
@@ -39,6 +39,7 @@ src/
 - `viewer-store.ts` stores only `{ track, config, error }` plus set/reset helpers; never add editor mutation actions.
 - `i18n.ts` is the translation source of truth; add every key in both language objects and use placeholders as `{name}`.
 - `translateOutsideReact()` exists for non-component code such as viewer bootstrap; components should use `useTranslation()`.
+- `components/ErrorBoundary.tsx` is the only class component and hardcodes German copy — a deliberate exception to the i18n rule for the crash fallback.
 
 ## ANTI-PATTERNS
 - Do not import `useAppStore` into viewer boot/store/components.

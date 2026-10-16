@@ -1,7 +1,7 @@
 # FPV TRACK DESIGNER - PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-09-25
-**Commit:** 3c85ea4
+**Generated:** 2026-10-16
+**Commit:** d99247e
 **Branch:** main
 
 ## OVERVIEW
@@ -24,7 +24,8 @@ fpv-track-designer/
 │   │   ├── scene/             # single R3F Canvas owner, camera controllers, themes
 │   │   ├── ui/                # shadcn primitives + editor panels/dialogs
 │   │   ├── viewer/            # read-only share viewer UI
-│   │   └── icons/             # gate-type SVG icon
+│   │   ├── icons/             # gate-type SVG icon
+│   │   └── ErrorBoundary.tsx  # only class component; hardcoded DE copy
 │   ├── hooks/                 # keyboard shortcuts, R3F selection, theme selector
 │   ├── schemas/               # track export/import validation boundary
 │   ├── store/                 # editor Zustand config + track slices
@@ -36,7 +37,11 @@ fpv-track-designer/
 ├── vite.config.viewer.ts      # single-file viewer build to dist-viewer/
 ├── Dockerfile                 # editor nginx container
 ├── Dockerfile.viewer          # static viewer nginx container
-└── docs/                      # Coolify deploy + share-viewer notes
+├── nginx.conf                 # editor nginx: /api/shorten-track proxy + SPA fallback
+├── docker-compose.yml         # local editor-only compose (8080:80)
+├── .env.development/.production/.example  # build-time VITE_* vars (viewer domain, shortener)
+├── public/                    # favicon.svg, icons.svg, screenshot.png
+└── docs/                      # Coolify deploy, German user docs, docs audit
 ```
 
 ## WHERE TO LOOK
@@ -71,7 +76,7 @@ fpv-track-designer/
 | `generateTrack` | function | `src/utils/generator.ts` | Random track generation and initial sequence |
 | `calculateFlightPath` | function | `src/utils/flightPath.ts` | Path segments, samples, arrows, gate-specific avoidance |
 | `GateHandles` | component | `src/components/gates/GateHandles.tsx` | Move/rotate/elevate/insert/delete controls in 3D |
-| `Scene` | component | `src/components/scene/Scene.tsx` | Single Canvas owner, theme-specific scene composition |
+| `Scene` | component | `src/components/scene/Scene.tsx` | Single Canvas owner (used by App + ViewerApp); imports `useAppStore` |
 | `serializeTrack` / `deserializeTrack` | functions | `src/schemas/track.schema.ts` | Export/import shape validation and normalization |
 | `encodeTrackSharePayload` / `decodeTrackSharePayload` | functions | `src/utils/shareTrack.ts` | Compressed share link payload boundary |
 | `THEME_PRESETS` | constant | `src/types/theme.ts` | Minimal/realistic/night renderer and color presets |
@@ -126,15 +131,17 @@ npm run preview        # preview production editor build only
 ```
 
 ## NOTES
-- No in-repo GitHub Actions workflows were found.
-- Docker deploys editor and viewer separately; editor nginx proxies `/api/shorten-track`, viewer is static-only.
+- Docker deploys editor and viewer separately; the viewer container is static-only.
 - Chunk size warning from R3F/Drei bundle is acceptable for MVP.
 - `src/assets/hero.png`, `react.svg`, `vite.svg` are template/unused leftovers.
 - `src/components/gates/index.ts` barrel is incomplete (missing `LadderGate`, `FlagSmall`) and has no importers; `Scene.tsx` and `Gate.tsx` import gate files directly.
 - `utils/gateOperations.ts` is dead in production (only its own test imports it); `trackSlice.ts` reimplements `moveGate`/`rotateGate` inline.
-- Test libraries live in `dependencies`; they would normally be `devDependencies`.
+- Test libraries live in `dependencies` (normally `devDependencies`); `@testing-library/jest-dom` is declared but never imported (no Vitest setup file), so tests use plain matchers.
 - Root has generated QA/build artifacts at times (`qa-*.png`, `dist/`, `dist-viewer/`); keep generated artifacts out of commits unless intentionally requested.
 - Avoid creating visual QA screenshots unless explicitly requested.
-- `docs/coolify-track-sharing.md` documents the two-service Coolify deploy and the n8n short-link proxy.
+- `docs/` holds `coolify-track-sharing.md` (two-service deploy + n8n proxy), `NUTZERDOKUMENTATION.md` (German user docs), and `dokumentations-audit.md`.
 - `utils/qrCode.ts` generates share QR PNG/SVG via `qrcode`; `ShareTrackDialog` previews via `dangerouslySetInnerHTML`.
 - No CI workflows exist; build/test/lint are run manually.
+- Short-link flow: the dev Vite server and the editor nginx both proxy `/api/shorten-track` to the n8n webhook; use `/webhook/shorten-track`, not `/webhook-test/`. `.env.*` bake `VITE_VIEWER_DOMAIN` and `VITE_TRACK_SHORTENER_ENDPOINT` at build time.
+- `components/scene/Scene.tsx` and `Grid.tsx` import `useAppStore` at module level, so the viewer bundle includes the editor store even though the viewer passes `track`/`configOverride`.
+- `types/gate.ts` comments `rotation` as continuous (0-359), but `trackSlice.rotateGate` applies ±30° steps (0-330); the comment is stale.
