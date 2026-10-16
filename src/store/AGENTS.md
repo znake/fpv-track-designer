@@ -22,7 +22,7 @@ store/
 | Task | File |
 |------|------|
 | Add config setting | `configSlice.ts` + `src/types/config.ts` + schema serialization if persisted |
-| Add theme setting | `configSlice.ts`, `src/types/theme.ts`, `GateConfigPanel.tsx` |
+| Add theme setting | `configSlice.ts`, `src/types/theme.ts`, `ThemeConfigPanel.tsx` |
 | Add track action | `trackSlice.ts` — use `pushHistory()` for undoable actions |
 | Add new editor domain slice | New slice file + `AppState` type + spread in `index.ts` |
 | Change viewer state | `src/viewer-store.ts`, not this directory |
@@ -51,7 +51,10 @@ Destructive actions (Shuffle, Import JSON, Gallery Load/Duplicate, Apply Config)
 The global save dialog is store-driven via `isSaveDialogOpen`, `openSaveDialog()`, and `dismissSaveDialog()`.
 
 ## NOTES
-- `trackSlice.ts` duplicates `moveGate`/`rotateGate` logic from `utils/gateOperations.ts`.
+- `trackSlice.ts` reimplements the `moveGate`/`rotateGate` helpers from `utils/gateOperations.ts` inline. `gateOperations.ts` is dead code (only its own test imports it).
+- The `moveGate`/`rotateGate` actions and `DirectionalPad` (`src/components/ui/directional-pad.tsx`) currently have no callers in the editor UI; rotation runs through the `GateHandles` rotate handle instead. Keep them in sync if you wire them up.
+- `MAX_HISTORY = 50`; `pushHistory` snapshots `{ track, selectedGateId, selectedGateIds, isTrackModified }`, caps `past` at 50 entries and clears `future`.
+- Every track mutation normalizes through `normalizeTrack` (`enforceSingletonGates` + `normalizeGates` + `normalizeGateSequence`).
 - `commitGateDrag()` pushes the drag-start snapshot once, avoiding undo stack pollution during pointer moves.
 - Viewer state intentionally does not expose editor mutation actions.
 

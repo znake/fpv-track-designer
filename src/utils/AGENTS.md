@@ -46,9 +46,10 @@ utils/
 - Min gate distance: 3m (`MIN_DISTANCE`).
 - Max placement attempts: 100 per gate.
 - Flight-path curve sampling is dense and gate-specific; preserve same-gate, dive, H-gate, double-H, and octagonal tunnel cases.
-- Share payload prefix: `z.` for compressed payloads; keep legacy base64-url decode fallback.
-- Gate rotation is applied in ±30° steps by the store actions (0-330), even though `types/gate.ts` comments it as continuous (0-359).
-- Storage key prefix: `fpv-track-`.
+- Share payload prefix: `z.` for compressed payloads; keep legacy base64-url decode fallback. Shortener defaults: n8n endpoint (`DEFAULT_SHORTENER_ENDPOINT`), dev proxy `/api/shorten-track`, 8 s timeout (`SHORTENER_TIMEOUT_MS`).
+- Gate rotation in the store's `rotateGate` action is ±30° steps (0-330), but that action is currently unused by the UI. Real rotation runs through the `GateHandles` rotate handle: 1°/pixel, rounded to 15° only while `config.snapGatesToGrid` is active. The generator aligns rotations in 30° steps. `types/gate.ts` still comments `rotation` as continuous (0-359); that comment is stale.
+- Gate types with `polesPerGate === 0` cannot be built from poles and are reported `notBuildable`: hurdle, dive, octagonal-tunnel (`poleCount.ts`).
+- Storage key prefix: `fpv-track-`. `storage.autoSave` exists but is only called by tests; no production caller.
 - Storage/import/share code must call schema helpers, not trust raw JSON.
 
 ## TESTING

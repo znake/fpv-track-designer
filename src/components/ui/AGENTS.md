@@ -1,6 +1,6 @@
 # UI Components — Panels, Dialogs & shadcn Primitives
 
-**Domain:** 36 UI files: editor panels/dialogs, shadcn/Radix primitives, variant helpers
+**Domain:** 35 UI files plus this `AGENTS.md`: editor panels/dialogs, shadcn/Radix primitives, variant helpers
 
 ## STRUCTURE
 ```
@@ -38,6 +38,10 @@ ui/
 | Unsaved destructive-action flow | `UnsavedChangesDialog.tsx`, `src/store/trackSlice.ts` |
 | Keyboard shortcut reference | `KeyboardShortcutsDialog.tsx`, `src/hooks/useKeyboardShortcuts.ts` |
 | Primitive styling | primitive file + matching `*-variants.ts` if present |
+
+## NOTES
+- First-visit flow: `App` auto-generates a track with `generateTrack(defaultConfig)` while no track exists, and opens the help dialog once via the `fpv-track-designer-visited` cookie.
+- The DE/EN language toggle lives in `TopBar` (`toggleLanguage`), which flips every translated string at once.
 
 ## TESTING
 - Co-located RTL tests exist for `GateConfigPanel`, `ThemeConfigPanel`, `TrackGallery`, and `ShareTrackDialog`.

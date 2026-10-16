@@ -1,11 +1,11 @@
 # FPV TRACK DESIGNER - PROJECT KNOWLEDGE BASE
 
 **Generated:** 2026-10-16
-**Commit:** d99247e
+**Code state:** db57870 (2026-10-16)
 **Branch:** main
 
 ## OVERVIEW
-Desktop-only 3D FPV drone racing track designer plus standalone read-only share viewer. React 19 + Vite/Vitest, R3F/Drei scene, Zustand slices, Tailwind v4/shadcn UI, schema-guarded local persistence and compressed share links.
+Desktop-first (mouse/keyboard primary, with touch pan/pinch support) 3D FPV drone racing track designer plus a standalone read-only share viewer. React 19 + Vite/Vitest, R3F/Drei scene, Zustand slices, Tailwind v4/shadcn UI, schema-guarded local persistence and compressed share links.
 
 ## STRUCTURE
 ```
@@ -30,7 +30,7 @@ fpv-track-designer/
 │   ├── schemas/               # track export/import validation boundary
 │   ├── store/                 # editor Zustand config + track slices
 │   ├── types/                 # domain contracts + theme presets
-│   ├── utils/                 # generator, flight path, storage, share links, helpers
+│   ├── utils/                 # generator, flight path, storage, share links, pole count
 │   ├── constants/             # shared gate dimensions
 │   └── lib/                   # cn helper for shadcn classes
 ├── vite.config.ts             # editor build + Vitest config
@@ -39,7 +39,8 @@ fpv-track-designer/
 ├── Dockerfile.viewer          # static viewer nginx container
 ├── nginx.conf                 # editor nginx: /api/shorten-track proxy + SPA fallback
 ├── docker-compose.yml         # local editor-only compose (8080:80)
-├── .env.development/.production/.example  # build-time VITE_* vars (viewer domain, shortener)
+├── .env.development/.production  # build-time VITE_TRACK_SHORTENER_ENDPOINT per mode
+├── .env.example               # documents VITE_VIEWER_DOMAIN + VITE_TRACK_SHORTENER_ENDPOINT
 ├── public/                    # favicon.svg, icons.svg, screenshot.png
 └── docs/                      # Coolify deploy, German user docs, docs audit
 ```
@@ -49,9 +50,10 @@ fpv-track-designer/
 |------|----------|-------|
 | Editor app shell / first-load flow | `src/App.tsx`, `src/main.tsx`, `src/AGENTS.md` | StrictMode is enabled; mount effects must be idempotent |
 | Translations / language toggle | `src/i18n.ts` | Add DE + EN keys together; consumers use `useTranslation()` |
-| Top toolbar / side tools / pole counter | `src/components/layout/`, `src/components/layout/AGENTS.md` | Import/export, FPV toggle, share, shuffle, shell controls |
-| Share viewer / read-only links | `src/viewer-main.tsx`, `src/viewer-store.ts`, `src/components/viewer/` | Hash payload -> decoded track/config -> read-only `Scene` |
-| Add/change gate visuals | `src/components/gates/`, `src/types/gate.ts` | Fixed gate set; update dispatcher/schema/tests together |
+| Top toolbar / side tools / pole counter | `src/components/layout/`, `src/components/layout/AGENTS.md` | Import/export, FPV toggle, share, shuffle, shell controls; the pole-counter badge opens a per-type breakdown and lists the types that can't be built from poles (hurdle, dive, octagonal-tunnel) separately |
+| Share viewer / read-only links | `src/viewer-main.tsx`, `src/viewer-store.ts`, `src/components/viewer/` | Hash payload -> decoded track/config -> read-only `Scene`; empty and undecodable payloads show translated error states, the help dialog auto-opens once per browser (cookie), and the track downloads as JSON |
+| Saved tracks / gallery | `src/components/ui/TrackGallery.tsx`, `src/hooks/useKeyboardShortcuts.ts`, `src/components/layout/LeftToolPanel.tsx` | Open with `G`; list, load, duplicate, and delete tracks saved in `localStorage` |
+| Add/change gate visuals | `src/components/gates/`, `src/types/gate.ts`, `src/utils/gateTypeOptions.ts` | Fixed set of 11 types (`standard`, `h-gate`, `double-h`, `hurdle`, `dive`, `double`, `ladder`, `start-finish`, `flag`, `flag-small`, `octagonal-tunnel`); update dispatcher/schema/tests together |
 | Change 3D scene/camera/themes | `src/components/scene/`, `src/types/theme.ts`, `src/utils/themeColors.ts` | R3F hooks stay under the single Canvas owner |
 | Change panels/dialog UI | `src/components/ui/` | shadcn primitives plus app-specific dialogs/panels |
 | Track generation | `src/utils/generator.ts` | Min 3m gate distance, nearest-neighbor order, 30 degree rotation alignment |
@@ -61,6 +63,9 @@ fpv-track-designer/
 | Persistence | `src/utils/storage.ts` | Browser `localStorage`; route validation through schemas |
 | Share-link payloads | `src/utils/shareTrack.ts` | `lz-string` compressed `z.` payloads + legacy base64 fallback |
 | Keyboard/mouse selection | `src/hooks/`, `src/components/gates/GateHandles.tsx` | Desktop mouse/keyboard first; shortcut tests in hooks |
+| Unsaved-changes guard | `src/components/ui/UnsavedChangesDialog.tsx`, `src/store/trackSlice.ts` | Destructive actions stage through `requestDestructiveAction`; the dialog offers cancel / save first / discard |
+| FPV fly-through | `src/components/scene/FpvFlyThrough.tsx`, `src/App.tsx` | Automated camera flight along the ideal line; disabled with fewer than 2 gates (editor and viewer) |
+| First-visit onboarding | `src/App.tsx` | Generates a starter track while none exists and opens the help dialog once per browser via cookie |
 
 ## CODE MAP
 | Symbol | Type | Location | Role |
@@ -82,6 +87,9 @@ fpv-track-designer/
 | `THEME_PRESETS` | constant | `src/types/theme.ts` | Minimal/realistic/night renderer and color presets |
 | `downloadTrackQrCodePng` / `createTrackQrCodeSvg` | functions | `src/utils/qrCode.ts` | Share QR PNG/SVG generation |
 | `FpvFlyThrough` | component | `src/components/scene/FpvFlyThrough.tsx` | Automated FPV camera flight |
+| `TrackGallery` | component | `src/components/ui/TrackGallery.tsx` | Saved-track sheet: list, load, duplicate, delete |
+| `PoleCounter` / `calculatePoleBreakdown` | component / function | `src/components/layout/PoleCounter.tsx`, `src/utils/poleCount.ts` | Pole-count badge plus per-type breakdown with a `notBuildable` flag |
+| `UnsavedChangesDialog` | component | `src/components/ui/UnsavedChangesDialog.tsx` | Cancel / save first / discard for staged destructive actions |
 
 ## CONVENTIONS
 - Named exports by default. `App.tsx` is the lone default export.
@@ -102,15 +110,16 @@ fpv-track-designer/
 - No backend/database/auth scope; persistence is browser `localStorage`, n8n short-link proxy, and share-link hash payloads only.
 - No per-gate size adjustment; gate dimensions are shared constants/global config behavior.
 - No custom gate type creation; the app has a fixed gate type set.
-- No mobile/touch gesture scope expansion unless explicitly requested; desktop mouse/keyboard is primary.
+- No new mobile/touch gestures beyond the existing two-finger pan and pinch zoom; mouse/keyboard stay the primary input.
 - Do not duplicate schema validation in storage/import/share flows; route through `src/schemas`.
-- Do not bypass the unsaved-changes flow for destructive editor actions.
+- Do not bypass the unsaved-changes flow for destructive editor actions; route them through `requestDestructiveAction` and the three-action dialog (cancel / save first / discard).
 - Do not expose editor mutation actions in the read-only viewer store/UI.
-- Do not assume `src/components/gates/index.ts` is authoritative; it is incomplete (missing `LadderGate`, `FlagSmall`) and bypassed by `Scene.tsx`/`Gate.tsx`.
+- Do not assume `src/components/gates/index.ts` is authoritative; it is incomplete (missing `LadderGate`, `FlagSmall`, `GateHandles`, `GateOpeningIndicators`) and bypassed by `Scene.tsx`/`Gate.tsx`.
 
 ## UNIQUE STYLES
-- Gate rotation: 0-330 in 30 degree steps.
-- Gate movement: N/S/E/W, 1m increments; optional snap-grid uses smaller subdivisions during drag.
+- Gate rotation: the rotate handle is continuous at 1 degree per pixel and rounds to 15 degree steps only while `config.snapGatesToGrid` is on; the generator aligns new gates to 30 degree steps.
+- Gate movement: the visible path is the free move-handle drag; the store `moveGate` (N/S/E/W, default 1 m) and `rotateGate` (plus/minus 30 degree) actions and `DirectionalPad` have no UI caller.
+- Snap grid: sizes are 0.3 m, 0.5 m, and 1.0 m (`SNAP_GRID_SIZES`); the fallback step is `GATE_BASE_WIDTH / 4` = 0.3 m.
 - Undo/redo: `past`/`future` arrays, `MAX_HISTORY=50`, dirty flag captured in history entries.
 - Flight path: gate-sequence visits, Bezier sampling, disjoint native `THREE.Line` segments, arrows along path.
 - Camera controls: Space/right-click pan, Shift vertical pan, wheel/middle-click smooth zoom.
@@ -134,7 +143,7 @@ npm run preview        # preview production editor build only
 - Docker deploys editor and viewer separately; the viewer container is static-only.
 - Chunk size warning from R3F/Drei bundle is acceptable for MVP.
 - `src/assets/hero.png`, `react.svg`, `vite.svg` are template/unused leftovers.
-- `src/components/gates/index.ts` barrel is incomplete (missing `LadderGate`, `FlagSmall`) and has no importers; `Scene.tsx` and `Gate.tsx` import gate files directly.
+- `src/components/gates/index.ts` barrel is incomplete (missing `LadderGate`, `FlagSmall`, `GateHandles`, `GateOpeningIndicators`) and has no importers; `Scene.tsx` and `Gate.tsx` import gate files directly.
 - `utils/gateOperations.ts` is dead in production (only its own test imports it); `trackSlice.ts` reimplements `moveGate`/`rotateGate` inline.
 - Test libraries live in `dependencies` (normally `devDependencies`); `@testing-library/jest-dom` is declared but never imported (no Vitest setup file), so tests use plain matchers.
 - Root has generated QA/build artifacts at times (`qa-*.png`, `dist/`, `dist-viewer/`); keep generated artifacts out of commits unless intentionally requested.
@@ -142,6 +151,11 @@ npm run preview        # preview production editor build only
 - `docs/` holds `coolify-track-sharing.md` (two-service deploy + n8n proxy), `NUTZERDOKUMENTATION.md` (German user docs), and `dokumentations-audit.md`.
 - `utils/qrCode.ts` generates share QR PNG/SVG via `qrcode`; `ShareTrackDialog` previews via `dangerouslySetInnerHTML`.
 - No CI workflows exist; build/test/lint are run manually.
-- Short-link flow: the dev Vite server and the editor nginx both proxy `/api/shorten-track` to the n8n webhook; use `/webhook/shorten-track`, not `/webhook-test/`. `.env.*` bake `VITE_VIEWER_DOMAIN` and `VITE_TRACK_SHORTENER_ENDPOINT` at build time.
+- Short-link flow: the dev Vite server and the editor nginx both proxy `/api/shorten-track` to the n8n webhook; use `/webhook/shorten-track`, not `/webhook-test/`. `.env.development` and `.env.production` set only `VITE_TRACK_SHORTENER_ENDPOINT`; `.env.example` additionally documents `VITE_VIEWER_DOMAIN`, which is optional and falls back to the `DEFAULT_VIEWER_DOMAIN` constant in `src/utils/shareTrack.ts`. All `VITE_*` values are baked in at build time.
 - `components/scene/Scene.tsx` and `Grid.tsx` import `useAppStore` at module level, so the viewer bundle includes the editor store even though the viewer passes `track`/`configOverride`.
 - `types/gate.ts` comments `rotation` as continuous (0-359), but `trackSlice.rotateGate` applies ±30° steps (0-330); the comment is stale.
+- Gate type catalog: exactly 11 types, defined in `src/types/gate.ts` and labeled in `src/utils/gateTypeOptions.ts` (see WHERE TO LOOK).
+- Pole counter: `calculatePoleBreakdown` in `src/utils/poleCount.ts` sums poles per type and flags `notBuildable` for every type with `polesPerGate === 0`, which is hurdle, dive, and octagonal-tunnel.
+- First-visit flow: `src/App.tsx` generates a starter track while no track exists and opens the help dialog once per browser using the `fpv-track-designer-visited` cookie (max-age `60 * 60 * 24 * 365`, one year).
+- Viewer: an empty hash shows `viewerMissingPayload` and an undecodable one `viewerInvalidPayload` (`src/viewer-main.tsx`); `ViewerApp` adds the error title, a "no track loaded" state, a JSON download, and a help dialog that auto-opens once via the `fpv-track-viewer-help-seen` cookie.
+- Toolchain requires Node `^20.19.0 || >=22.12.0` (Vite's engine range); `package.json` pins no `engines` field.

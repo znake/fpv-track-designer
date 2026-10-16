@@ -21,13 +21,14 @@ layout/
 | Shuffle track | `LeftToolPanel.tsx`, `src/utils/generator.ts` | Wrap with `requestDestructiveAction()` |
 | Share link | `LeftToolPanel.tsx`, `src/utils/shareTrack.ts`, `ShareTrackDialog.tsx` | Long URL first, optional n8n shortener fallback |
 | Save/gallery/settings/design | `LeftToolPanel.tsx`, `src/App.tsx`, `src/components/ui/` | Panel opens are parent-owned where provided |
-| Pole totals | `PoleCounter.tsx`, `src/utils/poleCount.ts` | Dive/tunnel can be marked not buildable |
+| Language toggle DE/EN | `TopBar.tsx`, `src/i18n.ts` | Flag button flips the whole UI language |
+| Pole totals | `PoleCounter.tsx`, `src/utils/poleCount.ts` | Hurdle, Dive, and Octagonal-Tunnel are not buildable from poles (every type with `polesPerGate === 0`); the badge renders nothing while no gates exist |
 
 ## CONVENTIONS
 - Layout components may read editor state with `useAppStore`; they are app shell, not shadcn primitives.
 - Keep destructive actions (`shuffle`, JSON import, gallery loads) behind `requestDestructiveAction()` so dirty tracks prompt first.
 - Import/export/share must route through schema/share utilities; never build payloads manually in layout.
-- `LeftToolPanel` shows the long share URL immediately, then replaces it with the shortened URL if the endpoint succeeds.
+- Share flow: `LeftToolPanel` builds the long URL and opens `ShareTrackDialog` right away, then fills in the short URL when the shortener responds. The dialog shows both links at once (long link read-only, short link with spinner and copy), not one replacing the other.
 - Text comes from `useTranslation()` except stable product labels like `FPV-Track-Designer` and `Beta Version`.
 - Keep mobile bottom-rail and desktop side-rail classes together in `LeftToolPanel`; avoid separate duplicated components.
 

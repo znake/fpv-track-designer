@@ -6,7 +6,7 @@
 ```
 scene/
 ├── Scene.tsx              # Single Canvas owner and theme-specific scene composition
-├── Grid.tsx               # Ground plane + field boundary + drei Grid
+├── Grid.tsx               # Ground plane, field boundary, and hand-built line grid
 ├── FlightPath.tsx         # Native THREE.Line segments + direction arrows
 ├── FpvFlyThrough.tsx      # Automated first-person flight along the path
 ├── SkyDome.tsx            # Shader sky dome anchored to camera
@@ -20,7 +20,7 @@ scene/
 - `Scene` accepts optional `track`, `configOverride`, and `readOnly` for the standalone viewer.
 - Camera controllers return `null` and are imperative via `useThree()`, refs, DOM listeners, and/or `useFrame()`.
 - `FlightPath` creates one native `THREE.Line` per sampled segment to avoid implicit connections between disjoint curves.
-- `Grid` uses drei's `<Grid>` helper and theme colors from `useTheme()`.
+- `Grid` draws cell (1 m) and section (5 m) lines as its own `<lineSegments>` from computed positions, takes theme colors through the `colors` prop from `Scene`, and only imports drei's `<Text>` for the `#FPVOOE` watermark.
 - Theme presets live in `src/types/theme.ts`; material helpers live in `src/utils/themeColors.ts`.
 
 ## WHERE TO LOOK
@@ -39,4 +39,7 @@ scene/
 - CameraVerticalPan: Shift+left-drag; keeps camera/target Y in sync.
 - SmoothZoom: wheel and middle-drag with frame-rate independent lerp.
 - Realistic theme uses sunset environment/shadows; night theme uses stars, environment, and bloom.
+- Grid details: the field boundary is always drawn, 1 m cells and 5 m sections appear only while `showGrid` is on, the `#FPVOOE` watermark sits at the field center, and a click on the ground deselects the current gate.
+- Touch: a two-finger drag pans the view (`CameraPan`) and a pinch zooms (`SmoothZoom`); both paths are skipped while a native touch gesture is active.
+- FPV fly-through runs at 4 m/s with a 1.25 m look-ahead and restores the previous editor camera on exit; the FPV button is disabled below 2 gates, and Escape stops the flight.
 - No direct scene/gate component test suites currently exist; verify through build and targeted utility tests.

@@ -17,8 +17,8 @@ schemas/
 | Import external/local JSON | `deserializeTrack()` |
 | Boolean guard | `isValidTrack()` |
 | Detailed validation | `validateTrack()` |
-| Version behavior | `SCHEMA_VERSION` |
-| Legacy gate aliases | `LEGACY_GATE_TYPE_MAP` |
+| Version behavior | `SCHEMA_VERSION` (currently `'1.2.0'`) |
+| Legacy gate aliases | `LEGACY_GATE_TYPE_MAP` (maps `asymmetric` → `double-h`) |
 | Gate quantity normalization | `normalizeGateQuantities()` |
 
 ## CONVENTIONS

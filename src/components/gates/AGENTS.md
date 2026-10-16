@@ -14,13 +14,13 @@ gates/
 ├── LadderGate.tsx            # Three stacked gates
 ├── StartFinishGate.tsx       # Start panel + text
 ├── Flag.tsx                  # Pole + flag marker
-├── FlagSmall.tsx             # 1m pole + proportionally smaller plate
-├── OctagonalTunnelGate.tsx   # Octagonal tunnel / legacy asymmetric replacement
+├── FlagSmall.tsx             # 1.2m pole + proportionally smaller plate
+├── OctagonalTunnelGate.tsx   # Octagonal 8-edge tunnel, length 2
 ├── Gate.tsx                  # Dispatcher: GateType → component
 ├── GateHandles.tsx           # Html overlay: move/rotate/elevate/insert/delete
 ├── GateOpeningIndicators.tsx # Maps openings to entry/exit indicators
 ├── GateEntryIndicator.tsx    # Per-opening planes, labels, swap icon
-└── index.ts                  # Incomplete barrel; no importers (missing LadderGate, FlagSmall)
+└── index.ts                  # Incomplete barrel; no importers (missing LadderGate, FlagSmall, GateHandles, GateOpeningIndicators)
 ```
 
 ## CONVENTIONS
@@ -30,6 +30,7 @@ gates/
 - `Gate.tsx` maps `GateType` to components and owns read-only handling plus opening label/direction callbacks.
 - `GateHandles.tsx` uses drei `<Html>` for DOM overlays in 3D space.
 - Opening indicators are green entry / red exit planes; label/swap interactions route through store actions.
+- `GateHandles` drag semantics: move is clamped to the field bounds, rotate runs at 1 degree per pixel and only rounds to 15 degrees while `config.snapGatesToGrid` is on, and elevate moves at 0.03 m per pixel with y floored at 0.
 
 ## WHERE TO LOOK
 | Task | File |
@@ -45,7 +46,7 @@ gates/
 - Do not add user-defined/custom gate types.
 - Do not add per-gate sizing; dimensions are shared constants/global behavior.
 - Do not bypass `Gate.tsx` when adding a fixed gate type.
-- Do not trust the barrel; it lacks `LadderGate`/`FlagSmall` and has no importers — import gate files directly.
+- Do not trust the barrel; it lacks `LadderGate`, `FlagSmall`, `GateHandles`, and `GateOpeningIndicators`, and has no importers. Import gate files directly.
 
 ## NOTES
 - `Scene.tsx` imports `Gate` directly (`../gates/Gate`) and bypasses the barrel.
@@ -53,3 +54,7 @@ gates/
 - Insert handles prefer flight-path samples when available and fall back to rotated gate offsets.
 - `GateType` set (`src/types/gate.ts`): standard, h-gate, double-h, hurdle, dive, double, ladder, start-finish, flag, flag-small, octagonal-tunnel.
 - `src/components/icons/GateIcon.tsx` mirrors each gate's 3D geometry as a front-view SVG silhouette; keep it in sync when geometry changes.
+- `start-finish` is a singleton: the store allows only one such gate at a time (`isSingletonGateType` / `hasSingletonGateConflict` in `src/store/trackSlice.ts`).
+- The legacy schema map sends the old `asymmetric` gate type to `double-h` (`LEGACY_GATE_TYPE_MAP` in `src/schemas/track.schema.ts`); `OctagonalTunnelGate` is an ordinary gate type, not a legacy replacement.
+- Handle constants live in `GateHandles.tsx`: `DEGREES_PER_PIXEL = 1`, `ROTATION_SNAP_STEP_DEGREES = 15`, `METERS_PER_ELEVATION_PIXEL = 0.03`, `HANDLE_CLEARANCE_ABOVE_GATE = 0.5`, `INSERT_HANDLE_OFFSET_Y = 0.9`, `FALLBACK_INSERT_DISTANCE = 3`.
+- The rotate handle only rounds while grid snap is active; the store action `rotateGate` (plus/minus 30 degrees) has no UI caller, and the generator rounds gate rotations to 30 degrees.

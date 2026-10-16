@@ -5,7 +5,7 @@
 ## STRUCTURE
 ```
 components/viewer/
-├── ViewerApp.tsx          # Read-only scene shell, export button, help button, error state
+├── ViewerApp.tsx          # Read-only scene shell, FPV/export/help buttons, error state
 ├── ViewerHelpDialog.tsx   # Viewer controls reference dialog
 └── ViewerApp.test.tsx     # RTL coverage for error/read-only/export/help flows
 ```
@@ -28,9 +28,14 @@ Related files outside this folder:
 ## CONVENTIONS
 - Viewer passes `readOnly` to `Scene`; do not render editor handles, labels that mutate state, or store mutation controls.
 - Viewer state is intentionally separate from `src/store`; it only accepts decoded track/config, error, and reset.
-- Error/help/export strings are German, matching the editor UI.
+- Error/help/export strings go through `useTranslation()` with DE and EN values in `src/i18n.ts`, matching the editor UI.
 - First valid viewer load opens help once via `fpv-track-viewer-help-seen` cookie.
 - Export uses `serializeTrack(track, config)` so downloaded JSON remains importable by the editor.
+
+## NOTES
+- The FPV button is disabled while fewer than 2 gates are loaded; a second click or Escape stops the flight.
+- The download file name comes from the track name: whitespace becomes `-`, the result is lowercased, and `.json` is appended.
+- A `fpvooe.com` pill sits bottom-right and opens https://fpvooe.com in a new tab with `rel="noreferrer"`.
 
 ## ANTI-PATTERNS
 - Do not import `useAppStore` into viewer components.

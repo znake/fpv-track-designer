@@ -14,7 +14,7 @@ hooks/
 ## WHERE TO LOOK
 | Task | File | Notes |
 |------|------|-------|
-| Change shortcut map | `useKeyboardShortcuts.ts` | S shuffle, Cmd/Ctrl+S save, G gallery, Cmd/Ctrl+Z/Y undo/redo, Escape, Backspace delete, Enter confirm |
+| Change shortcut map | `useKeyboardShortcuts.ts` | S shuffle, Cmd/Ctrl+S save, G gallery, Cmd/Ctrl+Z undo, Cmd/Ctrl+Y or Cmd/Ctrl+Shift+Z redo, Escape, Backspace delete (single selection only), Enter confirm |
 | Change gate click/selection | `useGateSelection.ts`, `src/store/trackSlice.ts` | Shift/Meta/Ctrl = additive; ignored while dragging or camera-gesturing |
 | Change active theme hook | `useTheme.ts`, `src/utils/themeColors.ts`, `src/types/theme.ts` | Thin selector over `config.theme` |
 
@@ -30,6 +30,10 @@ hooks/
 - Do not call `preventDefault()` on typing keys before the input-target guard.
 - Do not encode shortcut behavior in components; extend `useKeyboardShortcuts`.
 - Do not duplicate theme lookup logic outside `useTheme` / `getThemeConfig`.
+
+## NOTES
+- Backspace only opens the delete dialog when exactly one gate is selected (`selectedGateId` set and `selectedGateIds.length === 1`).
+- Undo is Cmd/Ctrl+Z (without Shift); redo accepts Cmd/Ctrl+Y and Cmd/Ctrl+Shift+Z.
 
 ## TESTING
 - `useKeyboardShortcuts.test.tsx` is the shortcut regression suite; extend it when adding/changing keys.

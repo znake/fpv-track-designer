@@ -1,6 +1,7 @@
 # Src — App Entrypoints, Shell & Cross-App State
 
 **Domain:** Editor/viewer bootstraps, editor orchestration, i18n, viewer store, shared CSS import, top-level app contracts
+**Code state:** db57870 (2026-10-16)
 
 ## STRUCTURE
 ```
@@ -22,8 +23,9 @@ src/
 ## WHERE TO LOOK
 | Task | File / Directory | Notes |
 |------|------------------|-------|
-| Editor startup | `main.tsx`, `App.tsx` | StrictMode effects must stay idempotent |
-| Viewer startup | `viewer-main.tsx`, `viewer-store.ts`, `components/viewer/` | Decode hash before mount; store has no editor actions |
+| Editor startup | `main.tsx`, `App.tsx` | StrictMode effects must stay idempotent; `App` generates a starter track while none exists and opens the help dialog once per browser (cookie) |
+| Viewer startup | `viewer-main.tsx`, `viewer-store.ts`, `components/viewer/` | Decode hash before mount; store has no editor actions; empty/invalid payloads map to translated error states, the help dialog auto-opens once (cookie), and the track downloads as JSON |
+| App dialogs / saved-track gallery | `components/ui/` | Gate insert, sequence, delete, unsaved-changes, share, and gallery dialogs |
 | Translations | `i18n.ts` | Add matching `de` and `en` keys; `TranslationKey` is inferred from `de` |
 | Global CSS/theme tokens | `index.css`, `components/ui/`, `types/theme.ts` | Tailwind v4 CSS-first; no Tailwind config file |
 | Editor state | `store/`, `store/AGENTS.md` | Mutations/history/destructive flow live here |
