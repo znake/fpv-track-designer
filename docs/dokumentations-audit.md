@@ -1,130 +1,76 @@
 # Dokumentations-Audit
 
-**Stand:** gegen `main` (HEAD `3c85ea4`)
-**Geprüft:** `README.md`, alle `AGENTS.md`, `docs/coolify-track-sharing.md`
-**Zweck:** Abgleich der Dokumentation mit dem tatsächlichen Funktionsumfang des Codes.
-
-Legende: ❌ falsch/veraltet · ⚠️ unvollständig/irreführend · ✅ korrekt
+**Stand:** `main`, Code-Stand `db57870` (Dokumentations-Commits: `89202e9`, `39e81c4` und dieser Commit)
+**Geprüft:** `README.md`, `docs/NUTZERDOKUMENTATION.md`, `docs/coolify-track-sharing.md`, `docs/dokumentations-audit.md`, `AGENTS.md`, `src/AGENTS.md` und alle 10 verschachtelten `AGENTS.md` unter `src/`
+**Methode:** Feature-Inventar aus dem Code (153 user-sichtbare Fähigkeiten mit file:line-Evidenz), anschließend Lückenanalyse je Dokumentationsfläche, Überarbeitung, danach mehrere unabhängige, adversariale Verifikationsläufe, in denen jede prüfbare Behauptung einzeln mit einem Kommando gegen den Code geprüft wurde.
+**Ergebnis:** 0 geprüfte Behauptungen mit Status MISMATCH; Coverage-Matrix: 131 von 153 Inventar-Zeilen mit Anker in README *und* Nutzerdokumentation, 0 Lücken.
 
 ---
 
-## 1. Zusammenfassung
+## 1. Vorgehen
 
-| Dokument | Zustand | Kernproblem |
+| Schritt | Ergebnis |
+| --- | --- |
+| Feature-Inventar (6 Lanes: Gates, Szene, Daten, UI, Viewer, Build) | 153 Fähigkeiten mit Beleg je Zeile |
+| Lückenanalyse (7 Läufe je Doku-Fläche) | 41 falsche/veraltete Aussagen, 68 fehlende Inhalte |
+| Überarbeitung (7 Lanes, disjunkte Dateien) | 15 Dokumentationsdateien + `src/i18n.ts` |
+| Adversariale Verifikation (mehrere Runden) | letzte Runde: README 30/30, Nutzerdoku 40/40, AGENTS 150/150, coolify 40/40, In-App-Hilfe 40/40, Struktur 50/50 — 0 MISMATCH |
+| Coverage-Matrix | 131 abgedeckt, 0 Lücken, 5 Renderer-Interna ausgenommen, 1 Produktlücke markiert |
+
+Die Verifikationsläufe haben die Überarbeitung mehrfach korrigiert; die Korrekturen sind in den Abschnitten 3 und 4 aufgeführt.
+
+## 2. Zustand vor dieser Runde
+
+Das README beschrieb einen Stand um Commit `283b0ec`: 8 statt 11 Gate-Typen, eine „Gate-Größe", die es nicht gibt, 5 von 7 npm-Scripts, keine Abschnitte für Teilen/Viewer/QR, FPV-Flug, Themes, Import/Export, Stangenzähler und Sprache. Die Nutzerdokumentation war über weite Strecken korrekt, enthielt aber sieben sachliche Fehler. Die `AGENTS.md`-Dateien waren im Commit `db57870` synchronisiert worden, enthielten aber weiterhin mehrere falsche Aussagen. Das alte Audit (dieses Dokument) war selbst teilweise falsch.
+
+## 3. Behobene Fehler (Auswahl mit Beleg)
+
+| # | Vorher | Nachher (Beleg) |
 | --- | --- | --- |
-| `README.md` | ❌ deutlich veraltet | Beschreibt einen Funktionsstand rund um Commit `283b0ec`. Es fehlen mehrere komplette Feature-Bereiche, und es werden Features genannt, die es so nicht (mehr) gibt. |
-| `AGENTS.md` (Root) | ⚠️ veraltet | Selbst als „Generated 2026-04-30, Commit 283b0ec" markiert; seitdem u. a. Hurdle, Flagge klein, Snap-Grid, QR-Teilen, Lokalisierung dazu. |
-| `src/components/gates/AGENTS.md` | ⚠️ veraltet + sachlich falsch | Strukturliste unvollständig (HurdleGate, FlagSmall fehlen); Falschaussage zu „legacy asymmetric replacement". |
-| `src/components/ui/AGENTS.md` | ⚠️ teils falsch | Ordnet Theme-Einstellungen dem `GateConfigPanel` zu und nennt „Gate size", die es nicht gibt. |
-| `src/components/scene/AGENTS.md` | ⚠️ unvollständig | `FpvFlyThrough.tsx` fehlt in der Struktur. |
-| `src/components/layout/AGENTS.md` | ⚠️ teils falsch | Beschreibt Share-Dialog als „long URL ersetzt durch short URL" – tatsächlich werden beide gleichzeitig gezeigt. |
-| `src/utils/AGENTS.md` | ⚠️ leicht veraltet | Hurdle-Gate wird in den Flight-Path-Constraints nicht erwähnt. |
-| `src/store/AGENTS.md` | ✅ korrekt | Deckt sich mit `trackSlice`/`configSlice`. |
-| `src/schemas/AGENTS.md` | ✅ korrekt | Deckt sich mit `track.schema.ts`. |
-| `src/AGENTS.md` | ✅ weitgehend korrekt | Beschreibt den aktuellen Aufbau zutreffend. |
-| `docs/coolify-track-sharing.md` | ✅ korrekt | Deckt sich mit `shareTrack.ts`, `nginx.conf`, `vite.config.ts`, Dockerfiles. |
+| 1 | README: „8 Gate-Typen" | 11 Typen inkl. Hurdle, Flagge klein, Tunnel (`src/types/gate.ts:1-12`) |
+| 2 | README + Nutzerdoku: „Gate-Größe" einstellbar | keine Gate-Größe (`src/components/ui/GateConfigPanel.tsx`: nur Anzahlen und Feldmaße) |
+| 3 | README: „Zod-Validierung" | handgeschriebene Schema-Validierung, kein zod im Projekt |
+| 4 | README: 5 von 7 npm-Scripts | alle 7 inkl. `build:viewer`/`build:all` (`package.json:7-13`) |
+| 5 | README: „kein Backend" ohne Hinweis | Kurzlink-Erzeugung überträgt die Lang-URL inkl. Track-Daten an den Shortener (`src/utils/shareTrack.ts:88-93`) |
+| 6 | Nutzerdoku: Drehung raste immer in 15° | 15°-Raster nur bei aktivem Grid-Snap (`src/components/gates/GateHandles.tsx:232-233`) |
+| 7 | Nutzerdoku: Verschieben in N/S/E/W-1-m-Schritten | freies Ziehen, optional am Raster eingerastet (Handles, nicht die ungenutzte Store-Aktion) |
+| 8 | Nutzerdoku: Realistisch rendert „Wolken" | `useClouds` hat keinen Verbraucher, es werden keine Wolken gerendert |
+| 9 | Nutzerdoku: Import liefert Fehlermeldung | fehlerhafte Dateien werden verworfen, die Meldung landet nur in der Konsole (`src/components/layout/TopBar.tsx:96,102`) |
+| 10 | Nutzerdoku: Ein-/Ausflug-Markierungen „immer sichtbar" | an den Schalter „Durchflüge" gekoppelt (`src/components/gates/Gate.tsx:70`) |
+| 11 | Nutzerdoku: Einfüge-Dialog biete vorher/nachher | Wahl über Insert-Handles (`GateHandles.tsx:350-351`), Dialog fragt nur den Typ (`App.tsx:301-333`) |
+| 12 | Nutzerdoku: Flagge „dreieckig" | rechteckige Platte (`src/components/gates/Flag.tsx:43-45`) |
+| 13 | Nutzerdoku: TopBar-Gruppierung und -Reihenfolge | Import/Export liegen rechts neben Streckennamen-Badge (`TopBar.tsx:326-400`) |
+| 14 | README + Nutzerdoku: Viewer-Zustand „Kein Track geladen." | über den Hash-Bootstrap unerreichbar (`viewer-main.tsx:14-23`) |
+| 15 | In-App-Hilfe: „Anzahl/Größe der Gates", 15° unabhängig vom Snap, Pan ohne Rechtsklick | korrigiert, DE + EN (`src/i18n.ts`, Commit `89202e9`) |
+| 16 | `AGENTS.md`: Rotation 0-330 in 30°-Schritten | Handle 1°/px, 15°-Snap nur bei `snapGatesToGrid`, Generator 30° (`GateHandles.tsx:232-233`, `generator.ts:141`) |
+| 17 | `AGENTS.md`: Barrel fehlen zwei Module | vier Module fehlen (`LadderGate`, `FlagSmall`, `GateHandles`, `GateOpeningIndicators`) |
+| 18 | `AGENTS.md`: `.env.*` bäckt Viewer-Domain | nur `.env.example` kennt `VITE_VIEWER_DOMAIN`; dev/prod setzen nur den Shortener-Endpoint |
+| 19 | `gates/AGENTS.md`: FlagSmall „1 m"-Mast | 1,2 m (`FlagSmall.tsx:22`, `gateDimensions.ts:2`) |
+| 20 | `layout/AGENTS.md`: Share-Dialog ersetze den Langlink | beide Links werden gleichzeitig gezeigt (`ShareTrackDialog.tsx:21-22,44-45`) |
+| 21 | coolify: `VITE_VIEWER_DOMAIN` sei Pflicht | optional mit Default (`shareTrack.ts:5,70`); Payload ist `#z.<lz-string>`, base64url nur Legacy-Fallback |
+| 22 | Altes Audit: Flight-Path-Constraints missen „hurdle" | falsch — `flightPath.ts` enthält keine Hurdle-Referenz, die Dokumentation war korrekt |
 
-**Fazit:** Die technische Projekt-/Agent-Doku ist überwiegend brauchbar, das `README.md` ist es als Nutzer-Einstieg nicht. Es fehlt eine eigentliche Nutzerdokumentation – diese liegt jetzt in [`NUTZERDOKUMENTATION.md`](./NUTZERDOKUMENTATION.md).
+## 4. Produktbefunde (keine Dokumentationsfehler, aus dem Audit gefallen)
 
----
+Diese Punkte sind keine Dokumentationsprobleme, sondern Produktbeobachtungen, die beim Abgleich aufgefallen sind:
 
-## 2. `README.md` – Befunde im Detail
+1. **Fehlende Import-Fehlermeldung:** Eine ungültige JSON-Datei wird still verworfen, es gibt keine sichtbare Rückmeldung im UI (`TopBar.tsx:96,102` schreibt nur in die Konsole). Die Dokumentation beschreibt das Verhalten korrekt; eine Nutzerfreundlichkeit wäre eine Erweiterung.
+2. **Unerreichbarer Viewer-Zustand:** `ViewerApp.tsx:73-79` rendert „Kein Track geladen.", aber der Bootstrap in `viewer-main.tsx:14-23` erreicht diesen Zweig nie. Wird als interner Zustand in den `AGENTS.md` dokumentiert.
+3. **Toter Code:** `src/utils/gateOperations.ts` (nur vom eigenen Test importiert), die Store-Aktionen `moveGate`/`rotateGate` ohne UI-Aufrufer, `DirectionalPad` ohne Import, `storage.autoSave` ohne Produktionsnutzer.
+4. **Stale Kommentar:** `src/types/gate.ts:28` kommentiert `rotation` als kontinuierlich, die Store-Aktion rechnet in 30°-Schritten.
+5. **Theme-Flag ohne Verbraucher:** `theme.realistic.useClouds` ist `true`, aber es wird nichts gerendert.
 
-### ❌ Falsche / veraltete Aussagen
+## 5. Bewusste Abgrenzungen der Coverage-Matrix
 
-1. **„8 Gate-Typen: Standard, Start/Ziel, H-Gate, Double-H, Dive, Double, Ladder und Flag"**
-   Tatsächlich existieren **11 Gate-Typen** (`src/types/gate.ts`, Dispatcher `Gate.tsx`):
-   `standard`, `start-finish`, `h-gate`, `double-h`, `hurdle`, `dive`, `double`, `ladder`, `flag`, `flag-small`, `octagonal-tunnel`.
-   Fehlend im README: **Hurdle**, **Flaggen-Gate klein**, **Tunnel**.
+- **AUSGENOMMEN (5):** ACES-Tonemapping, Kamera-Startkoordinaten, Zoom-Interpolation, Grasfläche, Himmelskuppel — reine Renderer-Interna ohne Nutzerhandlung.
+- **N/A_INTERNE:** der oben genannte unerreichbare Viewer-Zustand (in `AGENTS.md` dokumentiert).
+- **PRODUKTLÜCKE, DOKU KORREKT (1):** die inventarisierte „Fehlermeldung samt Feldliste" für Import/Share-Daten existiert im Produkt nicht; die Dokumentation beschreibt das Verhalten korrekt.
+- Die 15 Build-/Entwickler-Zeilen sind als Entwickler-Doku in `AGENTS.md` bzw. README abgedeckt; die Nutzerdokumentation lässt sie bewusst aus.
 
-2. **„Zufällige Track-Generierung anhand von Feldgröße, Gate-Anzahl und Gate-Größe"**
-   Eine konfigurierbare **Gate-Größe gibt es nicht** (mehr). `Config` (`src/types/config.ts`) enthält kein `gateSize`; die Schema-Schicht verwirft das Legacy-Feld bewusst. Generiert wird anhand von **Gate-Anzahl je Gate-Typ** und **Feldgröße**.
+## 6. Verifikations-Artefakte
 
-3. **Bedienung → Gates bearbeiten** nennt nur „verschieben, drehen, einfügen, löschen".
-   Es fehlen: **Höhe verstellen (Elevate)**, **Einflug-/Ausflugseite wechseln**, **Durchflugreihenfolge ändern**, **Grid-Snap / Snap-Genauigkeit**.
-
-4. **Shortcuts-Tabelle** ist unvollständig bzw. veraltet:
-   - Fehlt: `Enter` = Löschen bestätigen (im Bestätigungsdialog).
-   - `Escape` stoppt zusätzlich einen laufenden **FPV-Flug** – nicht erwähnt.
-   - Die App startet beim ersten Besuch automatisch den Hilfe-Dialog (`KeyboardShortcutsDialog`) – nicht erwähnt.
-
-5. **„Daten und Speicherung: Die App benötigt kein Backend."**
-   Nur teilweise korrekt: Tracks liegen lokal in `localStorage`, **aber** das Teilen nutzt optional einen n8n-Shortlink-Proxy (`/api/shorten-track` → n8n). Siehe `docs/coolify-track-sharing.md`.
-
-6. **„Nützliche Skripte"** fehlen `build:viewer` und `build:all` (siehe `package.json`).
-
-### ⚠️ Komplett fehlende Feature-Bereiche
-
-- **Track Teilen** inkl. Share-Dialog (langer + kurzer Link), **QR-Code (PNG/SVG)** und **Read-only-Viewer** (`sharedtrack.fpvooe.com`).
-- **FPV-Flug / Durchfliegen** (TopBar-Button, Ideallinie, Auto-Stopp, min. 2 Gates).
-- **Design/Themes**: Minimal Standard, Realistisch, Nacht.
-- **Import/Export als JSON** (nur in der Tech-Liste angedeutet, nicht als Feature).
-- **Stangenzähler** (`PoleCounter`) inkl. „nicht aus Stangen baubar".
-- **Sprachumschaltung DE/EN** (`i18n.ts`).
-- **Galerie-Funktionen**: Duplizieren, Umbenennen beim Duplizieren.
-- **Unsaved-Changes-/Bestätigungs-Flow** für destruktive Aktionen (Shuffle, Import, Laden, Duplizieren, Konfiguration anwenden).
-- **Snap-Genauigkeit** (0,3 m / 0,5 m / 1,0 m).
-
-### ✅ Korrekt im README
-
-- Tech-Stack, Installation, `npm`-Skripte (bis auf die zwei fehlenden), Maussteuerung (Drehen/Pan/Zoom/Kamerahöhe), Projektstruktur, Lizenz.
+Reports der Läufe (Inventar, Lückenanalyse, Verifikation, Coverage-Matrizen) liegen unter `/tmp/ulw-docs-8iXEY4/waves/docs-audit/` — `inv-*.md` (Inventar), `gap-*.md` (Lückenanalyse), `verify-*.md` (adversariale Prüfung), `coverage-matrix-last.md` (finale Matrix). Jede MISMATCH-Prüfung ist dort mit dem ausgeführten Kommando und der Code-Zeile belegt.
 
 ---
 
-## 3. `AGENTS.md`-Dateien – Befunde
-
-### Root `AGENTS.md`
-- ⚠️ Selbstauskunft „Generated 2026-04-30 / Commit `283b0ec`" – HEAD ist `3c85ea4`.
-- ⚠️ „UNIQUE STYLES → Gate rotation: 0-330 in 30 degree steps" ist irreführend: Die **UI rastet in 15°-Schritten** (`GateHandles.tsx`, `ROTATION_SNAP_STEP_DEGREES = 15`); 30° ist nur die interne Generator-Rundung.
-- ⚠️ Feature-Neuzugänge nach `283b0ec` fehlen (Hurdle, Flagge klein, Snap-Grid-Größe, QR-Teilen, Lokalisierung von Viewer/Galerie/Shortcuts, Theme-Anpassungen).
-- ⚠️ `docs/` wird in der Struktur nicht erwähnt.
-
-### `src/components/gates/AGENTS.md`
-- ❌ Strukturliste unvollständig: **`HurdleGate.tsx`** und **`FlagSmall.tsx`** fehlen.
-- ❌ Falschaussage: `OctagonalTunnelGate.tsx` sei „legacy asymmetric replacement". Die Schema-Legacy-Map bildet `asymmetric` → **`double-h`** ab, nicht auf den Tunnel.
-- ⚠️ „Barrel export (incomplete — missing LadderGate)": Aktuell fehlen im Barrel **`LadderGate` UND `FlagSmall`** (`src/components/gates/index.ts`). Funktional unkritisch, da `Gate.tsx`/`Scene.tsx` direkt importieren.
-
-### `src/components/ui/AGENTS.md`
-- ❌ „`GateConfigPanel.tsx` — Gate quantities, field size, theme settings": Theme-Einstellungen liegen im **`ThemeConfigPanel.tsx`**; `GateConfigPanel` hat keine Theme-Controls.
-- ⚠️ „34 UI files" – Anzahl nicht verifiziert und nicht kritisch.
-
-### `src/components/scene/AGENTS.md`
-- ⚠️ `FpvFlyThrough.tsx` fehlt in der Struktur und in „WHERE TO LOOK" (der FPV-Flug wird in `Scene.tsx` verdrahtet).
-
-### `src/components/layout/AGENTS.md`
-- ❌ „shows the long share URL immediately, then replaces it with the shortened URL": Der Dialog zeigt **beide** Felder gleichzeitig („Langer Link" und „Teilbarer Link"); kopiert wird der Kurzlink, falls vorhanden, sonst der lange Link.
-
-### `src/utils/AGENTS.md`
-- ⚠️ In „KEY CONSTRAINTS" der Flight-Path-Sonderfälle fehlt **Hurdle** (inzwischen im Code vorhanden).
-
-### `src/store/AGENTS.md`, `src/schemas/AGENTS.md`, `src/AGENTS.md`
-- ✅ Inhaltlich deckungsgleich mit dem Code (Stand geprüft).
-
----
-
-## 4. `docs/coolify-track-sharing.md`
-
-- ✅ Deckt sich mit `src/utils/shareTrack.ts` (Payload `z.` + lz-string, Legacy-base64url), `nginx.conf`, `vite.config.ts` (Dev-Proxy), `Dockerfile`/`Dockerfile.viewer`.
-- ✅ Env-Variablen (`VITE_VIEWER_DOMAIN`, `VITE_TRACK_SHORTENER_ENDPOINT`) korrekt.
-
----
-
-## 5. Inkonsistenz im Produkt selbst (Hinweis)
-
-Kein Doku-Fehler, aber relevant: Der Hilfe-Text `settingsHelp` in `src/i18n.ts` verweist noch auf „**Anzahl/Größe der Gates**", obwohl es keine Gate-Größen-Einstellung mehr gibt. Empfehlung: Text anpassen (z. B. „Anzahl der Gates je Typ und Feldgröße").
-
----
-
-## 6. Empfohlene Korrekturen (Priorität)
-
-1. **`README.md`**
-   - Gate-Liste auf 11 Typen erweitern (Hurdle, Flagge klein, Tunnel) und „Gate-Größe" entfernen.
-   - Neue Feature-Abschnitte/Stichpunkte: Teilen + Viewer (+QR), FPV-Flug, Themes, Import/Export, Stangenzähler, Sprache DE/EN, Snap-Genauigkeit.
-   - Shortcuts um `Enter` und „Escape stoppt FPV" ergänzen.
-   - Bei „kein Backend" auf den optionalen n8n-Shortener hinweisen und auf `docs/NUTZERDOKUMENTATION.md` bzw. `docs/coolify-track-sharing.md` verlinken.
-   - `build:viewer` / `build:all` ergänzen.
-2. **`src/components/gates/AGENTS.md`**: Struktur + Legacy-Aussage korrigieren, Barrel-Notiz aktualisieren.
-3. **`src/components/ui/AGENTS.md`**: Theme-Zuordnung korrigieren.
-4. **`src/components/scene/AGENTS.md`**: `FpvFlyThrough.tsx` ergänzen.
-5. **`src/components/layout/AGENTS.md`**: Share-Dialog-Beschreibung korrigieren.
-6. **Root `AGENTS.md`**: Generierungs-Commit aktualisieren, 15°-Snap präzisieren, neue Features ergänzen.
+*Dieses Dokument beschreibt den Abgleich der Dokumentation mit dem Code. Es wird beim nächsten Funktionswechsel aktuell gehalten, indem die geänderten Dokumentationsflächen erneut gegen den Code geprüft werden.*

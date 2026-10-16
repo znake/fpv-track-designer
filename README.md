@@ -9,13 +9,20 @@ Das Projekt kombiniert eine interaktive React-Oberfläche mit einer Three.js/R3F
 ## Features
 
 - **3D-Streckeneditor** mit frei sichtbarer FPV-Rennstrecke
-- **Zufällige Track-Generierung** anhand von Feldgröße, Gate-Anzahl und Gate-Größe
-- **8 Gate-Typen**: Standard, Start/Ziel, H-Gate, Double-H, Dive, Double, Ladder und Flag
-- **Gate-Bearbeitung** direkt in der Szene: auswählen, verschieben, drehen, einfügen und löschen
-- **Flugpfad-Visualisierung** mit Gate-Reihenfolge und Richtungspfeilen
+- **Zufällige Track-Generierung** anhand von Feldgröße und Gate-Anzahl je Typ
+- **11 Gate-Typen**: Standard, Start/Ziel, h-Gate, Doppel-h, Hurdle, Dive, Doppel, Leiter, Flagge, Flagge klein und Tunnel
+- **Gate-Bearbeitung** direkt in der Szene: auswählen, verschieben, anheben, drehen, einfügen und löschen
+- **Flugpfad-Visualisierung** mit Gate-Reihenfolge, Richtungspfeilen und automatischen Ausweichkurven
+- **FPV-Flug** entlang der Ideallinie (ab zwei Gates)
 - **Undo/Redo-Verlauf** für Bearbeitungsschritte
 - **Lokale Speicherung** von Tracks im Browser über `localStorage`
-- **Track-Galerie** zum Laden und Löschen gespeicherter Strecken
+- **Track-Galerie** zum Laden, Duplizieren und Löschen gespeicherter Strecken
+- **JSON-Import und -Export** für den Austausch von Strecken
+- **Teilen per Link**: Langlink, Kurzlink und QR-Code als PNG oder SVG
+- **Read-only Share-Viewer** auf eigener URL inklusive JSON-Download und FPV-Flug
+- **Design-Panel** mit den Themes Minimal Standard, Realistisch und Nacht
+- **Sprachumschaltung** zwischen Deutsch und Englisch
+- **Stangenzähler** mit Aufschlüsselung der benötigten Stangen je Gate-Typ
 - **Keyboard-Shortcuts** für schnelle Bedienung
 
 ## Tech Stack
@@ -31,7 +38,7 @@ Das Projekt kombiniert eine interaktive React-Oberfläche mit einer Three.js/R3F
 
 ## Voraussetzungen
 
-- Node.js 20 oder neuer empfohlen
+- Node.js 20.19+ oder 22.12+ empfohlen (die Build-Toolchain verlangt `^20.19.0 || >=22.12.0`)
 - npm
 
 ## Installation
@@ -57,25 +64,56 @@ http://localhost:5173
 ## Nützliche Skripte
 
 ```bash
-npm run dev      # Entwicklungsserver starten
-npm run build    # TypeScript prüfen und Produktions-Build erstellen
-npm run preview  # Produktions-Build lokal ansehen
-npm run lint     # ESLint ausführen
-npm run test     # Vitest starten
+npm run dev           # Entwicklungsserver starten
+npm run build         # TypeScript prüfen und Editor-Produktions-Build erstellen
+npm run build:viewer  # Share-Viewer als einzelne HTML-Datei nach dist-viewer/ bauen
+npm run build:all     # Editor- und Viewer-Build nacheinander ausführen
+npm run preview       # Editor-Produktions-Build lokal ansehen
+npm run lint          # ESLint ausführen
+npm run test          # Vitest starten
 ```
 
 ## Bedienung
 
+### Oberfläche im Überblick
+
+- **TopBar (oben):** links der App-Titel mit dem Badge „Beta Version“; in der Mitte Rückgängig/Wiederholen, der FPV-Flug, der Stangenzähler und die Anzeige-Schalter (Raster, Grid-Snap, Snap-Genauigkeit, Flugbahn, Durchflüge); rechts JSON-Import und -Export, das „#fpvooe“-Badge (Link auf fpvooe.com), der Name der geladenen Strecke, die Sprachumschaltung und der Hilfe-Button.
+- **Linke Werkzeugleiste:** Shuffle, Speichern, Track teilen, Galerie, Einstellungen und Design.
+- **3D-Szene (Mitte):** die Strecke selbst. Angeklickt erscheinen direkt am Gate die Bearbeitungswerkzeuge. In der Feldmitte liegt ein dezentes Wasserzeichen „#FPVOOE“.
+
+Der Hilfe-Button öffnet einen Dialog mit bebilderten Bearbeitungsschritten und den gruppierten Tastenkürzeln (auf dem Mac mit ⌘-Anzeige); beim ersten Besuch öffnet er sich einmalig von selbst.
+
+Läuft beim Rendern etwas schief, zeigt die App statt der Szene einen Fehlerbildschirm („Etwas ist schiefgelaufen“) mit einem „Erneut versuchen“-Button.
+
 ### Strecke konfigurieren
 
-Über die Einstellungen können Gate-Anzahlen, Feldmaße, Gate-Größe sowie Anzeigeoptionen angepasst werden. Beim Mischen wird daraus automatisch eine neue Strecke erzeugt.
+Über die Einstellungen lassen sich die Anzahl der Gates je Typ sowie die Feldbreite und -länge anpassen. Beim Mischen wird daraus automatisch eine neue Strecke erzeugt. „Auf Standard zurücksetzen“ stellt die Werkseinstellungen der Konfiguration wieder her.
+
+Änderungen an der Konfiguration erzeugen die Strecke nicht von selbst neu. Sobald die aktuelle Strecke von der Generierungs-Konfiguration abweicht, erscheint im Einstellungs-Panel der Button „Neue Kurskonfiguration anwenden“, der einen neuen Track erzeugt.
+
+Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in der TopBar: Raster, Flugbahn und Durchflüge lassen sich dort einzeln ein- und ausblenden.
 
 ### Gates bearbeiten
 
-1. Gate in der 3D-Szene anklicken.
-2. Verschieben- oder Drehen-Werkzeug direkt am Gate verwenden.
-3. Neue Gates können relativ zu einem ausgewählten Gate eingefügt werden.
-4. Ausgewählte Gates lassen sich per Dialog oder Shortcut löschen.
+1. Gate in der 3D-Szene anklicken. Shift-, Cmd- oder Ctrl-Klick erweitert die Auswahl.
+2. Verschieben-, Anheben- oder Drehen-Werkzeug direkt am Gate verwenden. Das Drehen läuft kontinuierlich mit 1° pro Pixel und rastet nur bei aktivem Snap auf 15°-Schritte ein.
+3. **Einflug- und Ausflugseite:** Bei aktivem Schalter „Durchflüge“ zeigt jede Öffnung eine grüne Einflug- und eine rote Ausflugsfläche; das ⇄-Symbol an der Öffnung dreht die Durchflugrichtung um. Je nach Kameraposition ist nur die zugewandte Seite beschriftet.
+4. **Durchflugreihenfolge:** Ein Klick auf die Durchflugnummer einer Öffnung öffnet den Dialog „Durchflugnummer ändern“. Die Nummer muss zwischen 1 und der Gesamtzahl der Durchflüge liegen.
+5. Neue Gates können relativ zu einem ausgewählten Gate davor oder danach eingefügt werden. Beim Einfügen wird der Gate-Typ gewählt; ein bereits vorhandenes Start/Ziel-Gate ist ausgegraut.
+6. Ausgewählte Gates lassen sich per Dialog oder Shortcut löschen.
+7. Ein Klick auf den Boden hebt die Auswahl wieder auf.
+
+### FPV-Flug
+
+Der Play-Button in der TopBar startet einen automatischen Kameraflug entlang der Ideallinie, ein erneuter Klick stoppt ihn. Der Flug ist erst ab zwei Gates verfügbar, darunter bleibt der Button deaktiviert. `Escape` beendet den Flug ebenfalls und stellt die vorherige Editor-Kamera wieder her. Die Geschwindigkeit ist fest (4 m/s), die Kamera blickt der Linie voraus, und eine Fortschrittsanzeige gibt es nicht. Während des Flugs sind die Kamera-Bedienelemente deaktiviert.
+
+### Design und Themes
+
+Das Design-Panel bietet drei Themes: Minimal Standard, Realistisch und Nacht. Ein Klick schaltet die Szene sofort um. Realistisch rendert Sonne, Umgebungslicht und Schatten, Nacht einen Sternenhimmel mit Bloom- und Neon-Effekt auf den Gates.
+
+### Sprache
+
+Der Flaggen-Button in der TopBar schaltet die komplette Oberfläche zwischen Deutsch und Englisch um. Standard ist Deutsch.
 
 ### Maussteuerung in der 3D-Ansicht
 
@@ -85,10 +123,15 @@ Die Ansicht kann vollständig mit der Maus bedient werden:
 | --- | --- |
 | Ansicht drehen | Linke Maustaste gedrückt halten und ziehen |
 | Über die Strecke bewegen | Rechte Maustaste gedrückt halten und ziehen (draggen/pannen) |
-| Zoomen | Mausrad scrollen oder Mausrad/mittlere Maustaste gedrückt halten und nach oben/unten ziehen |
+| Zoomen | Mausrad scrollen |
+| Schnell zoomen | Mittlere Maustaste gedrückt halten und ziehen |
 | Kamerahöhe ändern | `Shift` gedrückt halten und mit linker Maustaste ziehen |
+| Neigung der Ansicht | Die Kamera lässt sich nicht unter den Horizont kippen |
+| Zoom-Grenzen | Der Abstand reicht von 2 m bis 200 m |
 
 Alternativ kann die Ansicht auch mit `Space + linke Maustaste ziehen` verschoben werden.
+
+Auf Touch-Geräten verschiebt ein Zwei-Finger-Ziehen die Ansicht, ein Auf- und Zuziehen mit zwei Fingern zoomt.
 
 ### Shortcuts
 
@@ -99,41 +142,94 @@ Alternativ kann die Ansicht auch mit `Space + linke Maustaste ziehen` verschoben
 | Galerie öffnen | `G` |
 | Ansicht verschieben | `Space + linke Maustaste ziehen` |
 | Kamerahöhe ändern | `Shift + linke Maustaste ziehen` |
-| Auswahl/Dialog schließen | `Escape` |
+| Gate abwählen / Dialoge schließen | `Escape` |
+| FPV-Flug beenden | `Escape` |
 | Ausgewähltes Gate löschen | `Backspace` |
+| Löschen bestätigen | `Enter` |
 | Rückgängig | `Cmd/Ctrl + Z` |
 | Wiederholen | `Cmd/Ctrl + Y` oder `Cmd/Ctrl + Shift + Z` |
+
+Die Tooltips der Rückgängig-/Wiederholen-Knöpfe in der TopBar zeigen in Klammern, wie viele Schritte gerade verfügbar sind; ohne Verlauf sind die Knöpfe deaktiviert.
+
+### Snap und Raster
+
+Der "Grid-Snap"-Schalter in der TopBar aktiviert das Einrasten und rastet beim Einschalten sofort alle Gates ein. Die Rastergröße lässt sich auf 0,3 m, 0,5 m oder 1,0 m stellen; ein Wechsel rastet alle Gates neu ein. Der separate „Grid anzeigen“-Schalter blendet das Bodenraster mit 1-m-Zellen und 5-m-Markierungen ein oder aus. Der Feldrand wird unabhängig davon immer gezeichnet.
+
+## Teilen
+
+Der „Track teilen"-Button in der linken Werkzeugleiste erzeugt eine Viewer-URL, die die komplette Strecke als komprimierten Hash-Payload trägt (Langlink). Zusätzlich schickt die App den Langlink an einen Shortener-Dienst und zeigt den zurückgelieferten Kurzlink an. Der Share-Dialog zeigt beide Links gleichzeitig, erlaubt das Kopieren und zeigt eine QR-Vorschau, die sich als PNG oder SVG herunterladen lässt.
+
+Die Daten für Lang- und Kurzlink kommen ausschließlich aus der Strecke im Editor. Ohne geladenen Track bleibt der Teilen-Button deaktiviert.
+
+## Share-Viewer
+
+Der Share-Viewer ist eine eigene, read-only Ansicht der geteilten Strecke. Er wird über eine eigene URL mit Hash-Payload aufgerufen und liest die Daten beim Laden direkt aus dem Fragment nach `#`. Fehlt die Payload oder ist sie beschädigt, erscheint statt der Szene eine Fehlermeldung mit dem Titel „Track kann nicht geladen werden“ und einer passenden Meldung.
+
+Im Viewer lässt sich die Strecke frei betrachten, aber nicht verändern. Oben rechts gibt es Buttons für den FPV-Flug (ab zwei Gates), den JSON-Download der Strecke und eine Hilfe mit den Steuerungsgesten; die Hilfe öffnet sich beim ersten Besuch einmalig von selbst und danach nur noch per Klick. Der Download benennt die Datei nach dem Streckennamen. Unten rechts führt ein Link zu fpvooe.com. Auch im Viewer beendet `Escape` den FPV-Flug.
+
+Der Viewer wird als einzelne HTML-Datei gebaut und über einen eigenen Einstiegspunkt (`viewer.html`) geladen:
+
+```bash
+npm run build:viewer
+```
+
+Das Ergebnis landet als `dist-viewer/index.html`. Der Viewer ist damit unabhängig vom Editor deploybar.
+
+## Daten und Speicherung
+
+Die App benötigt kein Backend. Gespeicherte Tracks werden lokal im Browser abgelegt. Dadurch bleiben Daten auf dem Gerät, sind aber auch an den jeweiligen Browser und dessen Speicher gekoppelt.
+
+Eine Ausnahme ist das Erzeugen eines Kurzlinks: Dabei wird die vollständige lange URL inklusive der Track-Daten im Hash an den Shortener-Dienst übermittelt, damit dieser den Kurzlink bauen kann. Ohne diesen Dienst bleibt der Langlink uneingeschränkt nutzbar. Beim reinen Betrachten einer geteilten Strecke werden die Track-Daten ausschließlich im Browser aus dem URL-Fragment gelesen.
+
+Strecken lassen sich in der TopBar als `.json`-Datei exportieren und aus einer `.json`-Datei wieder importieren. Der Import läuft über die Schema-Validierung: Eine ungültige Datei wird abgewiesen und die aktuelle Strecke bleibt unverändert, die App stürzt dabei nicht ab. Eine sichtbare Fehlermeldung im UI gibt es derzeit noch nicht, der Fehler landet nur in der Browser-Konsole. Die gleiche Validierung schützt auch die per Share-Link übertragenen Daten.
+
+Vor destruktiven Aktionen wie Import, Verwerfen oder Galerie-Laden erscheint bei ungespeicherten Änderungen ein Dialog mit den Optionen „Abbrechen“, „Zuerst speichern“ und „Verwerfen“. Wählst du „Zuerst speichern“, wird die vorgemerkte Aktion nach dem erfolgreichen Speichern automatisch ausgeführt. Beim ersten Besuch wird automatisch eine Strecke generiert und die Hilfe einmalig geöffnet.
+
+## Stangenzähler
+
+Die TopBar zeigt ein Hammer-Badge mit der Gesamtzahl der benötigten Stangen. Ohne Gates wird das Element gar nicht gerendert. Ein Klick öffnet eine Aufschlüsselung je Gate-Typ mit Menge, Stangen pro Gate und Zwischensumme.
+
+Nicht alle Gate-Typen lassen sich aus Stangen bauen. Für Hurdle, Dive und den Tunnel ist die Stangenanzahl pro Gate null, sie werden in der Aufschlüsselung separat als nicht aus Stangen baubar geführt.
 
 ## Projektstruktur
 
 ```text
 src/
 ├── components/
-│   ├── gates/       # 3D-Komponenten für Gate-Typen und Handles
-│   ├── layout/      # TopBar und Werkzeugleiste
-│   ├── scene/       # R3F-Canvas, Kamera, Grid und Flugpfad
-│   └── ui/          # Dialoge, Panels und shadcn/ui-Primitives
-├── hooks/           # Keyboard- und Auswahl-Logik
-├── schemas/         # Zod-Validierung für Track-Daten
-├── store/           # Zustand-Slices für Config und Tracks
-├── types/           # TypeScript-Domänenmodelle
-└── utils/           # Generator, Flugpfad, Gate-Operationen und Storage
+│   ├── gates/        # 3D-Komponenten für Gate-Typen, Handles und Öffnungs-Indikatoren
+│   ├── layout/       # TopBar, linke Werkzeugleiste und Stangenzähler
+│   ├── scene/        # R3F-Canvas, Kamera, Grid, Flugpfad und FPV-Flug
+│   ├── ui/           # Dialoge, Panels und shadcn/ui-Primitives
+│   ├── viewer/       # Read-only Share-Viewer-UI
+│   ├── icons/        # Gate-Typ-Icons
+│   └── ErrorBoundary.tsx  # Fehlergrenze (einzige Klassenkomponente)
+├── constants/        # geteilte Gate-Maße
+├── hooks/            # Keyboard-, Auswahl- und Theme-Logik
+├── lib/              # cn-Helfer für shadcn-Klassen
+├── schemas/          # Schema-Validierung (handgeschrieben) für Track-Daten
+├── store/            # Zustand-Slices für Config und Tracks
+├── types/            # TypeScript-Domänenmodelle
+├── utils/            # Generator, Flugpfad, Stangenzählung, Share-Links und Storage
+├── i18n.ts           # typisierte DE/EN-Übersetzungen
+├── viewer-main.tsx   # Einstieg des Share-Viewers
+└── viewer-store.ts   # eigener Zustand-Store für den Viewer
 ```
-
-## Daten und Speicherung
-
-Die App benötigt kein Backend. Gespeicherte Tracks werden lokal im Browser abgelegt. Dadurch bleiben Daten auf dem Gerät, sind aber auch an den jeweiligen Browser und dessen Speicher gekoppelt.
 
 ## Tests
 
 Die Kernlogik ist mit Vitest abgedeckt, unter anderem für:
 
 - Track-Generierung
-- Gate-Operationen
 - Gate-Öffnungen und Sequenzen
 - Flugpfad-Berechnung
 - Store-Slices
 - LocalStorage-Persistenz
+- Schema-Validierung
+- Share-Link-Payloads
+- QR-Code-Erzeugung
+- Stangenzählung
+- Keyboard-Shortcuts
+- Share-Viewer
 
 ```bash
 npm run test
@@ -146,6 +242,13 @@ npm run build
 ```
 
 Der Build führt zuerst den TypeScript-Projektcheck aus und erstellt danach die optimierten Vite-Assets in `dist/`.
+
+Der Viewer hat einen eigenen Build (`npm run build:viewer`) nach `dist-viewer/`, der beide Builds laufen mit `npm run build:all` nacheinander. Editor und Viewer sind getrennte Deployments: Der Editor-Container liefert `dist/`, der Viewer-Container die einzelne Datei aus `dist-viewer/`.
+
+## Weiterführende Dokumentation
+
+- [Ausführliche Anleitung](./docs/NUTZERDOKUMENTATION.md)
+- [Deployment und Teilen-Technik](./docs/coolify-track-sharing.md)
 
 ## Lizenz
 

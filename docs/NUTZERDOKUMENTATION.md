@@ -43,9 +43,9 @@ Alles Weitere in dieser Anleitung baut darauf auf.
 
 Die Oberfläche besteht aus drei Bereichen:
 
-- **TopBar (oben):** Rückgängig/Wiederholen, FPV-Flug, JSON Import/Export, Anzeige-Optionen (Grid, Grid-Snap, Snap-Genauigkeit, Flugbahn, Durchflüge), Stangenzähler, Sprache, Hilfe.
+- **TopBar (oben):** Links stehen der App-Titel **FPV-Track-Designer** und daneben das Badge **"Beta Version".** In der Mitte folgen Rückgängig/Wiederholen, FPV-Flug, der Stangenzähler und die Anzeige-Optionen (Grid, Grid-Snap, Snap-Genauigkeit, Flugbahn, Durchflüge). Rechts findest du in der Desktop-Ansicht das Badge **„#fpvooe“** (verlinkt auf `https://fpvooe.com`, öffnet in einem neuen Tab), den Namen der geladenen Strecke als Badge (abgeschnittene Namen erscheinen vollständig als Tooltip), JSON Import/Export, Sprache und Hilfe.
 - **Linke Werkzeugleiste:** Shuffle (neu generieren), Speichern, Track Teilen, Galerie, Einstellungen, Design.
-- **3D-Szene (Mitte):** die Strecke selbst. Angeklickt erscheinen direkt am Gate die Bearbeitungswerkzeuge.
+- **3D-Szene (Mitte):** die Strecke selbst. Angeklickt erscheinen direkt am Gate die Bearbeitungswerkzeuge. In der Feldmitte liegt ein dezentes Wasserzeichen **„#FPVOOE"**.
 
 ---
 
@@ -89,10 +89,12 @@ Diese Optionen ändern nur die Darstellung, nicht die Strecke:
 | Option | Wirkung |
 | --- | --- |
 | **Grid anzeigen** | blendet das Boden-Grid (1-m-Zellen, 5-m-Markierungen) ein. Standardmäßig aus. |
-| **Grid-Snap** | Gates rasten beim Verschieben auf einem Positions-Grid ein. Die Drehung bleibt unabhängig davon bei 15°-Schritten. |
+| **Grid-Snap** | Gates rasten beim Verschieben auf einem Positions-Grid ein. Beim Drehen rastet die Drehung dann zusätzlich auf 15°-Schritte ein. Ohne aktiven Grid-Snap dreht sie stufenlos. |
 | **Snap-Genauigkeit** | wie grob eingerastet wird: **Fein · 0,3 m**, **1/2 Feld · 0,5 m** oder **1 Feld · 1,0 m**. |
 | **Flugbahn** | zeigt die Ideallinie durch alle Gates inkl. Richtungspfeilen. |
 | **Durchflüge** | markiert an jedem Gate die Reihenfolge der Durchflüge und die Ein-/Ausflugseite. |
+
+Der Feldrand ist unabhängig vom Gitter immer sichtbar und dient als Orientierung.
 
 ---
 
@@ -110,8 +112,8 @@ Der Designer kennt **11 feste Gate-Typen**. Jeder Typ hat eine eigene Form und e
 | **Dive-Gate** | Würfelartiger, unten offener Rahmen. Einflug von oben, Ausflug auf einer festen Seite. | 0 |
 | **Doppel-Gate** | Zwei übereinander gestapelte Standard-Gates. | 6 |
 | **Leiter-Gate** | Drei übereinander gestapelte Gates. | 9 |
-| **Flaggen-Gate** | 2-m-Mast mit dreieckiger Flagge. | 2 |
-| **Flaggen-Gate klein** | 1,2-m-Mast mit kleiner Flagge. | 1 |
+| **Flaggen-Gate** | 2-m-Mast mit rechteckiger Flaggen-Platte. | 2 |
+| **Flaggen-Gate klein** | 1,2-m-Mast mit kleiner rechteckiger Platte. | 1 |
 | **Tunnel** | Achteckiger Tunnel (ca. 2 m lang), dessen Ausgangsseite gespiegelt markiert ist. | 0 |
 
 > **Tipp:** Hurdle, Dive-Gate und Tunnel benötigen **keine Stangen** – sie erscheinen im Stangenzähler unter „Nicht aus Stangen baubar".
@@ -123,15 +125,16 @@ Der Designer kennt **11 feste Gate-Typen**. Jeder Typ hat eine eigene Form und e
 So bearbeitest du einzelne Gates direkt in der 3D-Szene:
 
 1. **Gate anklicken.** Es wird markiert und zeigt die Werkzeuge.
-2. **Verschieben:** Halte das Verschieben-Symbol am Gate und ziehe es an die gewünschte Position (N/S/E/W in 1-m-Schritten; mit aktivem Grid-Snap in der gewählten Snap-Genauigkeit).
-3. **Höhe verstellen:** Nutze das Höhen-Werkzeug am Gate, um es anzuheben oder abzusenken.
-4. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Die Drehung rastet in **15°-Schritten** ein.
-5. **Einfügen:** Klicke ein Gate an, wähle im Dialog **„Gate einfügen"** das Symbol **vorher** oder **nachher** und dann den **Gate-Typ**. Das neue Gate wird passend in die Durchflugreihenfolge eingefügt.
-6. **Löschen:** Wähle das Gate und drücke **`Backspace`** (öffnet den Bestätigungsdialog) oder nutze das Löschen-Symbol. Bestätigen mit **`Enter`** oder **„Gate löschen"**.
+2. **Mehrere Gates wählen:** Halte beim Klicken **`Shift`**, **`Cmd`** oder **`Ctrl`** gedrückt, um weitere Gates zur Auswahl hinzuzufügen oder bereits gewählte wieder abzuwählen. Ein Klick auf die **Bodenfläche** hebt die gesamte Auswahl auf.
+3. **Verschieben:** Halte das Verschieben-Symbol am Gate und ziehe es frei über das Feld. Mit aktivem Grid-Snap rastet es in der gewählten Snap-Genauigkeit ein.
+4. **Höhe verstellen:** Nutze das Höhen-Werkzeug am Gate, um es anzuheben oder abzusenken.
+5. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Die Drehung läuft stufenlos mit. Nur bei aktivem Grid-Snap rastet sie auf **15°-Schritte** ein.
+6. **Einfügen:** Klicke ein Gate an und nutze am Gate das **„vorher“**- oder **„nachher“**-Symbol. Der Dialog **„Gate einfügen“** fragt dann nur noch den **Gate-Typ** ab. Das neue Gate wird passend in die Durchflugreihenfolge eingefügt.
+7. **Löschen:** Wähle das Gate und drücke **`Backspace`** (öffnet den Bestätigungsdialog) oder nutze das Löschen-Symbol. Bestätigen mit **`Enter`** oder **„Gate löschen"**.
 
 ### 6.1 Einflug-/Ausflugseite wechseln
 
-Jedes Gate zeigt **grüne Einflug-** und **rote Ausflug-Markierungen** (diese Indikatoren sind immer sichtbar). Klicke die Markierung an und drehe die Richtung mit dem **⇄-Symbol** um. Die grüne Seite zeigt danach die neue Einflugseite.
+Jedes Gate zeigt **grüne Einflug-** und **rote Ausflug-Markierungen** (sichtbar, solange der Schalter **„Durchflüge“** aktiv ist). Je nach Kameraposition ist nur die zugewandte Seite beschriftet. Klicke die Markierung an und drehe die Richtung mit dem **⇄-Symbol** um. Die grüne Seite zeigt danach die neue Einflugseite.
 
 ### 6.2 Durchflugreihenfolge ändern
 
@@ -139,7 +142,7 @@ Mit aktivem **„Durchflüge"** zeigt jede Öffnung ihre **Durchflugnummer**. Kl
 
 ### 6.3 Rückgängig / Wiederholen
 
-Alle Bearbeitungsschritte lassen sich mit **`Cmd/Ctrl + Z`** rückgängig machen und mit **`Cmd/Ctrl + Y`** (oder `Cmd/Ctrl + Shift + Z`) wiederherstellen.
+Alle Bearbeitungsschritte lassen sich mit **`Cmd/Ctrl + Z`** rückgängig machen und mit **`Cmd/Ctrl + Y`** (oder `Cmd/Ctrl + Shift + Z`) wiederherstellen. Fährst du mit der Maus über den Rückgängig- oder Wiederholen-Knopf in der TopBar, zeigt der Tooltip in Klammern an, wie viele Schritte gerade verfügbar sind. Ohne Verlauf sind die Knöpfe deaktiviert.
 
 ---
 
@@ -164,7 +167,7 @@ Das Highlight: die Strecke einmal aus der **Ich-Perspektive** durchfliegen.
 - **Stoppen:** Klick erneut auf den Button (**„FPV stoppen"**) oder drücke **`Escape`**. Am Ende der Strecke stoppt der Flug automatisch und die Editor-Kamera wird wiederhergestellt.
 - **Voraussetzung:** Die Strecke braucht **mindestens 2 Gates**; sonst ist der Button deaktiviert.
 
-> **Hinweis:** Es gibt (noch) keine Fortschrittsanzeige oder Zeitanzeige während des Flugs – du siehst nur die Kamerafahrt und den Wechsel des Buttons. Die Fluggeschwindigkeit ist fest.
+> **Hinweis:** Es gibt (noch) keine Fortschrittsanzeige oder Zeitanzeige während des Flugs – du siehst nur die Kamerafahrt und den Wechsel des Buttons. Die Fluggeschwindigkeit ist fest, und die Kamera blickt der Ideallinie voraus.
 
 ---
 
@@ -175,7 +178,7 @@ Das Highlight: die Strecke einmal aus der **Ich-Perspektive** durchfliegen.
 | Theme | Beschreibung |
 | --- | --- |
 | **Minimal Standard** | Für schwächere Geräte – reduzierter Detailgrad, keine Schatten. |
-| **Realistisch** | Sonne, Wolken, Schatten und atmosphärische Beleuchtung – für leistungsstarke Rechner. |
+| **Realistisch** | Sonne, Schatten und atmosphärische Beleuchtung (Umgebungslicht) für leistungsstarke Rechner. |
 | **Nacht** | Neonfarbene Gates mit Bloom-Effekt unter einem Sternenhimmel. |
 
 Das gewählte Theme wird mit der Strecke gespeichert und **beim Teilen mitgegeben** – Empfänger sehen deine Strecke also im gleichen Look.
@@ -207,6 +210,7 @@ In der TopBar findest du **JSON exportieren** und **JSON importieren**:
 
 - **Export:** speichert die aktuell geladene Strecke (Gates, Reihenfolge, Konfiguration, Theme) als JSON-Datei zum Sichern oder Weitergeben.
 - **Import:** lädt eine zuvor exportierte oder von anderen Piloten erhaltene JSON-Datei. Beim Import wird die aktuelle Strecke ersetzt – bei ungespeicherten Änderungen fragt die App vorher nach.
+- Jede Datei läuft beim Import durch die Schema-Validierung. Ist sie ungültig, wird sie abgewiesen und die aktuelle Strecke bleibt unverändert; die App stürzt nicht ab. Eine Fehlermeldung im Fenster gibt es derzeit noch nicht – der Fehler steht nur in der Browser-Konsole.
 - Ältere/legacy Track-Dateien werden beim Import automatisch auf das aktuelle Format normalisiert.
 
 ---
@@ -216,24 +220,25 @@ In der TopBar findest du **JSON exportieren** und **JSON importieren**:
 Der schnellste Weg, eine Strecke weiterzugeben – ohne Datei, ohne Konto:
 
 1. Klicke links auf **„Track Teilen"**.
-2. Es öffnet sich der Dialog **„Track teilen"**. Er zeigt sofort den **„Langen Link"** – dieser funktioniert bereits sofort.
-3. Parallel versucht die App, einen **„Teilbaren Link"** (Kurzlink) zu erstellen. Solange das läuft: „Kurzlink wird erstellt. Bis dahin ist der lange Link bereits nutzbar." Bei Erfolg erscheint „Kurzlink erstellt.".
+2. Es öffnet sich der Dialog **„Track teilen"**. Er zeigt sofort das Feld **Langer Link** mit dem vollständigen Link; der funktioniert bereits sofort.
+3. Parallel versucht die App, einen Kurzlink zu erstellen, der im Feld **Teilbarer Link** erscheint. Solange das läuft, steht dort „Kurzlink wird erstellt. Bis dahin ist der lange Link bereits nutzbar.". Bei Erfolg erscheint „Kurzlink erstellt.".
    - Klappt das Erstellen des Kurzlinks nicht, kannst du den langen Link trotzdem teilen.
 4. Sobald ein Kurzlink existiert, erscheint zusätzlich ein **QR-Code**, den du als **PNG** oder **SVG** herunterladen kannst.
 5. **„Link kopieren"** kopiert den Kurzlink (falls vorhanden), sonst den langen Link. Danach zeigt der Button **„Kopiert!"**.
 
 ### 12.1 Was der Empfänger sieht (Viewer)
 
-Der Link öffnet eine **reine Ansichtsseite** (Read-only) – ohne Bearbeitungsfunktionen. Die Track-Daten stecken im **URL-Fragment** (`#…`), werden also nicht an einen Server gesendet.
+Der Link öffnet eine **reine Ansichtsseite** (Read-only), ohne Bearbeitungsfunktionen. Die Track-Daten stecken im **URL-Fragment** (`#…`) und werden beim reinen Betrachten nicht an den Viewer-Server gesendet. Nur wenn du einen **Kurzlink** erzeugen lässt, schickt die App die vollständige lange URL inklusive Fragment mit den Track-Daten an den Shortener-Dienst, damit dieser den Kurzlink bauen kann.
 
 Im Viewer kann der Empfänger:
 
-- die Strecke frei betrachten (Drehen, Bewegen, Zoom, Kamerahöhe – wie im Editor),
-- den **FPV-Flug** starten/stoppen,
-- den Track als **JSON herunterladen** (wieder importierbar in den Editor),
-- die **Viewer-Hilfe** öffnen (erscheint beim ersten Besuch automatisch).
+- die Strecke frei betrachten (Drehen, Bewegen, Zoom, Kamerahöhe, wie im Editor),
+- den **FPV-Flug** starten/stoppen (wie im Editor erst ab zwei Gates),
+- den Track als **JSON herunterladen** (der Dateiname wird aus dem Streckennamen abgeleitet und wieder importierbar in den Editor),
+- die **Viewer-Hilfe** öffnen (erscheint beim ersten Besuch automatisch),
+- unten rechts über **fpvooe.com** auf `https://fpvooe.com` wechseln (öffnet in einem neuen Tab).
 
-Ist ein Link leer oder beschädigt, erscheint **„Track kann nicht geladen werden"** mit einer passenden Meldung.
+Ist ein Link leer oder beschädigt, erscheint **„Track kann nicht geladen werden“** mit einer passenden Meldung.
 
 > **Technischer Hintergrund (Deployment):** Der Editor läuft unter `trackdesigner.fpvooe.com`, der Viewer unter `sharedtrack.fpvooe.com`. Details zur Einrichtung stehen in [`coolify-track-sharing.md`](./coolify-track-sharing.md).
 
@@ -241,7 +246,7 @@ Ist ein Link leer oder beschädigt, erscheint **„Track kann nicht geladen werd
 
 ## 13. Stangenzähler
 
-Oben in der TopBar zeigt der **Stangenzähler** die Gesamtzahl der für den Aufbau benötigten Stangen. Ein Klick öffnet die detaillierte **Stangenkalkulation**:
+Oben in der TopBar zeigt der **Stangenzähler** die Gesamtzahl der für den Aufbau benötigten Stangen. Solange die Strecke keine Gates enthält, wird der Stangenzähler gar nicht angezeigt. Ein Klick öffnet die detaillierte **Stangenkalkulation**:
 
 - Tabelle mit **Gate-Typ**, **Anzahl**, **Stangen pro Gate** und **Summe**,
 - separater Bereich **„Nicht aus Stangen baubar"** für Hurdle, Dive-Gate und Tunnel.
@@ -256,9 +261,11 @@ So planst du den Materialbedarf deiner Strecke direkt mit.
 | --- | --- |
 | Ansicht drehen | Linke Maustaste gedrückt halten und ziehen |
 | Über die Strecke bewegen (Pan) | Rechte Maustaste ziehen **oder** `Space` + linke Maustaste ziehen |
-| Zoomen | Mausrad scrollen **oder** mittlere Maustaste ziehen |
-| Schnell zoomen | Mausrad / mittlere Maustaste ziehen |
+| Zoomen | Mausrad scrollen |
+| Schnell zoomen | Mittlere Maustaste ziehen |
+| Zoom-Grenzen | Der Abstand reicht von 2 m bis 200 m |
 | Kamerahöhe ändern | `Shift` gedrückt halten und mit linker Maustaste ziehen |
+| Neigung der Ansicht | Die Kamera lässt sich nicht unter den Horizont kippen |
 | Auf Mobilgeräten | Zwei Finger ziehen zum Verschieben, auf-/zuziehen zum Zoomen |
 
 Während eines **FPV-Flugs** sind die Kamera-Bedienelemente deaktiviert, bis du den Flug stoppst.
@@ -300,13 +307,14 @@ Während eines **FPV-Flugs** sind die Kamera-Bedienelemente deaktiviert, bis du 
 - Der **FPV-Flug** zeigt keine Fortschrittsanzeige und hat eine feste Geschwindigkeit.
 - Der **Viewer ist strikt read-only** – Änderungen sind dort nicht möglich.
 - Tracks liegen in `localStorage` deines Browsers. Löschst du Browserdaten, sind auch die lokal gespeicherten Strecken weg – exportiere wichtige Strecken zusätzlich als **JSON**.
-- Sind ungespeicherte Änderungen vorhanden, fragt die App bei destruktiven Aktionen (Shuffle, Import, Laden, Duplizieren, Konfiguration anwenden) nach: **Abbrechen**, **Zuerst speichern** oder **Verwerfen**.
+- Sind ungespeicherte Änderungen vorhanden, fragt die App bei destruktiven Aktionen (Shuffle, Import, Laden, Duplizieren, Konfiguration anwenden) nach: **Abbrechen**, **Zuerst speichern** oder **Verwerfen**. Nach **„Zuerst speichern“** wird die vorgemerkte Aktion ausgeführt, sobald das Speichern geklappt hat.
 
 **Häufige Fragen**
 
 - *Der FPV-Button ist ausgegraut.* → Deine Strecke hat weniger als 2 Gates.
 - *Der Kurzlink kam nicht.* → Kein Problem, teile einfach den **langen Link**; er funktioniert immer.
 - *Beim Öffnen eines Links erscheint eine Fehlermeldung.* → Der Link ist unvollständig oder beschädigt. Bitte den Absender, ihn erneut zu teilen.
+- *Die App zeigt „Etwas ist schiefgelaufen".* → Es ist ein unerwarteter Fehler aufgetreten. Klicke auf **„Erneut versuchen"**; hilft das nicht, lade die Seite neu.
 
 ---
 
