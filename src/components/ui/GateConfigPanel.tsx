@@ -12,6 +12,15 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { VENUE_PRESETS, getVenuePreset } from '@/utils/venuePresets'
+import type { VenueId } from '@/types/venue'
 import { Button } from '@/components/ui/button'
 import {
   Collapsible,
@@ -28,7 +37,10 @@ export function GateConfigPanel() {
   const config = useAppStore((state) => state.config)
   const setGateQuantity = useAppStore((state) => state.setGateQuantity)
   const setFieldSize = useAppStore((state) => state.setFieldSize)
+  const setVenue = useAppStore((state) => state.setVenue)
   const resetToDefault = useAppStore((state) => state.resetToDefault)
+
+  const activeVenuePreset = getVenuePreset(config.venueId)
 
   const [quantitiesOpen, setQuantitiesOpen] = useState(true)
   const [fieldOpen, setFieldOpen] = useState(true)
@@ -124,6 +136,40 @@ export function GateConfigPanel() {
             />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-3">
+            {/* Field Preset */}
+            <div className="space-y-2">
+              <Label htmlFor="field-preset" className="text-sm text-muted-foreground">
+                {t('fieldPreset')}
+              </Label>
+              <Select
+                value={config.venueId ?? 'custom'}
+                onValueChange={(value) =>
+                  setVenue(value === 'custom' ? null : (value as VenueId))
+                }
+              >
+                <SelectTrigger id="field-preset" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">{t('fieldPresetCustom')}</SelectItem>
+                  {VENUE_PRESETS.map((preset) => (
+                    <SelectItem key={preset.id} value={preset.id}>
+                      {preset.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t('fieldPresetDescription')}
+              </p>
+              {activeVenuePreset && (
+                <p className="text-xs text-muted-foreground">
+                  {t('fieldPresetLocked')}{' '}
+                  {t('fieldPresetObstacles', { count: activeVenuePreset.obstacles.length })}
+                </p>
+              )}
+            </div>
+
             {/* Field Size */}
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">
@@ -141,6 +187,7 @@ export function GateConfigPanel() {
                     key={`field-width-${config.fieldSize.width}`}
                     onBlur={commitFieldWidth}
                     onKeyDown={commitFieldSizeOnSubmit}
+                    disabled={config.venueId !== null}
                   />
                 </div>
                 <div className="flex-1 space-y-1">
@@ -154,6 +201,7 @@ export function GateConfigPanel() {
                     key={`field-height-${config.fieldSize.height}`}
                     onBlur={commitFieldHeight}
                     onKeyDown={commitFieldSizeOnSubmit}
+                    disabled={config.venueId !== null}
                   />
                 </div>
               </div>
