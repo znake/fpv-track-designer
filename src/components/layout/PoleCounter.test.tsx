@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAppStore } from '@/store'
@@ -81,23 +81,45 @@ describe('PoleCounter', () => {
     renderPoleCounter()
 
     expect(screen.getByRole('button', { name: 'Stangen: 60. Klicken für Details.' })).toBeTruthy()
-    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 
-  it('warns when the track exceeds the stored limit and hides the warning on dismiss', () => {
+  it('warns in an alert dialog when the track exceeds the stored limit and hides it on dismiss', () => {
     window.localStorage.setItem('fpv-track-designer-max-poles', '30')
     useAppStore.setState({ currentTrack: createTrackWithGateCount(20) })
 
     renderPoleCounter()
 
-    const warning = screen.getByRole('alert')
+    const warning = screen.getByRole('alertdialog')
     expect(warning.textContent).toContain('Maximale Stangenanzahl erreicht')
     expect(warning.textContent).toContain('Maximalzahl von 30 Stangen')
     expect(warning.textContent).toContain('aktuell 60 Stangen')
 
     fireEvent.click(screen.getByRole('button', { name: 'Verstanden' }))
 
-    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+
+  it('warns once per crossing instead of on every added gate', () => {
+    useAppStore.setState({ currentTrack: createTrackWithGateCount(20) })
+
+    renderPoleCounter()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+
+    act(() => useAppStore.setState({ currentTrack: createTrackWithGateCount(21) }))
+    expect(screen.getByRole('alertdialog')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verstanden' }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+
+    act(() => useAppStore.setState({ currentTrack: createTrackWithGateCount(22) }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+
+    act(() => useAppStore.setState({ currentTrack: createTrackWithGateCount(10) }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+
+    act(() => useAppStore.setState({ currentTrack: createTrackWithGateCount(21) }))
+    expect(screen.getByRole('alertdialog')).toBeTruthy()
   })
 
   it('stores a custom limit typed into the pole dialog', () => {

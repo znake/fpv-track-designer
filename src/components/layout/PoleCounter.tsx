@@ -1,6 +1,6 @@
 import type { FC } from 'react'
 import { useMemo, useState } from 'react'
-import { AlertTriangle, Hammer, X } from 'lucide-react'
+import { AlertTriangle, Hammer } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { calculatePoleBreakdown } from '@/utils/poleCount'
 import {
@@ -9,7 +9,16 @@ import {
   useMaxPoles,
 } from '@/utils/poleLimit'
 import { useTranslation } from '@/i18n'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Popover,
   PopoverContent,
@@ -35,12 +44,24 @@ export const PoleCounter: FC = () => {
   const gates = useAppStore((state) => state.currentTrack?.gates ?? null)
   const maxPoles = useMaxPoles()
   const [maxPolesDraft, setMaxPolesDraft] = useState<string | null>(null)
-  const [dismissedSignature, setDismissedSignature] = useState<string | null>(null)
+  const [wasOverLimit, setWasOverLimit] = useState(false)
+  const [limitWarningDismissed, setLimitWarningDismissed] = useState(false)
 
   const breakdown = useMemo(
     () => calculatePoleBreakdown(gates ?? []),
     [gates],
   )
+
+  const overLimit = breakdown.total > maxPoles
+
+  // Beim Überschreiten einmal warnen und nach dem Wegklicken erst wieder
+  // warnen, wenn die Strecke zwischenzeitlich unter das Limit gefallen ist.
+  if (wasOverLimit !== overLimit) {
+    setWasOverLimit(overLimit)
+    if (!overLimit) {
+      setLimitWarningDismissed(false)
+    }
+  }
 
   if (!gates || gates.length === 0) {
     return null
@@ -48,9 +69,7 @@ export const PoleCounter: FC = () => {
 
   const buildableEntries = breakdown.entries.filter((e) => !e.notBuildable)
   const notBuildableEntries = breakdown.entries.filter((e) => e.notBuildable)
-  const overLimit = breakdown.total > maxPoles
-  const warningSignature = `${breakdown.total}:${maxPoles}`
-  const showLimitWarning = overLimit && dismissedSignature !== warningSignature
+  const showLimitWarning = overLimit && !limitWarningDismissed
 
   const handleMaxPolesChange = (value: string) => {
     setMaxPolesDraft(value)
@@ -65,7 +84,7 @@ export const PoleCounter: FC = () => {
   }
 
   return (
-    <div className="relative">
+    <>
       <Popover>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -201,38 +220,30 @@ export const PoleCounter: FC = () => {
       </Popover>
 
       {showLimitWarning && (
-        <div
-          role="alert"
-          className="absolute left-0 top-full z-50 mt-2 w-64 rounded-lg border border-destructive/40 bg-background p-3 shadow-lg"
-        >
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold text-destructive">
+        <Dialog open onOpenChange={() => setLimitWarningDismissed(true)}>
+          <DialogContent role="alertdialog" className="max-w-sm border-destructive/50">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="size-4 shrink-0" />
                 {t('poleLimitReachedTitle')}
-              </div>
-              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              </DialogTitle>
+              <DialogDescription>
                 {t('poleLimitReachedBody', { max: maxPoles, total: breakdown.total })}
-              </p>
-              <button
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4 gap-2 sm:gap-2">
+              <Button
                 type="button"
-                onClick={() => setDismissedSignature(warningSignature)}
-                className="mt-2 rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+                variant="destructive"
+                autoFocus
+                onClick={() => setLimitWarningDismissed(true)}
               >
                 {t('poleLimitReachedDismiss')}
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => setDismissedSignature(warningSignature)}
-              aria-label={t('close')}
-              className="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <X className="size-3.5" />
-            </button>
-          </div>
-        </div>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
-    </div>
+    </>
   )
 }
