@@ -10,6 +10,7 @@ import { getThemeConfig } from '../../utils/themeColors'
 import { Gate } from '../gates/Gate'
 import { FlightPath } from '../scene/FlightPath'
 import { Grid } from '../scene/Grid'
+import { VenueObstacles } from '../scene/VenueObstacles'
 import { CameraPan } from '../scene/CameraPan'
 import { CameraVerticalPan } from '../scene/CameraVerticalPan'
 import { SmoothZoom } from '../scene/SmoothZoom'
@@ -17,6 +18,7 @@ import { SkyDome } from '../scene/SkyDome'
 import { FpvFlyThrough } from '../scene/FpvFlyThrough'
 import type { Config, Track } from '../../types'
 import { calculateFlightPath } from '../../utils/flightPath'
+import { getVenuePreset } from '../../utils/venuePresets'
 
 interface SceneProps {
   track?: Track | null
@@ -33,6 +35,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
   const currentTrack = track !== undefined ? track : storeTrack
   const config = configOverride ?? storeConfig
   const theme = useMemo(() => getThemeConfig(config.theme), [config.theme])
+  const venueObstacles = useMemo(() => getVenuePreset(config.venueId)?.obstacles ?? [], [config.venueId])
   const usesMinimalScene = theme.useSkyDome
   const flightPath = useMemo(() => {
     if (!currentTrack) return null
@@ -193,6 +196,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
           />
           <ambientLight intensity={theme.colors.ambientIntensity} color={theme.colors.ambientColor} />
           <Grid fieldSize={config.fieldSize} colors={theme.colors} showGrid={config.showGrid} />
+          <VenueObstacles obstacles={venueObstacles} color={theme.colors.obstacle} />
           {trackContent}
           {cameraControls}
         </>
@@ -245,6 +249,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
           />
           <ambientLight intensity={theme.colors.ambientIntensity} color={theme.colors.ambientColor} />
           <Grid fieldSize={config.fieldSize} colors={theme.colors} showGrid={config.showGrid} />
+          <VenueObstacles obstacles={venueObstacles} color={theme.colors.obstacle} />
           {trackContent}
           {cameraControls}
         </>
@@ -271,6 +276,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
           <ambientLight intensity={theme.colors.ambientIntensity} color={theme.colors.ambientColor} />
           {/* Night field colors use the unlit Grid path so ThemeColors.groundGrass is visible as authored. */}
           <Grid fieldSize={config.fieldSize} colors={theme.colors} showGrid={config.showGrid} useUnlitGround />
+          <VenueObstacles obstacles={venueObstacles} color={theme.colors.obstacle} />
           {currentTrack && (
             <EffectComposer>
               <Bloom mipmapBlur intensity={1.6} luminanceThreshold={1} luminanceSmoothing={0.2} />

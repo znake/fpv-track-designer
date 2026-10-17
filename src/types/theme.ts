@@ -48,6 +48,7 @@ export interface ThemeColors {
   groundEarth: string
   groundBoundary: string
   gridColor: string
+  obstacle: string
   watermarkColor: string
 
   // Flight path
@@ -124,6 +125,7 @@ const minimalColors: ThemeColors = {
   groundEarth: '#7A4A24',
   groundBoundary: '#FFE8C8',
   gridColor: '#8B6B3E',
+  obstacle: '#9BA3AC',
   watermarkColor: '#e8d5b0',
 
   flightPath: '#FF8B5A',
@@ -181,6 +183,7 @@ const realisticColors: ThemeColors = {
   groundEarth: '#4A2E18',
   groundBoundary: '#FFE8C8',
   gridColor: '#8B6B3E',
+  obstacle: '#8E96A0',
   watermarkColor: '#e8d5b0',
 
   flightPath: '#FF6944',
@@ -238,6 +241,7 @@ const nightColors: ThemeColors = {
   groundEarth: '#4A2E18',
   groundBoundary: '#FF00E5',
   gridColor: '#C4B5FD',
+  obstacle: '#4A5570',
   watermarkColor: '#6D28D9',
 
   flightPath: '#FFEA00',
