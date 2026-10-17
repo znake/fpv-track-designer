@@ -1,11 +1,13 @@
 import type { StateCreator } from 'zustand'
-import type { Config, GateType, SnapGridSize, ThemeId } from '../types'
+import type { Config, GateType, SnapGridSize, ThemeId, VenueId } from '../types'
+import { getVenuePreset } from '../utils/venuePresets'
 
 export interface ConfigSlice {
   config: Config
   setConfig: (config: Config) => void
   setGateQuantity: (type: GateType, quantity: number) => void
   setFieldSize: (width: number, height: number) => void
+  setVenue: (venueId: VenueId | null) => void
   setSnapGatesToGrid: (value: boolean) => void
   setSnapGridSize: (value: SnapGridSize) => void
   setShowGrid: (value: boolean) => void
@@ -30,6 +32,7 @@ export const defaultConfig: Config = {
     'octagonal-tunnel': 1,
   },
   fieldSize: { width: 30, height: 15 },
+  venueId: null,
   snapGatesToGrid: false,
   snapGridSize: 0.3,
   showGrid: false,
@@ -50,6 +53,16 @@ export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> =
   setFieldSize: (width, height) => set((state) => ({
     config: { ...state.config, fieldSize: { width, height } },
   })),
+  setVenue: (venueId) => set((state) => {
+    const preset = getVenuePreset(venueId)
+    return {
+      config: {
+        ...state.config,
+        venueId,
+        ...(preset ? { fieldSize: { ...preset.fieldSize } } : {}),
+      },
+    }
+  }),
   setSnapGatesToGrid: (value) => set((state) => ({
     config: { ...state.config, snapGatesToGrid: value },
   })),

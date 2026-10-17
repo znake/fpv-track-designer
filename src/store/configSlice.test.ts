@@ -71,6 +71,7 @@ describe('ConfigSlice - default settings', () => {
         'octagonal-tunnel': 2,
       },
       fieldSize: { width: 42, height: 24 },
+      venueId: null,
       snapGatesToGrid: true,
       snapGridSize: 0.5,
       showFlightPath: false,
@@ -93,5 +94,36 @@ describe('ConfigSlice - default settings', () => {
 
     expect(store.getState().config.snapGridSize).toBe(1)
     expect(store.getState().config.snapGatesToGrid).toBe(false)
+  })
+})
+
+describe('ConfigSlice - setVenue', () => {
+  it("applies the 'last-og3' preset field size", () => {
+    const store = createTestStore()
+
+    store.getState().setVenue('last-og3')
+
+    expect(store.getState().config.venueId).toBe('last-og3')
+    expect(store.getState().config.fieldSize).toEqual({ width: 10.5, height: 22.7 })
+  })
+
+  it('clears the venue without touching the field size', () => {
+    const store = createTestStore()
+
+    store.getState().setVenue('last-og3')
+    store.getState().setVenue(null)
+
+    expect(store.getState().config.venueId).toBeNull()
+    expect(store.getState().config.fieldSize).toEqual({ width: 10.5, height: 22.7 })
+  })
+
+  it('resetToDefault restores venueId null and the default field size', () => {
+    const store = createTestStore()
+
+    store.getState().setVenue('last-og3')
+    store.getState().resetToDefault()
+
+    expect(store.getState().config.venueId).toBeNull()
+    expect(store.getState().config.fieldSize).toEqual({ width: 30, height: 15 })
   })
 })

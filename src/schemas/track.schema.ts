@@ -2,10 +2,12 @@ import type { Config } from '../types/config'
 import { SNAP_GRID_SIZES } from '../types/config'
 import type { Gate, GateOpening, GateType } from '../types/gate'
 import type { GateSequenceItem, Track } from '../types/track'
+import { VENUE_IDS } from '../types/venue'
 import { normalizeGates } from '../utils/gateOpenings'
 import { normalizeGateSequence } from '../utils/gateSequence'
+import { isVenueId } from '../utils/venuePresets'
 
-export const SCHEMA_VERSION = '1.2.0'
+export const SCHEMA_VERSION = '1.3.0'
 
 const VALID_THEME_IDS = [
   'minimal',
@@ -32,6 +34,7 @@ export interface TrackExportSchema {
   config: {
     gateQuantities: Record<GateType, number>
     fieldSize: { width: number; height: number }
+    venueId?: string | null
     snapGatesToGrid?: boolean
     snapGridSize?: Config['snapGridSize']
     showGrid?: boolean
@@ -366,6 +369,10 @@ export function validateTrack(data: unknown): { valid: boolean; errors: Validati
     errors.push(...validateGateQuantities(config.gateQuantities))
     errors.push(...validateFieldSize(config.fieldSize, 'config.fieldSize'))
 
+    if (config.venueId !== undefined && config.venueId !== null && !isVenueId(config.venueId)) {
+      errors.push({ field: 'config.venueId', message: `Venue must be one of: ${VENUE_IDS.join(', ')}` })
+    }
+
     errors.push(...validateBooleanFlag(config.snapGatesToGrid, 'config.snapGatesToGrid'))
     errors.push(...validateSnapGridSize(config.snapGridSize))
     errors.push(...validateBooleanFlag(config.showGrid, 'config.showGrid'))
@@ -397,6 +404,7 @@ export function serializeTrack(track: Track, config: Config): string {
     config: {
       gateQuantities: config.gateQuantities,
       fieldSize: config.fieldSize,
+      venueId: config.venueId,
       snapGatesToGrid: config.snapGatesToGrid,
       snapGridSize: config.snapGridSize,
       showGrid: config.showGrid,
@@ -443,6 +451,7 @@ export function deserializeTrack(jsonString: string): { track: Track; config: Co
     config: {
       gateQuantities: normalizeGateQuantities(data.config.gateQuantities),
       fieldSize: data.config.fieldSize,
+      venueId: isVenueId(data.config.venueId) ? data.config.venueId : null,
       snapGatesToGrid: data.config.snapGatesToGrid ?? false,
       snapGridSize: data.config.snapGridSize ?? 0.3,
       showGrid: data.config.showGrid ?? false,

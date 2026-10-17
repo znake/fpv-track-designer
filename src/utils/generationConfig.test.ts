@@ -17,6 +17,7 @@ const baseConfig: Config = {
     'octagonal-tunnel': 1,
   },
   fieldSize: { width: 30, height: 15 },
+  venueId: null,
   snapGatesToGrid: false,
   snapGridSize: 0.3,
   showGrid: false,
@@ -85,6 +86,7 @@ describe('hasConfigDrift', () => {
 
   it('ignores non-generation config fields', () => {
     const config = makeConfig({
+      venueId: null,
       snapGatesToGrid: true,
       snapGridSize: 1,
       showFlightPath: false,

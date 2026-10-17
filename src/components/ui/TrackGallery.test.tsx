@@ -166,6 +166,7 @@ describe('TrackGallery', () => {
     const onOpenChange = vi.fn()
     const savedConfig = createTestConfig({
       fieldSize: { width: 36, height: 18 },
+      venueId: null,
       showOpeningLabels: false,
     })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { deserializeTrack, serializeTrack } from './track.schema'
+import { deserializeTrack, serializeTrack, validateTrack } from './track.schema'
 import type { Config, Track } from '../types'
 import { createDefaultGateOpenings } from '../utils/gateOpenings'
 
@@ -19,6 +19,7 @@ const config: Config = {
     'octagonal-tunnel': 0,
   },
   fieldSize: { width: 30, height: 15 },
+  venueId: null,
   snapGatesToGrid: false,
   snapGridSize: 0.3,
   showFlightPath: true,
@@ -295,6 +296,70 @@ describe('track schema', () => {
     expect(result.errors).toContainEqual({
       field: 'config.snapGridSize',
       message: 'Snap grid size must be one of: 0.3, 0.5, 1',
+    })
+  })
+
+  it('round-trips the venue id together with the preset field size', () => {
+    const venueConfig: Config = {
+      ...config,
+      venueId: 'last-og3',
+      fieldSize: { width: 10.5, height: 22.7 },
+    }
+
+    const result = deserializeTrack(serializeTrack(track, venueConfig))
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+
+    expect(result.config.venueId).toBe('last-og3')
+    expect(result.config.fieldSize).toEqual({ width: 10.5, height: 22.7 })
+  })
+
+  it('round-trips a null venue id', () => {
+    const result = deserializeTrack(serializeTrack(track, { ...config, venueId: null }))
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+
+    expect(result.config.venueId).toBeNull()
+  })
+
+  it('loads legacy 1.2.0 payloads without a venue id as null', () => {
+    const legacyPayload = {
+      version: '1.2.0',
+      track,
+      config: {
+        gateQuantities: config.gateQuantities,
+        fieldSize: config.fieldSize,
+      },
+    }
+
+    expect(validateTrack(legacyPayload).valid).toBe(true)
+
+    const result = deserializeTrack(JSON.stringify(legacyPayload))
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+
+    expect(result.config.venueId).toBeNull()
+  })
+
+  it('rejects unknown venue ids in track payload', () => {
+    const unsupportedVenuePayload = {
+      version: '1.3.0',
+      track,
+      config: {
+        ...config,
+        venueId: 'nope',
+      },
+    }
+
+    const validation = validateTrack(unsupportedVenuePayload)
+
+    expect(validation.valid).toBe(false)
+    expect(validation.errors).toContainEqual({
+      field: 'config.venueId',
+      message: 'Venue must be one of: last-og3',
     })
   })
 })
