@@ -5,7 +5,6 @@ import { extractGenerationConfig } from './utils/generationConfig'
 import { createDefaultGateOpenings } from './utils/gateOpenings'
 import { gateTypeOptions } from './utils/gateTypeOptions'
 import { GateIcon } from './components/icons/GateIcon'
-import { defaultConfig } from './store/configSlice'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import type { GateType } from './types'
 import { SaveTrackDialog } from './components/ui/SaveTrackDialog'
@@ -105,13 +104,14 @@ function App() {
     onEscape: () => setFpvModeActive(false),
   })
 
-  // Auto-generate track on first load
+  // Auto-generate track on first load, using the active config so a remembered
+  // venue (and its field size) is already applied to the starter track.
   useEffect(() => {
     if (!currentTrack) {
-      const track = generateTrack(defaultConfig)
-      setTrack(track, extractGenerationConfig(defaultConfig))
+      const track = generateTrack(config)
+      setTrack(track, extractGenerationConfig(config))
     }
-  }, [currentTrack, setTrack])
+  }, [config, currentTrack, setTrack])
 
   // Show help once for first-time visitors.
   useEffect(() => {

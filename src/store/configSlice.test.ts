@@ -1,6 +1,28 @@
-import { describe, it, expect } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { create } from 'zustand'
-import { createConfigSlice, defaultConfig, type ConfigSlice } from './configSlice'
+import { createConfigSlice, createInitialConfig, defaultConfig, type ConfigSlice } from './configSlice'
+
+const STORED_VENUE_KEY = 'fpv-track-designer-venue'
+
+const localStorageMock = (() => {
+  let store: Record<string, string> = {}
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
+  }
+})()
+
+Object.defineProperty(globalThis, 'localStorage', {
+  value: localStorageMock,
+})
 
 const createTestStore = () =>
   create<ConfigSlice>()((set, get, store) => ({
@@ -94,6 +116,67 @@ describe('ConfigSlice - default settings', () => {
 
     expect(store.getState().config.snapGridSize).toBe(1)
     expect(store.getState().config.snapGatesToGrid).toBe(false)
+  })
+})
+
+describe('ConfigSlice - stored venue preference', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  it('starts from the factory defaults without a stored venue', () => {
+    const config = createInitialConfig()
+
+    expect(config.venueId).toBeNull()
+    expect(config.fieldSize).toEqual({ width: 30, height: 15 })
+  })
+
+  it('starts with the remembered venue and its field size', () => {
+    window.localStorage.setItem(STORED_VENUE_KEY, 'last-og3')
+
+    const store = createTestStore()
+
+    expect(store.getState().config.venueId).toBe('last-og3')
+    expect(store.getState().config.fieldSize).toEqual({ width: 10.5, height: 22.7 })
+  })
+
+  it('ignores an unknown stored venue', () => {
+    window.localStorage.setItem(STORED_VENUE_KEY, 'nope')
+
+    const store = createTestStore()
+
+    expect(store.getState().config.venueId).toBeNull()
+    expect(store.getState().config.fieldSize).toEqual({ width: 30, height: 15 })
+  })
+
+  it('remembers the picked venue and forgets it on custom', () => {
+    const store = createTestStore()
+
+    store.getState().setVenue('last-og3')
+    expect(window.localStorage.getItem(STORED_VENUE_KEY)).toBe('last-og3')
+
+    store.getState().setVenue(null)
+    expect(window.localStorage.getItem(STORED_VENUE_KEY)).toBeNull()
+  })
+
+  it('clears the remembered venue on resetToDefault', () => {
+    const store = createTestStore()
+
+    store.getState().setVenue('last-og3')
+    store.getState().resetToDefault()
+
+    expect(store.getState().config.venueId).toBeNull()
+    expect(window.localStorage.getItem(STORED_VENUE_KEY)).toBeNull()
+  })
+
+  it('leaves the remembered venue alone when a track config is loaded', () => {
+    const store = createTestStore()
+
+    store.getState().setVenue('last-og3')
+    store.getState().setConfig({ ...defaultConfig, fieldSize: { width: 42, height: 24 } })
+
+    expect(store.getState().config.venueId).toBeNull()
+    expect(window.localStorage.getItem(STORED_VENUE_KEY)).toBe('last-og3')
   })
 })
 

@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { Config, GateType, SnapGridSize, ThemeId, VenueId } from '../types'
 import { getVenuePreset } from '../utils/venuePresets'
+import { readStoredVenueId, writeStoredVenueId } from '../utils/venuePreference'
 
 export interface ConfigSlice {
   config: Config
@@ -41,8 +42,20 @@ export const defaultConfig: Config = {
   theme: 'minimal' as const,
 };
 
+/**
+ * Starting config: the factory defaults, with the venue the user picked last in
+ * this browser applied (see `utils/venuePreference.ts`).
+ */
+export function createInitialConfig(): Config {
+  const preset = getVenuePreset(readStoredVenueId())
+
+  return preset
+    ? { ...defaultConfig, venueId: preset.id, fieldSize: { ...preset.fieldSize } }
+    : defaultConfig
+}
+
 export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> = (set) => ({
-  config: defaultConfig,
+  config: createInitialConfig(),
   setConfig: (config) => set({ config }),
   setGateQuantity: (type, quantity) => set((state) => ({
     config: {
@@ -53,16 +66,21 @@ export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> =
   setFieldSize: (width, height) => set((state) => ({
     config: { ...state.config, fieldSize: { width, height } },
   })),
-  setVenue: (venueId) => set((state) => {
-    const preset = getVenuePreset(venueId)
-    return {
-      config: {
-        ...state.config,
-        venueId,
-        ...(preset ? { fieldSize: { ...preset.fieldSize } } : {}),
-      },
-    }
-  }),
+  setVenue: (venueId) => {
+    // Only an explicit pick in the panel is remembered for the next visit;
+    // loading or importing a track leaves the preference alone.
+    writeStoredVenueId(venueId)
+    set((state) => {
+      const preset = getVenuePreset(venueId)
+      return {
+        config: {
+          ...state.config,
+          venueId,
+          ...(preset ? { fieldSize: { ...preset.fieldSize } } : {}),
+        },
+      }
+    })
+  },
   setSnapGatesToGrid: (value) => set((state) => ({
     config: { ...state.config, snapGatesToGrid: value },
   })),
@@ -81,5 +99,8 @@ export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> =
   setTheme: (theme) => set((state) => ({
     config: { ...state.config, theme },
   })),
-  resetToDefault: () => set({ config: defaultConfig }),
+  resetToDefault: () => {
+    writeStoredVenueId(null)
+    set({ config: defaultConfig })
+  },
 })
