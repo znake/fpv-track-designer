@@ -7,7 +7,8 @@
 layout/
 ├── TopBar.tsx              # undo/redo, FPV toggle, import/export, view toggles, language
 ├── LeftToolPanel.tsx       # shuffle/save/share/gallery/settings/design tool rail
-├── PoleCounter.tsx         # pole breakdown popover in TopBar
+├── PoleCounter.tsx         # pole breakdown popover in TopBar + max pole limit input and over-limit warning
+├── PoleCounter.test.tsx    # pole total, over-limit warning, limit persistence
 ├── TopBar.test.tsx         # import/export/top-bar behavior
 └── LeftToolPanel.test.tsx  # tool rail behavior
 ```
@@ -23,6 +24,7 @@ layout/
 | Save/gallery/settings/design | `LeftToolPanel.tsx`, `src/App.tsx`, `src/components/ui/` | Panel opens are parent-owned where provided |
 | Language toggle DE/EN | `TopBar.tsx`, `src/i18n.ts` | Flag button flips the whole UI language |
 | Pole totals | `PoleCounter.tsx`, `src/utils/poleCount.ts` | Hurdle, Dive, and Octagonal-Tunnel are not buildable from poles (every type with `polesPerGate === 0`); the badge renders nothing while no gates exist |
+| Max pole limit + warning | `PoleCounter.tsx`, `src/utils/poleLimit.ts` | Limit is stored in `localStorage` (default 60) and edited inside the popover; exceeding it turns the badge destructive and opens a dismissible warning popup |
 
 ## CONVENTIONS
 - Layout components may read editor state with `useAppStore`; they are app shell, not shadcn primitives.

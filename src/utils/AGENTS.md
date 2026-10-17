@@ -15,6 +15,7 @@ utils/
 ├── qrCode.ts             # Share QR PNG/SVG generation via `qrcode`
 ├── generationConfig.ts   # Detect settings that require regeneration
 ├── poleCount.ts          # Gate/pole totals for buildability reporting
+├── poleLimit.ts          # localStorage-backed max pole limit (default 60) + warning threshold
 ├── gateTypeOptions.ts    # Canonical gate type order/labels for UI + metrics
 └── themeColors.ts        # Theme lookup and gate material color helpers
 ```
@@ -50,6 +51,7 @@ utils/
 - Gate rotation in the store's `rotateGate` action is ±30° steps (0-330), but that action is currently unused by the UI. Real rotation runs through the `GateHandles` rotate handle: 1°/pixel, rounded to 15° only while `config.snapGatesToGrid` is active. The generator aligns rotations in 30° steps. `types/gate.ts` still comments `rotation` as continuous (0-359); that comment is stale.
 - Gate types with `polesPerGate === 0` cannot be built from poles and are reported `notBuildable`: hurdle, dive, octagonal-tunnel (`poleCount.ts`).
 - Storage key prefix: `fpv-track-`. `storage.autoSave` exists but is only called by tests; no production caller.
+- The max pole limit is a browser-only preference (`fpv-track-designer-max-poles`, default 60) and deliberately stays out of `Config`, track exports, and share links (`poleLimit.ts`).
 - Storage/import/share code must call schema helpers, not trust raw JSON.
 
 ## TESTING
