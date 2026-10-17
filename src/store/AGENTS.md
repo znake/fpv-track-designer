@@ -16,6 +16,7 @@ store/
 - DevTools middleware is enabled only on the editor root store.
 - `import type` is required for type-only imports.
 - Config actions update nested config immutably; `theme` values come from `src/types/theme.ts`.
+- The initial `config` comes from `createInitialConfig()`: factory defaults plus the venue remembered in this browser (`utils/venuePreference.ts`). `setVenue` writes that preference, `resetToDefault` clears it, and `setConfig` (gallery load, import, share) leaves it untouched.
 - Undoable track actions call `pushHistory()` and set `isTrackModified: true`.
 
 ## WHERE TO LOOK

@@ -16,6 +16,7 @@ utils/
 ├── generationConfig.ts   # Detect settings that require regeneration
 ├── poleCount.ts          # Gate/pole totals for buildability reporting
 ├── poleLimit.ts          # localStorage-backed max pole limit (default 60) + warning threshold
+├── venuePreference.ts    # localStorage-backed last picked venue, seeds the next visit
 ├── gateTypeOptions.ts    # Canonical gate type order/labels for UI + metrics
 └── themeColors.ts        # Theme lookup and gate material color helpers
 ```
@@ -42,6 +43,7 @@ utils/
 | Change regen prompts | `generationConfig.ts` | generation-relevant config diff helpers |
 | Change pole totals | `poleCount.ts`, `gateTypeOptions.ts` | pole count/grouping logic and display order |
 | Change theme material colors | `themeColors.ts`, `src/types/theme.ts` | `getThemeConfig()`, `getGateColors()` |
+| Change the remembered venue | `venuePreference.ts`, `src/store/configSlice.ts` | `readStoredVenueId()`, `writeStoredVenueId()`, `createInitialConfig()` |
 
 ## KEY CONSTRAINTS
 - Min gate distance: 3m (`MIN_DISTANCE`).
@@ -52,6 +54,7 @@ utils/
 - Gate types with `polesPerGate === 0` cannot be built from poles and are reported `notBuildable`: hurdle, dive, octagonal-tunnel (`poleCount.ts`).
 - Storage key prefix: `fpv-track-`. `storage.autoSave` exists but is only called by tests; no production caller.
 - The max pole limit is a browser-only preference (`fpv-track-designer-max-poles`, default 60) and deliberately stays out of `Config`, track exports, and share links (`poleLimit.ts`).
+- The last picked venue is the same kind of preference (`fpv-track-designer-venue`, `venuePreference.ts`): it seeds `createInitialConfig()`, is written only by an explicit `setVenue` pick, and is cleared by `resetToDefault`. `Config.venueId` itself keeps travelling through exports and share links.
 - Storage/import/share code must call schema helpers, not trust raw JSON.
 
 ## TESTING

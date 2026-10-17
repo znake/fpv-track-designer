@@ -92,6 +92,8 @@ Manche Hallen haben feste Maße. Über das Feld **Feldvorlage** in den **Feldein
 
 Sobald du eine Vorlage wählst, legt die App die Feldgröße selbst fest. Die beiden Zahlenfelder **Breite** und **Länge** sind dann gesperrt. Erst mit **Benutzerdefiniert** werden sie wieder freigeschaltet, und die zuletzt gesetzte Größe bleibt dabei stehen. Unter dem Auswahlfeld zeigt die App zusätzlich an, wie viele Säulen im Feld stehen.
 
+Die zuletzt gewählte Vorlage merkt sich die App in deinem Browser: Beim nächsten Besuch ist sie sofort wieder aktiv, samt ihrer Feldgröße. **Auf Standard zurücksetzen** löscht diese Erinnerung und stellt die Werkseinstellungen wieder her (Benutzerdefiniert, 30 m × 15 m). Das Laden oder Importieren einer Strecke ändert die gemerkte Vorlage nicht – eine Strecke bringt ihre eigene Feldgröße mit.
+
 Die Säulen erscheinen in der 3D-Ansicht als Hindernisse, damit du die Gates passend drumherum aufstellst. Anklicken lassen sie sich nicht: Klicks gehen durch sie hindurch auf den Boden und auf die Gates.
 
 ### 4.2 Anzeige-Optionen (in der TopBar)
