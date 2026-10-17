@@ -7,6 +7,7 @@
 scene/
 ├── Scene.tsx              # Single Canvas owner and theme-specific scene composition
 ├── Grid.tsx               # Ground plane, field boundary, and hand-built line grid
+├── VenueObstacles.tsx     # Fixed obstacles of the active venue preset (hall pillars)
 ├── FlightPath.tsx         # Native THREE.Line segments + direction arrows
 ├── FpvFlyThrough.tsx      # Automated first-person flight along the path
 ├── SkyDome.tsx            # Shader sky dome anchored to camera
@@ -21,6 +22,7 @@ scene/
 - Camera controllers return `null` and are imperative via `useThree()`, refs, DOM listeners, and/or `useFrame()`.
 - `FlightPath` creates one native `THREE.Line` per sampled segment to avoid implicit connections between disjoint curves.
 - `Grid` draws cell (1 m) and section (5 m) lines as its own `<lineSegments>` from computed positions, takes theme colors through the `colors` prop from `Scene`, and only imports drei's `<Text>` for the `#FPVOOE` watermark.
+- `VenueObstacles` is props-only (`obstacles` + `color`) and store-free so the read-only viewer renders it too; every mesh is raycast-inert, so clicks pass through to the ground and gates. `Scene` resolves the obstacles from `getVenuePreset(config.venueId)` and renders the component in all three theme branches, with `theme.colors.obstacle` as the color.
 - Theme presets live in `src/types/theme.ts`; material helpers live in `src/utils/themeColors.ts`.
 
 ## WHERE TO LOOK
@@ -32,6 +34,7 @@ scene/
 | Modify flight path rendering | `FlightPath.tsx`, `src/utils/flightPath.ts` |
 | Change FPV fly-through | `FpvFlyThrough.tsx` (route sampling, look-ahead camera, completion callback) |
 | Change ground/grid appearance | `Grid.tsx`, `src/types/theme.ts` |
+| Venue obstacles (hall pillars) | `VenueObstacles.tsx`, `Scene.tsx`, `src/utils/venuePresets.ts` |
 | Support viewer read-only mode | `Scene.tsx`, `src/components/viewer/ViewerApp.tsx` |
 
 ## NOTES

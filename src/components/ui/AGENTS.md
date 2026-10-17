@@ -5,7 +5,7 @@
 ## STRUCTURE
 ```
 ui/
-├── GateConfigPanel.tsx       # Gate quantities + field size settings
+├── GateConfigPanel.tsx       # Gate quantities + field size + field preset (venue) settings
 ├── ThemeConfigPanel.tsx      # Theme preset picker (minimal/realistic/night)
 ├── ApplyConfigFooter.tsx     # Apply/discard footer for config changes
 ├── SaveTrackDialog.tsx       # Name + save track to localStorage
@@ -30,7 +30,7 @@ ui/
 ## WHERE TO LOOK
 | Task | File |
 |------|------|
-| Gate quantities / field size | `GateConfigPanel.tsx`, `ApplyConfigFooter.tsx` |
+| Gate quantities / field size / field preset | `GateConfigPanel.tsx`, `ApplyConfigFooter.tsx` |
 | Theme preset picker | `ThemeConfigPanel.tsx`, `src/types/theme.ts` |
 | Save current track | `SaveTrackDialog.tsx` |
 | Load/delete/duplicate saved tracks | `TrackGallery.tsx` |
@@ -45,5 +45,6 @@ ui/
 
 ## TESTING
 - Co-located RTL tests exist for `GateConfigPanel`, `ThemeConfigPanel`, `TrackGallery`, and `ShareTrackDialog`.
+- `GateConfigPanel` drives the venue `Select` through pointer/click events (jsdom has no `PointerEvent` with `pointerType: 'mouse'`) and mocks `hasPointerCapture`/`setPointerCapture`/`releasePointerCapture`/`scrollIntoView` plus `ResizeObserver` locally.
 - Mock browser APIs locally in the relevant suite (`localStorage`, clipboard, URL, random UUID).
 - Do not snapshot broad shadcn output; test app behavior and accessible labels instead.

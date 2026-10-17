@@ -55,6 +55,7 @@ fpv-track-designer/
 | Saved tracks / gallery | `src/components/ui/TrackGallery.tsx`, `src/hooks/useKeyboardShortcuts.ts`, `src/components/layout/LeftToolPanel.tsx` | Open with `G`; list, load, duplicate, and delete tracks saved in `localStorage` |
 | Add/change gate visuals | `src/components/gates/`, `src/types/gate.ts`, `src/utils/gateTypeOptions.ts` | Fixed set of 11 types (`standard`, `h-gate`, `double-h`, `hurdle`, `dive`, `double`, `ladder`, `start-finish`, `flag`, `flag-small`, `octagonal-tunnel`); update dispatcher/schema/tests together |
 | Change 3D scene/camera/themes | `src/components/scene/`, `src/types/theme.ts`, `src/utils/themeColors.ts` | R3F hooks stay under the single Canvas owner |
+| Field presets / venues | `src/types/venue.ts`, `src/utils/venuePresets.ts`, `src/components/scene/VenueObstacles.tsx`, `src/components/ui/GateConfigPanel.tsx` | "Last OG3" (10.5 x 22.7 m, four hall pillars); picking a preset writes `config.venueId`, locks the field-size inputs, and renders the pillars as raycast-inert obstacles in the scene |
 | Change panels/dialog UI | `src/components/ui/` | shadcn primitives plus app-specific dialogs/panels |
 | Track generation | `src/utils/generator.ts` | Min 3m gate distance, nearest-neighbor order, 30 degree rotation alignment |
 | Flight path logic | `src/utils/flightPath.ts` | Dense geometry/avoidance algorithm; test edge cases |
@@ -87,6 +88,8 @@ fpv-track-designer/
 | `THEME_PRESETS` | constant | `src/types/theme.ts` | Minimal/realistic/night renderer and color presets |
 | `downloadTrackQrCodePng` / `createTrackQrCodeSvg` | functions | `src/utils/qrCode.ts` | Share QR PNG/SVG generation |
 | `FpvFlyThrough` | component | `src/components/scene/FpvFlyThrough.tsx` | Automated FPV camera flight |
+| `VENUE_PRESETS` / `getVenuePreset` | constant / function | `src/utils/venuePresets.ts` | Venue presets (field size + obstacles) and lookup by `VenueId` |
+| `VenueObstacles` | component | `src/components/scene/VenueObstacles.tsx` | Renders the active venue's fixed obstacles (hall pillars) |
 | `TrackGallery` | component | `src/components/ui/TrackGallery.tsx` | Saved-track sheet: list, load, duplicate, delete |
 | `PoleCounter` / `calculatePoleBreakdown` | component / function | `src/components/layout/PoleCounter.tsx`, `src/utils/poleCount.ts` | Pole-count badge plus per-type breakdown with a `notBuildable` flag |
 | `UnsavedChangesDialog` | component | `src/components/ui/UnsavedChangesDialog.tsx` | Cancel / save first / discard for staged destructive actions |

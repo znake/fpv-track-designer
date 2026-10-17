@@ -8,6 +8,7 @@ types/
 ├── gate.ts      # GateType union, Gate, GateOpening
 ├── track.ts     # Track, GateSequenceItem
 ├── config.ts    # Config, SnapGridSize + SNAP_GRID_SIZES
+├── venue.ts     # VenueId, VenuePreset, VenueObstacle + VENUE_IDS
 ├── theme.ts     # ThemeId, ThemeColors, ThemeConfig, THEME_PRESETS, DEFAULT_THEME
 └── index.ts     # `export *` barrel (complete; consumed via `@/types` / `../types`)
 ```
@@ -19,12 +20,13 @@ types/
 | Track/gate-sequence shape | `track.ts` | `Track` includes `gates`, `gateSequence`, `fieldSize`, timestamps |
 | Config settings | `config.ts` | `Config` + `SNAP_GRID_SIZES` (0.3/0.5/1) |
 | Themes/colors | `theme.ts`, `src/utils/themeColors.ts` | `THEME_PRESETS` keyed by `ThemeId`; `DEFAULT_THEME = 'minimal'` |
-| Import contract | `index.ts` | Re-exports gate/track/config/theme; add new type files here |
+| Venue/field presets | `venue.ts`, `src/utils/venuePresets.ts` | `VENUE_IDS` is the canonical venue set; `VenuePreset` carries `fieldSize` + `obstacles`, and `Config.venueId` is `VenueId | null` |
+| Import contract | `index.ts` | Re-exports gate/track/config/venue/theme; add new type files here |
 
 ## CONVENTIONS
 - `import type` for type-only imports (`verbatimModuleSyntax` is on).
 - Named exports only; no default exports.
-- Interfaces/type aliases only — no enums, classes, or runtime values except documented constants (`SNAP_GRID_SIZES`, `THEME_PRESETS`, `DEFAULT_THEME`) — `erasableSyntaxOnly` is on.
+- Interfaces/type aliases only — no enums, classes, or runtime values except documented constants (`SNAP_GRID_SIZES`, `THEME_PRESETS`, `DEFAULT_THEME`, `VENUE_IDS`) — `erasableSyntaxOnly` is on.
 - `index.ts` is a complete `export *` barrel; import contracts from `@/types` rather than deep paths in cross-domain code.
 - Keep color values here; keep their rendering consumers noted in `theme.ts` (Scene sky/fog/light, Grid ground, `themeColors.ts` gates).
 

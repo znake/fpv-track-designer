@@ -73,6 +73,7 @@ Gespeicherte Strecken lädst du über die **Galerie** wieder (siehe [Abschnitt 1
 Öffne links die **Einstellungen** (Zahnrad). Der Bereich **Strecken-Einstellungen** enthält die Karte **Kurskonfiguration**:
 
 - **Gate-Anzahl:** ein Zahlenfeld pro Gate-Typ. Trage ein, wie viele Gates welchen Typs generiert werden sollen (0 = nicht verwenden).
+- **Feldeinstellungen → Feldvorlage:** wählt eine Halle mit festen Maßen (siehe [Abschnitt 4.1](#41-feldvorlagen-halle-mit-festen-maßen)).
 - **Feldeinstellungen → Feldgröße (m):** **Breite** und **Länge** des Spielfelds.
 - **Auf Standard zurücksetzen:** setzt die Konfiguration auf die Werkseinstellungen zurück.
 
@@ -80,9 +81,20 @@ Gespeicherte Strecken lädst du über die **Galerie** wieder (siehe [Abschnitt 1
 
 **Standardwerte** (werksseitig): Standard-Gate 3, Start/Ziel 1, h-Gate 2, Dive 1, Doppel 1, Flagge 1, Flagge klein 1, Tunnel 1; Doppel-h, Hurdle und Leiter sind standardmäßig auf 0.
 
-> **Hinweis:** Eine separate **Gate-Größe** gibt es in der aktuellen Version nicht – die Gate-Abmessungen sind fest. Die Anzahl der Gates und die Feldgröße sind die Stellschrauben.
+> **Hinweis:** Eine separate **Gate-Größe** gibt es in der aktuellen Version nicht – die Gate-Abmessungen sind fest. Die Anzahl der Gates und die Feldgröße (oder eine Feldvorlage) sind die Stellschrauben.
 
-### 4.1 Anzeige-Optionen (in der TopBar)
+### 4.1 Feldvorlagen (Halle mit festen Maßen)
+
+Manche Hallen haben feste Maße. Über das Feld **Feldvorlage** in den **Feldeinstellungen** wählst du eine Vorlage:
+
+- **Benutzerdefiniert** (Standard): Breite und Länge stellst du frei ein.
+- **Last OG3**: eine Halle mit **22,7 m Länge und 10,5 m Breite**. In der Hallenmitte stehen **vier Säulen**. Die erste sitzt **4,3 m von der Stirnwand** entfernt, die übrigen folgen im Abstand von **5,1 m**. Jede Säule misst in der Grundfläche **0,5 m in der Längsrichtung und 0,3 m in der Breite** und ist **3 m hoch**.
+
+Sobald du eine Vorlage wählst, legt die App die Feldgröße selbst fest. Die beiden Zahlenfelder **Breite** und **Länge** sind dann gesperrt. Erst mit **Benutzerdefiniert** werden sie wieder freigeschaltet, und die zuletzt gesetzte Größe bleibt dabei stehen. Unter dem Auswahlfeld zeigt die App zusätzlich an, wie viele Säulen im Feld stehen.
+
+Die Säulen erscheinen in der 3D-Ansicht als Hindernisse, damit du die Gates passend drumherum aufstellst. Anklicken lassen sie sich nicht: Klicks gehen durch sie hindurch auf den Boden und auf die Gates.
+
+### 4.2 Anzeige-Optionen (in der TopBar)
 
 Diese Optionen ändern nur die Darstellung, nicht die Strecke:
 
@@ -303,7 +315,7 @@ Während eines **FPV-Flugs** sind die Kamera-Bedienelemente deaktiviert, bis du 
 
 **Grenzen / gut zu wissen**
 
-- Es gibt **keine einstellbare Gate-Größe** und **keinen Zufalls-Seed** – nur Gate-Anzahl und Feldgröße.
+- Es gibt **keine einstellbare Gate-Größe** und **keinen Zufalls-Seed** – nur Gate-Anzahl und Feldgröße (oder eine Feldvorlage).
 - Der **FPV-Flug** zeigt keine Fortschrittsanzeige und hat eine feste Geschwindigkeit.
 - Der **Viewer ist strikt read-only** – Änderungen sind dort nicht möglich.
 - Tracks liegen in `localStorage` deines Browsers. Löschst du Browserdaten, sind auch die lokal gespeicherten Strecken weg – exportiere wichtige Strecken zusätzlich als **JSON**.

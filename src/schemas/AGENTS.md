@@ -17,7 +17,8 @@ schemas/
 | Import external/local JSON | `deserializeTrack()` |
 | Boolean guard | `isValidTrack()` |
 | Detailed validation | `validateTrack()` |
-| Version behavior | `SCHEMA_VERSION` (currently `'1.2.0'`) |
+| Version behavior | `SCHEMA_VERSION` (currently `'1.3.0'`) |
+| Venue preset id | `config.venueId` (optional; absent/`null` means no preset, anything else must be a `VENUE_IDS` member) |
 | Legacy gate aliases | `LEGACY_GATE_TYPE_MAP` (maps `asymmetric` → `double-h`) |
 | Gate quantity normalization | `normalizeGateQuantities()` |
 
@@ -26,7 +27,9 @@ schemas/
 - Validate unknown data first, normalize legacy fields second, return domain types last.
 - Keep validation errors shaped as `{ field, message }`; UI/import callers depend on readable feedback.
 - Normalize legacy gate types before final gate/opening/sequence validation.
-- Validate track, gates, openings, gate sequence, config flags, field size, and gate quantities together.
+- Validate track, gates, openings, gate sequence, config flags, field size, gate quantities, and the venue id together.
+- `config.venueId` is optional: `undefined` and `null` both pass, any other value must satisfy `isVenueId()` (`src/utils/venuePresets.ts`) or validation reports `{ field: 'config.venueId', message: 'Venue must be one of: last-og3' }`. Serialization always writes the field, deserialization normalizes an unknown or missing value to `null`, so 1.2.0 payloads load unchanged.
+- `SCHEMA_VERSION` went `1.2.0` to `1.3.0` with the venue field; the preset's field size travels inside `config.fieldSize`, the schema never derives it.
 - Schema version changes require matching migration/rejection behavior and `track.schema.test.ts` coverage.
 - Storage/import code should call schema helpers, not parse and trust raw JSON directly.
 
