@@ -3,6 +3,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import { useAppStore } from '../../store'
 import type { ThemeColors } from '../../types/theme'
+import { calculateFieldWatermarkMetrics, FIELD_WATERMARK_TEXT } from '../../utils/fieldWatermark'
 
 function isCameraTouchGesture(e: ThreeEvent<MouseEvent>) {
   const target = e.nativeEvent.target
@@ -23,7 +24,7 @@ interface GridProps {
 export function Grid({ fieldSize = { width: 100, height: 100 }, colors, showGrid, useUnlitGround = false }: GridProps) {
   const halfW = fieldSize.width / 2
   const halfH = fieldSize.height / 2
-  const watermarkSize = Math.max(6, Math.min(fieldSize.width / 5.2, fieldSize.height * 0.32))
+  const watermark = calculateFieldWatermarkMetrics(fieldSize)
   const selectGate = useAppStore((state) => state.selectGate)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const gridCellSize = 1
@@ -118,24 +119,26 @@ export function Grid({ fieldSize = { width: 100, height: 100 }, colors, showGrid
         </group>
       )}
 
-      {/* Subtle field branding */}
-      <Text
-        position={[0, 0.025, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={watermarkSize}
-        anchorX="center"
-        anchorY="middle"
-        renderOrder={1}
-      >
-        #FPVOOE
-        <meshBasicMaterial
-          color={colors.watermarkColor}
-          transparent
-          opacity={0.035}
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </Text>
+      {/* Subtle field branding, laid along the longer field axis */}
+      <group rotation={[0, watermark.alongAxis === 'height' ? Math.PI / 2 : 0, 0]}>
+        <Text
+          position={[0, 0.025, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          fontSize={watermark.fontSize}
+          anchorX="center"
+          anchorY="middle"
+          renderOrder={1}
+        >
+          {FIELD_WATERMARK_TEXT}
+          <meshBasicMaterial
+            color={colors.watermarkColor}
+            transparent
+            opacity={0.035}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </Text>
+      </group>
 
     </group>
   )
