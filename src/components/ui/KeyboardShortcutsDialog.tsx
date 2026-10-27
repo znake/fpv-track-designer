@@ -80,11 +80,10 @@ export function KeyboardShortcutsDialog({
         { description: t('quickZoom'), keys: [t('quickZoomKey')] },
         { description: t('mobilePan'), keys: [t('mobilePanKey')] },
         { description: t('mobileZoom'), keys: [t('mobileZoomKey')] },
-        { description: t('changeCameraHeight'), keys: [t('changeCameraHeightKey')] },
         { description: t('deselectClose'), keys: ['Escape'] },
       ],
     },
-    { category: t('gateEditing'), shortcuts: [{ description: t('deleteSelectedGate'), keys: ['Backspace'] }, { description: t('confirmDelete'), keys: ['Enter'] }, { description: t('dragRotateGate'), keys: [t('dragRotateGateKey')] }] },
+    { category: t('gateEditing'), shortcuts: [{ description: t('deleteSelectedGate'), keys: ['Backspace'] }, { description: t('confirmDelete'), keys: ['Enter'] }, { description: t('dragRotateGate'), keys: [t('dragRotateGateKey')] }, { description: t('elevateGate'), keys: [t('elevateGateKey')] }] },
     { category: t('history'), shortcuts: [{ description: t('undo'), keys: [ctrl, 'Z'] }, { description: t('redo'), keys: [ctrl, 'Y', '/', ctrl, 'Shift', 'Z'] }] },
   ]
   return (

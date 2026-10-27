@@ -12,7 +12,6 @@ import { FlightPath } from '../scene/FlightPath'
 import { Grid } from '../scene/Grid'
 import { VenueObstacles } from '../scene/VenueObstacles'
 import { CameraPan } from '../scene/CameraPan'
-import { CameraVerticalPan } from '../scene/CameraVerticalPan'
 import { SmoothZoom } from '../scene/SmoothZoom'
 import { SkyDome } from '../scene/SkyDome'
 import { FpvFlyThrough } from '../scene/FpvFlyThrough'
@@ -150,7 +149,6 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
         enabled={!fpvModeActive}
       />
       {!fpvModeActive && <CameraPan controlsRef={controlsRef} />}
-      {!fpvModeActive && <CameraVerticalPan controlsRef={controlsRef} />}
       {!fpvModeActive && <SmoothZoom controlsRef={controlsRef} />}
       <FpvFlyThrough
         active={fpvModeActive}

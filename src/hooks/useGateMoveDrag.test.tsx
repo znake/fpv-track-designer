@@ -65,6 +65,12 @@ function DragProbe() {
       />
       <button
         type="button"
+        data-testid="gate-body-shift"
+        data-moving={String(isMoving)}
+        onPointerDown={(event) => startPressDrag(event.clientX, event.clientY, { vertical: true })}
+      />
+      <button
+        type="button"
         data-testid="move-handle"
         onPointerDown={(event) => beginMoveDrag(event.clientX, event.clientY)}
       />
@@ -182,6 +188,39 @@ describe('useGateMoveDrag', () => {
     expect(controls.enabled).toBe(false)
     expect(useAppStore.getState().isDraggingGate).toBe(false)
     expect(useAppStore.getState().past).toHaveLength(0)
+  })
+
+  it('raises the gate vertically when Shift is held during a gate-body drag', () => {
+    const { getByTestId } = render(<DragProbe />)
+
+    dispatch(getByTestId('gate-body-shift'), pointer('pointerdown', 400, 300))
+    dispatch(window, pointer('pointermove', 400, 290))
+    dispatch(window, pointer('pointermove', 400, 200))
+
+    const position = gatePosition()
+    expect(position?.y).toBeCloseTo(0.5 + 100 * 0.03, 6)
+    expect(position?.x).toBe(0)
+    expect(position?.z).toBe(0)
+    expect(useAppStore.getState().selectedGateId).toBe('gate-1')
+
+    dispatch(window, pointer('pointerup', 400, 200))
+    act(() => {
+      vi.runAllTimers()
+    })
+
+    expect(useAppStore.getState().isDraggingGate).toBe(false)
+    expect(useAppStore.getState().past).toHaveLength(1)
+    expect(controls.enabled).toBe(true)
+  })
+
+  it('stops the vertically dragged gate at ground level', () => {
+    const { getByTestId } = render(<DragProbe />)
+
+    dispatch(getByTestId('gate-body-shift'), pointer('pointerdown', 400, 300))
+    dispatch(window, pointer('pointermove', 400, 310))
+    dispatch(window, pointer('pointermove', 400, 2000))
+
+    expect(gatePosition()?.y).toBe(0)
   })
 
   it('moves immediately when the move handle starts the drag', () => {

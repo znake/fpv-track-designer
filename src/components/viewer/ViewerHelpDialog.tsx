@@ -12,7 +12,6 @@ export function ViewerHelpDialog({ open, onOpenChange }: ViewerHelpDialogProps) 
   const viewerControls = [
     { description: t('rotateView'), keys: t('viewerRotateViewKey') },
     { description: t('moveOverTrack'), keys: t('viewerMoveOverTrackKey') },
-    { description: t('changeCameraHeight'), keys: t('viewerChangeCameraHeightKey') },
     { description: t('zoom'), keys: t('viewerZoomKey') },
     { description: t('fpvStop'), keys: t('viewerStopFpvKey') },
   ]

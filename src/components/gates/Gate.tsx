@@ -70,7 +70,7 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly =
     if (e.button !== 0 || e.nativeEvent.pointerType === 'touch') return
 
     e.stopPropagation()
-    startPressDrag(e.clientX, e.clientY)
+    startPressDrag(e.clientX, e.clientY, { vertical: e.shiftKey })
   }
 
   const commonProps = {

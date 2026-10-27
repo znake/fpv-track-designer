@@ -2,12 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Raycaster, Vector2 } from 'three'
 import { useAppStore } from '../store'
+import { GATE_ELEVATION_METERS_PER_PIXEL } from '../constants/gateDimensions'
 
 type GatePosition = { x: number; y: number; z: number }
 
 interface UseGateMoveDragOptions {
   gateId: string
   position: GatePosition
+}
+
+interface StartPressDragOptions {
+  /** Shift + press on the gate body raises/lowers it instead of ground dragging. */
+  vertical?: boolean
 }
 
 const RAYCASTER = new Raycaster()
@@ -25,10 +31,11 @@ function getControlsEnabled(controls: unknown): boolean | undefined {
     : undefined
 }
 
-/** Ground dragging for the move handle (immediate) and the gate body (press + travel). */
+/** Ground dragging for the move handle (immediate), the gate body (press + travel), and vertical press + travel while Shift is held. */
 export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
   const { camera, gl, controls } = useThree()
   const [isMoving, setIsMoving] = useState(false)
+  const isDraggingRef = useRef(false)
   const isMovingRef = useRef(false)
   const stopMoveRef = useRef<(() => void) | null>(null)
   const stopPressRef = useRef<(() => void) | null>(null)
@@ -59,8 +66,9 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
     setControlsEnabled(controls, enabled)
   }, [controls])
 
-  const endMove = useCallback(() => {
-    if (!isMovingRef.current) return
+  const endDrag = useCallback(() => {
+    if (!isDraggingRef.current) return
+    isDraggingRef.current = false
     isMovingRef.current = false
     setIsMoving(false)
     stopMoveRef.current?.()
@@ -74,7 +82,7 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
   }, [commitGateDrag, restoreControls, setDraggingGate])
 
   const beginMoveDrag = useCallback((clientX: number, clientY: number) => {
-    if (isMovingRef.current) return
+    if (isDraggingRef.current) return
 
     if (controlsEnabledBeforeDragRef.current === undefined) {
       controlsEnabledBeforeDragRef.current = getControlsEnabled(controls)
@@ -83,6 +91,7 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
     const startPosition = { x: position.x, z: position.z }
     const y = position.y
 
+    isDraggingRef.current = true
     isMovingRef.current = true
     setIsMoving(true)
     setControlsEnabled(controls, false)
@@ -100,15 +109,15 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
 
     stopMoveRef.current = () => {
       window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', endMove)
-      window.removeEventListener('pointercancel', endMove)
+      window.removeEventListener('pointerup', endDrag)
+      window.removeEventListener('pointercancel', endDrag)
     }
     window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', endMove)
-    window.addEventListener('pointercancel', endMove)
+    window.addEventListener('pointerup', endDrag)
+    window.addEventListener('pointercancel', endDrag)
   }, [
     controls,
-    endMove,
+    endDrag,
     gateId,
     getGroundPoint,
     position.x,
@@ -118,8 +127,50 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
     setGatePosition,
   ])
 
-  const startPressDrag = useCallback((clientX: number, clientY: number) => {
-    if (isMovingRef.current) return
+  const beginElevateDrag = useCallback((clientY: number) => {
+    if (isDraggingRef.current) return
+
+    if (controlsEnabledBeforeDragRef.current === undefined) {
+      controlsEnabledBeforeDragRef.current = getControlsEnabled(controls)
+    }
+    const pressY = clientY
+    const startHeight = position.y
+
+    isDraggingRef.current = true
+    setControlsEnabled(controls, false)
+    setDraggingGate(true)
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!isDraggingRef.current) return
+      const pointerDeltaY = pressY - event.clientY
+      setGatePosition(gateId, {
+        x: position.x,
+        y: Math.max(0, startHeight + pointerDeltaY * GATE_ELEVATION_METERS_PER_PIXEL),
+        z: position.z,
+      })
+    }
+
+    stopMoveRef.current = () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', endDrag)
+      window.removeEventListener('pointercancel', endDrag)
+    }
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', endDrag)
+    window.addEventListener('pointercancel', endDrag)
+  }, [
+    controls,
+    endDrag,
+    gateId,
+    position.x,
+    position.y,
+    position.z,
+    setDraggingGate,
+    setGatePosition,
+  ])
+
+  const startPressDrag = useCallback((clientX: number, clientY: number, options?: StartPressDragOptions) => {
+    if (isDraggingRef.current) return
 
     const controlsWereEnabled = getControlsEnabled(controls)
     if (controlsWereEnabled === false) return
@@ -143,7 +194,11 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
 
       stopPress()
       selectGate(gateId)
-      beginMoveDrag(pressX, pressY)
+      if (options?.vertical) {
+        beginElevateDrag(pressY)
+      } else {
+        beginMoveDrag(pressX, pressY)
+      }
     }
 
     const handlePressUp = () => {
@@ -155,14 +210,15 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
     window.addEventListener('pointermove', handlePressMove)
     window.addEventListener('pointerup', handlePressUp)
     window.addEventListener('pointercancel', handlePressUp)
-  }, [beginMoveDrag, controls, gateId, restoreControls, selectGate])
+  }, [beginElevateDrag, beginMoveDrag, controls, gateId, restoreControls, selectGate])
 
   useEffect(() => {
     return () => {
       stopPressRef.current?.()
       stopPressRef.current = null
-      if (!isMovingRef.current) return
+      if (!isDraggingRef.current) return
 
+      isDraggingRef.current = false
       isMovingRef.current = false
       stopMoveRef.current?.()
       stopMoveRef.current = null

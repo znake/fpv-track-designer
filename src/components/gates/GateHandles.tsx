@@ -8,6 +8,7 @@ import { calculateFlightPathWithControlPoints } from '../../utils/flightPath'
 import { getClosestPathPoint } from '../../utils/idealLine'
 import { Button } from '../ui/button'
 import { useGateMoveDrag } from '../../hooks/useGateMoveDrag'
+import { GATE_ELEVATION_METERS_PER_PIXEL } from '../../constants/gateDimensions'
 import { useTranslation } from '@/i18n'
 
 interface GateHandlesProps {
@@ -39,7 +40,6 @@ const HANDLE_CLEARANCE_ABOVE_GATE = 0.5
 const INSERT_HANDLE_OFFSET_Y = 0.9
 const DEGREES_PER_PIXEL = 1
 const ROTATION_SNAP_STEP_DEGREES = 15
-const METERS_PER_ELEVATION_PIXEL = 0.03
 const FALLBACK_INSERT_DISTANCE = 3
 const GATE_HANDLE_Z_INDEX_RANGE: [number, number] = [30, 0]
 const HANDLE_BUTTON_CLASSNAME = 'pointer-events-auto flex size-11 items-center justify-center rounded-full border shadow-lg shadow-black/30 backdrop-blur supports-backdrop-filter:backdrop-blur-sm transition-colors select-none touch-none'
@@ -191,7 +191,7 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
 
       if (mode === 'elevate') {
         const pointerDeltaY = elevationDragStartYRef.current - e.clientY
-        const y = Math.max(0, gateStartHeightRef.current + pointerDeltaY * METERS_PER_ELEVATION_PIXEL)
+        const y = Math.max(0, gateStartHeightRef.current + pointerDeltaY * GATE_ELEVATION_METERS_PER_PIXEL)
         setGatePositionRef.current(gateIdRef.current, {
           ...positionRef.current,
           y,
