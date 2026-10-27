@@ -137,6 +137,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
     <>
       <OrbitControls
         ref={controlsRef}
+        makeDefault
         enableDamping
         dampingFactor={0.1}
         enableZoom={false}
