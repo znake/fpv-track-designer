@@ -141,7 +141,7 @@ So bearbeitest du einzelne Gates direkt in der 3D-Szene:
 1. **Gate anklicken.** Es wird markiert und zeigt die Werkzeuge.
 2. **Mehrere Gates wählen:** Halte beim Klicken **`Shift`**, **`Cmd`** oder **`Ctrl`** gedrückt, um weitere Gates zur Auswahl hinzuzufügen oder bereits gewählte wieder abzuwählen. Ein Klick auf die **Bodenfläche** hebt die gesamte Auswahl auf.
 3. **Verschieben:** Halte das Verschieben-Symbol am Gate und ziehe es frei über das Feld. Mit aktivem Grid-Snap rastet es in der gewählten Snap-Genauigkeit ein.
-4. **Höhe verstellen:** Nutze das Höhen-Werkzeug am Gate, um es anzuheben oder abzusenken.
+4. **Höhe verstellen:** Nutze das Höhen-Werkzeug am Gate, um es anzuheben oder abzusenken. Schneller geht es direkt am Gate: **`Shift` gedrückt halten und das Gate ziehen** – die Höhe ändert sich dabei um 0,03 m pro Pixel, genau wie beim Höhen-Werkzeug.
 5. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Die Drehung läuft stufenlos mit. Nur bei aktivem Grid-Snap rastet sie auf **15°-Schritte** ein.
 6. **Einfügen:** Klicke ein Gate an und nutze am Gate das **„vorher“**- oder **„nachher“**-Symbol. Der Dialog **„Gate einfügen“** fragt dann nur noch den **Gate-Typ** ab. Das neue Gate wird passend in die Durchflugreihenfolge eingefügt.
 7. **Löschen:** Wähle das Gate und drücke **`Backspace`** (öffnet den Bestätigungsdialog) oder nutze das Löschen-Symbol. Bestätigen mit **`Enter`** oder **„Gate löschen"**.
@@ -167,6 +167,20 @@ Aktiviere oben **„Flugbahn"**. Die App berechnet dann die **Ideallinie** durch
 - Kurven von Einflug zu Ausflug durch jedes Gate,
 - Übergänge zwischen den Gates (inkl. Sonderfällen wie U-Turns, H-Gate-Rückenlehne, Doppel-h-Stapel und Tunnelportale),
 - **Richtungspfeile** entlang der Linie zeigen, in welche Richtung und Reihenfolge geflogen wird.
+
+### 7.1 Ideallinie mit Leitpunkten formen
+
+Aktiviere **„Flugbahn“**. Solange kein Gate ausgewählt ist, kannst du die Ideallinie bearbeiten: Leitpunkte einfügen oder direkt ein Gate an der Linie platzieren.
+
+1. **Menü öffnen:** Fahre mit der Maus über die Linie. Das **Plus-Zeichen** erscheint genau unter dem Mauszeiger; ein Klick auf die Linie klappt zwei Symbole darunter auf (ein zweiter Klick schließt sie wieder). Die Symbole bleiben anklickbar, auch wenn der Mauszeiger das Bildfeld verlässt; erst ein Klick außerhalb schließt das Menü.
+2. **Gate einfügen:** Das Gate-Symbol öffnet den Dialog „Gate einfügen“. Das neue Gate landet auf der Linie, ist entlang der Linie gedreht und wird in der Durchflugreihenfolge zwischen den beiden Gate-Ankern des Abschnitts eingefügt.
+3. **Leitpunkt setzen:** Das gelbe Punkt-Symbol setzt und selektiert einen Leitpunkt an dieser Stelle.
+4. **Im Feld verschieben:** Klicke den gelben Leitpunkt an. Das Verschieben-Werkzeug bewegt ihn in X/Z-Richtung wie ein Gate. Feldgrenzen und aktives Grid-Snap gelten ebenfalls. Der kleine Papierkorb oben rechts löscht den Leitpunkt. Wie bei Gates funktioniert auch das direkte Ziehen: **Leitpunkt gedrückt halten und ziehen**. Ein kurzer Klick ohne Ziehen wählt den Leitpunkt nur aus.
+5. **Höhe ändern:** Das Höhen-Werkzeug hebt oder senkt den Leitpunkt um 0,03 m pro Pixel und mindestens bis zum Boden. Genauso wie bei Gates geht das direkt mit **`Shift` + Leitpunkt gedrückt halten und ziehen**.
+6. **Kurve formen:** Füge weitere Leitpunkte ein. Die Linie verläuft glatt durch sie, während die Gate-Anker unverändert bleiben.
+7. **Rückgängig und abwählen:** Einfügen, Löschen und jede Ziehbewegung sind jeweils ein Rückgängig-Schritt. Boden- oder Gate-Klick beendet die Auswahl.
+
+Leitpunkte speichern ihre Weltposition und die Zuordnung zum Gate-Abschnitt. Gate-Bearbeitungen erhalten diese Daten; wenn ein Abschnitt nicht mehr existiert, bleibt sein Leitpunkt gespeichert, aber wirkungslos. Speichern, JSON-Export/Import, Galerie und Teilen übernehmen die Leitpunkte. Der Share-Viewer zeigt die geformte Linie ohne Leitpunkte.
 
 Die Flugbahn ist auch die Grundlage für den FPV-Flug.
 
@@ -246,7 +260,8 @@ Der Link öffnet eine **reine Ansichtsseite** (Read-only), ohne Bearbeitungsfunk
 
 Im Viewer kann der Empfänger:
 
-- die Strecke frei betrachten (Drehen, Bewegen, Zoom, Kamerahöhe, wie im Editor),
+- die Strecke frei betrachten (Drehen, Bewegen, Zoom, wie im Editor),
+- eine mit Leitpunkten geformte Ideallinie sehen (die Leitpunkte selbst bleiben unsichtbar),
 - den **FPV-Flug** starten/stoppen (wie im Editor erst ab zwei Gates),
 - den Track als **JSON herunterladen** (der Dateiname wird aus dem Streckennamen abgeleitet und wieder importierbar in den Editor),
 - die **Viewer-Hilfe** öffnen (erscheint beim ersten Besuch automatisch),
@@ -278,7 +293,6 @@ So planst du den Materialbedarf deiner Strecke direkt mit.
 | Zoomen | Mausrad scrollen |
 | Schnell zoomen | Mittlere Maustaste ziehen |
 | Zoom-Grenzen | Der Abstand reicht von 2 m bis 200 m |
-| Kamerahöhe ändern | `Shift` gedrückt halten und mit linker Maustaste ziehen |
 | Neigung der Ansicht | Die Kamera lässt sich nicht unter den Horizont kippen |
 | Auf Mobilgeräten | Zwei Finger ziehen zum Verschieben, auf-/zuziehen zum Zoomen |
 
@@ -293,6 +307,7 @@ Während eines **FPV-Flugs** sind die Kamera-Bedienelemente deaktiviert, bis du 
 | Strecke shuffeln (neu generieren) | `S` |
 | Strecke speichern | `Cmd/Ctrl + S` |
 | Galerie öffnen | `G` |
+| Gate anheben oder absenken | `Shift` gedrückt halten und Gate ziehen |
 | Rückgängig | `Cmd/Ctrl + Z` |
 | Wiederholen | `Cmd/Ctrl + Y` oder `Cmd/Ctrl + Shift + Z` |
 | Ausgewähltes Gate löschen (Dialog) | `Backspace` |

@@ -13,6 +13,7 @@ Das Projekt kombiniert eine interaktive React-Oberfläche mit einer Three.js/R3F
 - **11 Gate-Typen**: Standard, Start/Ziel, h-Gate, Doppel-h, Hurdle, Dive, Doppel, Leiter, Flagge, Flagge klein und Tunnel
 - **Gate-Bearbeitung** direkt in der Szene: auswählen, verschieben, anheben, drehen, einfügen und löschen
 - **Flugpfad-Visualisierung** mit Gate-Reihenfolge, Richtungspfeilen und automatischen Ausweichkurven
+- **Freie Ideallinien-Bearbeitung**: Per Hover das Plus auf der Flugbahn anklicken und zwischen zwei Aktionen wählen: ein neues Gate an dieser Stelle einfügen oder einen frei verschiebbaren Leitpunkt setzen, um die Linie zu formen
 - **FPV-Flug** entlang der Ideallinie (ab zwei Gates)
 - **Undo/Redo-Verlauf** für Bearbeitungsschritte
 - **Lokale Speicherung** von Tracks im Browser über `localStorage`
@@ -96,12 +97,26 @@ Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in d
 ### Gates bearbeiten
 
 1. Gate in der 3D-Szene anklicken. Shift-, Cmd- oder Ctrl-Klick erweitert die Auswahl.
-2. Verschieben-, Anheben- oder Drehen-Werkzeug direkt am Gate verwenden. Das Drehen läuft kontinuierlich mit 1° pro Pixel und rastet nur bei aktivem Snap auf 15°-Schritte ein.
+2. Verschieben-, Anheben- oder Drehen-Werkzeug direkt am Gate verwenden. Das Drehen läuft kontinuierlich mit 1° pro Pixel und rastet nur bei aktivem Snap auf 15°-Schritte ein. Alternativ hebt und senkt **`Shift` + Ziehen am Gate** die Höhe direkt, ohne das Höhen-Werkzeug zu greifen.
 3. **Einflug- und Ausflugseite:** Bei aktivem Schalter „Durchflüge“ zeigt jede Öffnung eine grüne Einflug- und eine rote Ausflugsfläche; das ⇄-Symbol an der Öffnung dreht die Durchflugrichtung um. Je nach Kameraposition ist nur die zugewandte Seite beschriftet.
 4. **Durchflugreihenfolge:** Ein Klick auf die Durchflugnummer einer Öffnung öffnet den Dialog „Durchflugnummer ändern“. Die Nummer muss zwischen 1 und der Gesamtzahl der Durchflüge liegen.
 5. Neue Gates können relativ zu einem ausgewählten Gate davor oder danach eingefügt werden. Beim Einfügen wird der Gate-Typ gewählt; ein bereits vorhandenes Start/Ziel-Gate ist ausgegraut.
 6. Ausgewählte Gates lassen sich per Dialog oder Shortcut löschen.
 7. Ein Klick auf den Boden hebt die Auswahl wieder auf.
+
+### Ideallinie mit Leitpunkten formen
+
+Aktiviere in der TopBar **„Flugbahn“**. Solange kein Gate ausgewählt ist, kannst du die Ideallinie bearbeiten.
+
+1. Fahre mit der Maus über die Linie. Ein **Plus-Zeichen** erscheint direkt unter dem Mauszeiger; klicke auf die Linie, um zwei Symbole aufzuklappen (ein zweiter Klick schließt sie wieder).
+2. Das **Gate-Symbol** öffnet den bekannten Dialog „Gate einfügen“. Das neue Gate landet genau auf der Linie, ist entlang der Linie ausgerichtet und wird in der Durchflugreihenfolge zwischen den beiden Gate-Ankern dieses Abschnitts eingefügt.
+3. Das **gelbe Punkt-Symbol** setzt genau einen Leitpunkt an dieser Stelle.
+4. Klicke den neuen gelben Leitpunkt an. Über ihm erscheinen zwei Werkzeuge wie bei Gates: **Verschieben** bewegt den Leitpunkt in der Feldebene (X/Z), **Höhe** hebt oder senkt ihn um 0,03 m pro Pixel (Y). Feldgrenzen und Grid-Snap wirken wie bei Gates. Der kleine Papierkorb oben rechts am Leitpunkt löscht ihn.
+   Genau wie bei Gates geht es auch direkt am Leitpunkt: **Leitpunkt gedrückt halten und ziehen** verschiebt ihn in der Feldebene, **`Shift` + Leitpunkt gedrückt halten und ziehen** nur in der Höhe. Ein kurzer Klick ohne Ziehen wählt den Leitpunkt weiterhin nur aus.
+5. Füge bei Bedarf weitere Leitpunkte ein. Die Linie verläuft glatt durch alle Leitpunkte eines Gate-Abschnitts; die Gate-Anker bleiben unverändert.
+6. Einfügen, Löschen und jede komplette Ziehbewegung sind jeweils ein Rückgängig-Schritt.
+
+Die Leitpunkte werden mit ihrer Weltposition und ihrer Zuordnung zum Gate-Abschnitt gespeichert. Gate-Bearbeitungen behalten diese Daten; Leitpunkte eines nicht mehr vorhandenen Abschnitts bleiben gespeichert, sind aber wirkungslos. Speichern, JSON-Export/Import und Teilen übernehmen die Leitpunkte.
 
 ### FPV-Flug
 
@@ -125,7 +140,6 @@ Die Ansicht kann vollständig mit der Maus bedient werden:
 | Über die Strecke bewegen | Rechte Maustaste gedrückt halten und ziehen (draggen/pannen) |
 | Zoomen | Mausrad scrollen |
 | Schnell zoomen | Mittlere Maustaste gedrückt halten und ziehen |
-| Kamerahöhe ändern | `Shift` gedrückt halten und mit linker Maustaste ziehen |
 | Neigung der Ansicht | Die Kamera lässt sich nicht unter den Horizont kippen |
 | Zoom-Grenzen | Der Abstand reicht von 2 m bis 200 m |
 
@@ -141,7 +155,8 @@ Auf Touch-Geräten verschiebt ein Zwei-Finger-Ziehen die Ansicht, ein Auf- und Z
 | Strecke speichern | `Cmd/Ctrl + S` |
 | Galerie öffnen | `G` |
 | Ansicht verschieben | `Space + linke Maustaste ziehen` |
-| Kamerahöhe ändern | `Shift + linke Maustaste ziehen` |
+| Gate anheben oder absenken | `Shift` gedrückt halten und Gate ziehen |
+| Leitpunkt anheben oder absenken | `Shift` gedrückt halten und Leitpunkt ziehen |
 | Gate abwählen / Dialoge schließen | `Escape` |
 | FPV-Flug beenden | `Escape` |
 | Ausgewähltes Gate löschen | `Backspace` |
@@ -165,7 +180,7 @@ Die Daten für Lang- und Kurzlink kommen ausschließlich aus der Strecke im Edit
 
 Der Share-Viewer ist eine eigene, read-only Ansicht der geteilten Strecke. Er wird über eine eigene URL mit Hash-Payload aufgerufen und liest die Daten beim Laden direkt aus dem Fragment nach `#`. Fehlt die Payload oder ist sie beschädigt, erscheint statt der Szene eine Fehlermeldung mit dem Titel „Track kann nicht geladen werden“ und einer passenden Meldung.
 
-Im Viewer lässt sich die Strecke frei betrachten, aber nicht verändern. Oben rechts gibt es Buttons für den FPV-Flug (ab zwei Gates), den JSON-Download der Strecke und eine Hilfe mit den Steuerungsgesten; die Hilfe öffnet sich beim ersten Besuch einmalig von selbst und danach nur noch per Klick. Der Download benennt die Datei nach dem Streckennamen. Unten rechts führt ein Link zu fpvooe.com. Auch im Viewer beendet `Escape` den FPV-Flug.
+Im Viewer lässt sich die Strecke frei betrachten, aber nicht verändern. Eine mit Leitpunkten geformte Ideallinie wird angezeigt; die Leitpunkte selbst sind dort nicht sichtbar. Oben rechts gibt es Buttons für den FPV-Flug (ab zwei Gates), den JSON-Download der Strecke und eine Hilfe mit den Steuerungsgesten; die Hilfe öffnet sich beim ersten Besuch einmalig von selbst und danach nur noch per Klick. Der Download benennt die Datei nach dem Streckennamen. Unten rechts führt ein Link zu fpvooe.com. Auch im Viewer beendet `Escape` den FPV-Flug.
 
 Der Viewer wird als einzelne HTML-Datei gebaut und über einen eigenen Einstiegspunkt (`viewer.html`) geladen:
 

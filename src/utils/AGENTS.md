@@ -9,6 +9,7 @@ utils/
 ├── generator.ts          # Random track generation with collision detection
 ├── flightPath.ts         # Base route plus per-leg custom-point displacement, samples, arrows
 ├── idealLine.ts          # Leg refs, visible-basis interpolation, smooth offset field, hover/closest helpers
+├── gateInsertion.ts      # Ideal-line hover -> gate-insertion payload (position, rotation, sequence index)
 ├── gateOperations.ts     # Pure move/rotate helpers (dead: only its own test imports it)
 ├── gateOpenings.ts       # Opening geometry, normalizeGates, H-gate backrest side
 ├── gateSequence.ts       # Sequence ordering, legacy expansion, normalization
@@ -41,6 +42,7 @@ utils/
 | Change gate movement | `src/store/trackSlice.ts` (inline `moveGate`/`rotateGate`); `gateOperations.ts` is dead code | `moveGate()`, `rotateGate()` |
 | Modify gate openings | `gateOpenings.ts` | `createDefaultGateOpenings()`, `normalizeGates()` |
 | Modify gate sequence | `gateSequence.ts` | `buildDefaultGateSequenceEntries()`, `normalizeGateSequence()` |
+| Insert a gate at an ideal-line hover | `gateInsertion.ts` | `resolveIdealLineGateInsertion()` |
 | Modify persistence | `storage.ts` | `saveTrack()`, `loadTrack()`, `listTracks()`, `deleteTrack()` |
 | Modify share links | `shareTrack.ts` | `encodeTrackSharePayload()`, `decodeTrackSharePayload()`, `createTrackShareUrl()`, `shortenTrackShareUrl()`, `getTrackShortenerEndpoint()` |
 | Share QR codes | `qrCode.ts`, `components/ui/ShareTrackDialog.tsx` | `downloadTrackQrCodePng()`, `createTrackQrCodeSvg()`, `downloadTrackQrCodeSvg()` |
@@ -69,7 +71,7 @@ utils/
 - Storage/import/share code must call schema helpers, not trust raw JSON.
 
 ## TESTING
-- `flightPath.test.ts` preserves gate-specific cases and covers default identity, leg-local shaping, exact authored samples, smoothness, dormant/inert points, and metadata synchronization. `idealLine.test.ts` covers the field, basis, grouping, hover, and closest-point helpers.
+- `flightPath.test.ts` preserves gate-specific cases and covers default identity, leg-local shaping, exact authored samples, smoothness, dormant/inert points, and metadata synchronization. `idealLine.test.ts` covers the field, basis, grouping, hover, and closest-point helpers. `gateInsertion.test.ts` covers the ideal-line hover to gate-insertion resolver (position, tangent rotation, sequence index incl. same-gate loops, unknown legs).
 - `generator.test.ts`, `gateOpenings.test.ts`, `gateSequence.test.ts`, `gateOperations.test.ts`, and `storage.test.ts` cover core invariants.
 - `shareTrack.test.ts`, `generationConfig.test.ts`, `poleCount.test.ts`, `poleLimit.test.ts`, `venuePreference.test.ts`, `venuePresets.test.ts`, and `fieldWatermark.test.ts` cover the newer helpers.
 - `qrCode.test.ts` covers PNG/SVG download helpers; mock `URL.createObjectURL`/`revokeObjectURL` locally.

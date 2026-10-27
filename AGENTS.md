@@ -56,7 +56,7 @@ fpv-track-designer/
 | Change panels/dialog UI | `src/components/ui/` | shadcn primitives plus app-specific dialogs/panels |
 | Track generation | `src/utils/generator.ts` | Min 3m gate distance, nearest-neighbor order, 30 degree rotation alignment |
 | Flight path logic | `src/utils/flightPath.ts`, `src/utils/idealLine.ts` | Dense geometry/avoidance algorithm; test edge cases |
-| Ideal-line point editing | `src/components/scene/FlightPathEditor.tsx`, `FlightPathPointControls.tsx`, `src/utils/idealLine.ts`, `src/store/trackSlice.ts` | Hover a path line to insert a point, drag X/Z, raise Y; points live on `track.idealLinePoints` and never dirty the track by selection alone |
+| Ideal-line point editing | `src/components/scene/FlightPathEditor.tsx`, `FlightPathPointControls.tsx`, `src/hooks/useFlightPathPointDrag.ts`, `src/utils/idealLine.ts`, `src/utils/gateInsertion.ts`, `src/store/trackSlice.ts` | Hovering a path line shows a `+` that expands into gate-or-point; the point inserts there and is dragged like a gate (press + travel on the dot for X/Z, Shift at the press for Y, plus move/elevate handles), the gate opens the normal insert dialog; points live on `track.idealLinePoints` and never dirty the track by selection alone |
 | Regeneration prompt | `src/utils/generationConfig.ts`, `src/components/ui/ApplyConfigFooter.tsx` | `hasConfigDrift()` decides whether applying settings offers a regenerate |
 | Store state/actions | `src/store/configSlice.ts`, `src/store/trackSlice.ts` | Slice pattern, history, dirty-state workflow |
 | Persistence / import / export / share | `src/schemas/track.schema.ts`, `src/utils/storage.ts`, `src/utils/shareTrack.ts` | Schema-guarded `localStorage` CRUD; `lz-string` compressed `z.` payloads with legacy base64 fallback |
