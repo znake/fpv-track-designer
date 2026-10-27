@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Html } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { Vector2, Raycaster } from 'three'
 import { ArrowUpDown, Move, Plus, RotateCw, Trash2 } from 'lucide-react'
 import type { GateType } from '../../types'
 import { useAppStore } from '../../store'
-import { calculateFlightPath } from '../../utils/flightPath'
+import { calculateFlightPathWithControlPoints } from '../../utils/flightPath'
+import { getClosestPathPoint } from '../../utils/idealLine'
 import { Button } from '../ui/button'
+import { useGateMoveDrag } from '../../hooks/useGateMoveDrag'
 import { useTranslation } from '@/i18n'
 
 interface GateHandlesProps {
@@ -18,7 +19,7 @@ interface GateHandlesProps {
 
 type GatePosition = { x: number; y: number; z: number }
 
-type DragMode = 'none' | 'move' | 'elevate' | 'rotate'
+type DragMode = 'none' | 'elevate' | 'rotate'
 type InsertPosition = 'before' | 'after'
 
 interface InsertControlConfig {
@@ -29,7 +30,6 @@ interface InsertControlConfig {
   sequenceIndex: number
 }
 
-const RAYCASTER = new Raycaster()
 const BASE_GATE_HEIGHT = 1.2
 const FLAG_BASE_HEIGHT = 2
 const FLAG_SMALL_BASE_HEIGHT = 1.2
@@ -50,18 +50,6 @@ function getMidpoint(a: GatePosition, b: GatePosition): GatePosition {
     y: (a.y + b.y) / 2,
     z: (a.z + b.z) / 2,
   }
-}
-
-function getSquaredDistance(a: GatePosition, b: GatePosition): number {
-  return (a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2
-}
-
-function getClosestPathPoint(target: GatePosition, pathPoints: GatePosition[]): GatePosition | null {
-  if (pathPoints.length === 0) return null
-
-  return pathPoints.reduce((closest, point) => (
-    getSquaredDistance(point, target) < getSquaredDistance(closest, target) ? point : closest
-  ))
 }
 
 function getWrappedSequenceIndex(index: number, length: number): number {
@@ -125,15 +113,12 @@ function getGateTopOffset(gateType: GateType): number {
 
 export function GateHandles({ gateId, gateType, position, rotation }: GateHandlesProps) {
   const { t } = useTranslation()
-  const { camera, gl, controls } = useThree()
+  const { controls } = useThree()
+  const { isMoving, beginMoveDrag } = useGateMoveDrag({ gateId, position })
   const modeRef = useRef<DragMode>('none')
   const [activeMode, setActiveMode] = useState<DragMode>('none')
   const openDeleteDialog = useAppStore((state) => state.openDeleteDialog)
   const closeDeleteDialog = useAppStore((state) => state.closeDeleteDialog)
-
-  // Move refs
-  const dragStartRef = useRef<{ x: number; z: number } | null>(null)
-  const gateStartPosRef = useRef<{ x: number; z: number } | null>(null)
 
   // Elevation refs
   const elevationDragStartYRef = useRef(0)
@@ -147,7 +132,6 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
   const setGateRotation = useAppStore((state) => state.setGateRotation)
   const commitGateDrag = useAppStore((state) => state.commitGateDrag)
   const setDraggingGate = useAppStore((state) => state.setDraggingGate)
-  const fieldSize = useAppStore((state) => state.config.fieldSize)
   const snapGatesToGrid = useAppStore((state) => state.config.snapGatesToGrid)
   const currentTrack = useAppStore((state) => state.currentTrack)
   const selectedGateId = useAppStore((state) => state.selectedGateId)
@@ -156,9 +140,6 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
   // Stable refs for window listeners
   const gateIdRef = useRef(gateId)
   const positionRef = useRef(position)
-  const fieldSizeRef = useRef(fieldSize)
-  const cameraRef = useRef(camera)
-  const glRef = useRef(gl)
   const controlsRef = useRef(controls)
   const setGatePositionRef = useRef(setGatePosition)
   const setGateRotationRef = useRef(setGateRotation)
@@ -169,9 +150,6 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
 
   useEffect(() => { gateIdRef.current = gateId }, [gateId])
   useEffect(() => { positionRef.current = position }, [position])
-  useEffect(() => { fieldSizeRef.current = fieldSize }, [fieldSize])
-  useEffect(() => { cameraRef.current = camera }, [camera])
-  useEffect(() => { glRef.current = gl }, [gl])
   useEffect(() => { controlsRef.current = controls }, [controls])
   useEffect(() => { setGatePositionRef.current = setGatePosition }, [setGatePosition])
   useEffect(() => { setGateRotationRef.current = setGateRotation }, [setGateRotation])
@@ -185,46 +163,22 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
     [currentTrack?.gateSequence],
   )
   const flightPath = useMemo(
-    () => currentTrack ? calculateFlightPath(currentTrack.gates, currentTrack.gateSequence) : null,
+    () => currentTrack ? calculateFlightPathWithControlPoints(
+      currentTrack.gates,
+      currentTrack.gateSequence,
+      currentTrack.idealLinePoints,
+    ) : null,
     [currentTrack],
   )
   const selectedGateIndex = currentTrack?.gates.findIndex((gate) => gate.id === gateId) ?? -1
   const selectedGate = selectedGateIndex >= 0 ? currentTrack?.gates[selectedGateIndex] : null
   const moveRotateHandleY = position.y + getGateTopOffset(gateType) + HANDLE_CLEARANCE_ABOVE_GATE
 
-  const intersectGround = useCallback((clientX: number, clientY: number) => {
-    const rect = glRef.current.domElement.getBoundingClientRect()
-    const mouse = new Vector2(
-      ((clientX - rect.left) / rect.width) * 2 - 1,
-      -((clientY - rect.top) / rect.height) * 2 + 1,
-    )
-    RAYCASTER.setFromCamera(mouse, cameraRef.current)
-    const dir = RAYCASTER.ray.direction.clone()
-    const ori = RAYCASTER.ray.origin.clone()
-    const t = -ori.y / dir.y
-    return ori.add(dir.multiplyScalar(t))
-  }, [])
-
   // Window-level listeners
   useEffect(() => {
     const onPointerMove = (e: PointerEvent) => {
       const mode = modeRef.current
       if (mode === 'none') return
-
-      if (mode === 'move') {
-        if (!dragStartRef.current || !gateStartPosRef.current) return
-        const hit = intersectGround(e.clientX, e.clientY)
-        const dx = hit.x - dragStartRef.current.x
-        const dz = hit.z - dragStartRef.current.z
-        const fs = fieldSizeRef.current
-        const halfW = fs.width / 2
-        const halfH = fs.height / 2
-        const x = Math.max(-halfW, Math.min(halfW, gateStartPosRef.current.x + dx))
-        const z = Math.max(-halfH, Math.min(halfH, gateStartPosRef.current.z + dz))
-        setGatePositionRef.current(gateIdRef.current, {
-          x, y: positionRef.current.y, z,
-        })
-      }
 
       if (mode === 'rotate') {
         const dx = e.clientX - dragStartXRef.current
@@ -273,7 +227,7 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
         clearTimeout(draggingReleaseTimeoutRef.current)
       }
     }
-  }, [intersectGround])
+  }, [])
 
   const disableControls = useCallback(() => {
     const currentControls = controlsRef.current
@@ -317,7 +271,7 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
     const fallbackPosition = getFallbackInsertPosition(selectedGate.position, selectedGate.rotation, direction, currentTrack.fieldSize)
     const centerTarget = neighborGate ? getMidpoint(selectedGate.position, neighborGate.position) : fallbackPosition
     const pathLegIndex = direction === 'before' ? neighborSequenceIndex : selectedSequenceIndex
-    const pathPoints = pathLegIndex >= 0 ? flightPath?.sampledLegs[pathLegIndex] ?? [] : []
+    const pathPoints = pathLegIndex >= 0 ? flightPath?.path.sampledLegs[pathLegIndex] ?? [] : []
     const closestPathPoint = getClosestPathPoint(centerTarget, pathPoints)
     const insertPosition = clampPositionToField({
       x: closestPathPoint?.x ?? centerTarget.x,
@@ -335,7 +289,7 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
       gateIndex: direction === 'before' ? selectedGateIndex : selectedGateIndex + 1,
       sequenceIndex: insertionSequenceIndex,
     }
-  }, [currentTrack, flightPath?.sampledLegs, gateId, gateSequence, selectedGate, selectedGateIndex])
+  }, [currentTrack, flightPath?.path.sampledLegs, gateId, gateSequence, selectedGate, selectedGateIndex])
 
   const handleOpenInsertDialog = useCallback((control: InsertControlConfig) => {
     if (!currentTrack || !selectedGate) return
@@ -355,21 +309,10 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
       e.preventDefault()
       e.stopPropagation()
       e.nativeEvent.stopImmediatePropagation()
-      disableControls()
 
-      modeRef.current = 'move'
-      setActiveMode('move')
-      setDraggingGate(true)
-      if (draggingReleaseTimeoutRef.current) {
-        clearTimeout(draggingReleaseTimeoutRef.current)
-        draggingReleaseTimeoutRef.current = null
-      }
-
-      const hit = intersectGround(e.clientX, e.clientY)
-      dragStartRef.current = { x: hit.x, z: hit.z }
-      gateStartPosRef.current = { x: position.x, z: position.z }
+      beginMoveDrag(e.clientX, e.clientY)
     },
-    [position, intersectGround, setDraggingGate, disableControls],
+    [beginMoveDrag],
   )
 
   const handleRotateDown = useCallback(
@@ -489,11 +432,11 @@ export function GateHandles({ gateId, gateType, position, rotation }: GateHandle
             type="button"
             aria-label={`${gateId} ${t('move')}`}
             onPointerDown={handleMoveDown}
-            className={`${HANDLE_BUTTON_CLASSNAME} ${activeMode === 'move'
+            className={`${HANDLE_BUTTON_CLASSNAME} ${isMoving
               ? 'border-primary bg-primary text-primary-foreground'
               : 'border-primary/40 bg-surface-elevated/95 text-primary hover:bg-surface-hover'
             }`}
-            style={{ cursor: activeMode === 'move' ? 'grabbing' : 'grab' }}
+            style={{ cursor: isMoving ? 'grabbing' : 'grab' }}
           >
             <Move size={22} />
           </button>

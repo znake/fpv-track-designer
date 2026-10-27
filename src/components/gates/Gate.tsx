@@ -3,6 +3,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { Gate as GateType } from '../../types'
 import { useGateSelection } from '../../hooks/useGateSelection'
+import { useGateMoveDrag } from '../../hooks/useGateMoveDrag'
 import { useAppStore } from '../../store'
 import { StandardGate } from './StandardGate'
 import { HGate } from './HGate'
@@ -27,6 +28,7 @@ interface GateProps {
 export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly = false }: GateProps) {
   const shadowGroupRef = useRef<THREE.Group>(null)
   const { isSelected, handleClick } = useGateSelection(gate.id)
+  const { startPressDrag } = useGateMoveDrag({ gateId: gate.id, position: gate.position })
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const currentTrack = useAppStore((state) => state.currentTrack)
   const toggleGateDirection = useAppStore((state) => state.toggleGateDirection)
@@ -63,6 +65,13 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly =
   }
 
   const gateIsSelected = readOnly ? false : isSelected
+
+  const handlePress = (e: ThreeEvent<PointerEvent>) => {
+    if (e.button !== 0 || e.nativeEvent.pointerType === 'touch') return
+
+    e.stopPropagation()
+    startPressDrag(e.clientX, e.clientY)
+  }
 
   const commonProps = {
     position: gate.position,
@@ -122,7 +131,7 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly =
   }
 
   return (
-    <group ref={shadowGroupRef}>
+    <group ref={shadowGroupRef} onPointerDown={readOnly ? undefined : handlePress}>
       {gateComponent}
       {!readOnly && isSelected && (
         <GateHandles
