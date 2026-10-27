@@ -15,8 +15,9 @@ import { CameraPan } from '../scene/CameraPan'
 import { SmoothZoom } from '../scene/SmoothZoom'
 import { SkyDome } from '../scene/SkyDome'
 import { FpvFlyThrough } from '../scene/FpvFlyThrough'
+import { FlightPathEditor } from '../scene/FlightPathEditor'
 import type { Config, Track } from '../../types'
-import { calculateFlightPath } from '../../utils/flightPath'
+import { calculateFlightPathWithControlPoints } from '../../utils/flightPath'
 import { getVenuePreset } from '../../utils/venuePresets'
 
 interface SceneProps {
@@ -31,15 +32,22 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
   const controlsRef = useRef<OrbitControlsImpl>(null)
   const storeTrack = useAppStore((state) => state.currentTrack)
   const storeConfig = useAppStore((state) => state.config)
+  const selectedGateId = useAppStore((state) => state.selectedGateId)
+  const selectedGateIds = useAppStore((state) => state.selectedGateIds)
   const currentTrack = track !== undefined ? track : storeTrack
   const config = configOverride ?? storeConfig
   const theme = useMemo(() => getThemeConfig(config.theme), [config.theme])
   const venueObstacles = useMemo(() => getVenuePreset(config.venueId)?.obstacles ?? [], [config.venueId])
   const usesMinimalScene = theme.useSkyDome
-  const flightPath = useMemo(() => {
+  const flightPathData = useMemo(() => {
     if (!currentTrack) return null
-    return calculateFlightPath(currentTrack.gates, currentTrack.gateSequence)
+    return calculateFlightPathWithControlPoints(
+      currentTrack.gates,
+      currentTrack.gateSequence,
+      currentTrack.idealLinePoints,
+    )
   }, [currentTrack])
+  const flightPath = flightPathData?.path ?? null
 
   const sunGlowTexture = useMemo(() => {
     const canvas = document.createElement('canvas')
@@ -117,6 +125,12 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
     return labelsByGate
   }, [currentTrack])
 
+  const showEditorLineTools = !readOnly
+    && config.showFlightPath
+    && !fpvModeActive
+    && selectedGateId === null
+    && selectedGateIds.length === 0
+
   const trackContent = currentTrack ? (
     <>
       {currentTrack.gates.map((gate) => (
@@ -128,7 +142,11 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
           readOnly={readOnly}
         />
       ))}
-      {config.showFlightPath && <FlightPath gates={currentTrack.gates} gateSequence={currentTrack.gateSequence} />}
+      {config.showFlightPath && flightPathData && (
+        showEditorLineTools
+          ? <FlightPathEditor data={flightPathData} controlsRef={controlsRef} fpvModeActive={fpvModeActive} />
+          : <FlightPath path={flightPathData.path} />
+      )}
     </>
   ) : null
 

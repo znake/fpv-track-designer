@@ -1,13 +1,13 @@
 import type { Config } from '../types/config'
 import { SNAP_GRID_SIZES } from '../types/config'
 import type { Gate, GateOpening, GateType } from '../types/gate'
-import type { GateSequenceItem, Track } from '../types/track'
+import type { IdealLinePoint, GateSequenceItem, Track } from '../types/track'
 import { VENUE_IDS } from '../types/venue'
 import { normalizeGates } from '../utils/gateOpenings'
 import { normalizeGateSequence } from '../utils/gateSequence'
 import { isVenueId } from '../utils/venuePresets'
 
-export const SCHEMA_VERSION = '1.3.0'
+export const SCHEMA_VERSION = '1.5.0'
 
 const VALID_THEME_IDS = [
   'minimal',
@@ -28,6 +28,7 @@ export interface TrackExportSchema {
     gates: Gate[]
     gateSequence?: Array<string | GateSequenceItem>
     fieldSize: { width: number; height: number }
+    idealLinePoints?: IdealLinePoint[]
     createdAt: string
     updatedAt: string
   }
@@ -238,6 +239,82 @@ function validateGateQuantities(quantities: unknown): ValidationError[] {
   return errors
 }
 
+function validateIdealLinePoints(value: unknown): ValidationError[] {
+  if (value === undefined) return []
+  if (!Array.isArray(value)) {
+    return [{ field: 'track.idealLinePoints', message: 'Ideal-line points must be an array when provided' }]
+  }
+
+  const errors: ValidationError[] = []
+  const ids = new Set<string>()
+
+  value.forEach((entry, index) => {
+    const field = `track.idealLinePoints[${index}]`
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      errors.push({ field, message: 'Ideal-line point must be an object' })
+      return
+    }
+
+    const candidate = entry as Record<string, unknown>
+    if (typeof candidate.id !== 'string' || candidate.id.length === 0) {
+      errors.push({ field: `${field}.id`, message: 'Ideal-line point id must be a non-empty string' })
+    } else if (ids.has(candidate.id)) {
+      errors.push({ field: `${field}.id`, message: 'Ideal-line point ids must be unique' })
+    } else {
+      ids.add(candidate.id)
+    }
+
+    if (typeof candidate.u !== 'number' || !Number.isFinite(candidate.u) || candidate.u <= 0 || candidate.u >= 1) {
+      errors.push({ field: `${field}.u`, message: 'Ideal-line point u must be finite and between 0 and 1' })
+    }
+
+    const leg = candidate.leg
+    if (!leg || typeof leg !== 'object' || Array.isArray(leg)) {
+      errors.push({ field: `${field}.leg`, message: 'Ideal-line point leg must be an object' })
+    } else {
+      for (const endpoint of ['from', 'to'] as const) {
+        const visit = (leg as Record<string, unknown>)[endpoint]
+        if (!visit || typeof visit !== 'object' || Array.isArray(visit)) {
+          errors.push({ field: `${field}.leg.${endpoint}`, message: 'Ideal-line leg endpoint must be an object' })
+          continue
+        }
+        for (const key of ['gateId', 'openingId'] as const) {
+          if (typeof (visit as Record<string, unknown>)[key] !== 'string') {
+            errors.push({ field: `${field}.leg.${endpoint}.${key}`, message: `${key} must be a string` })
+          }
+        }
+      }
+    }
+
+    const position = candidate.position
+    if (!position || typeof position !== 'object' || Array.isArray(position)) {
+      errors.push({ field: `${field}.position`, message: 'Ideal-line point position must be an object' })
+    } else {
+      for (const axis of ['x', 'y', 'z'] as const) {
+        const coordinate = (position as Record<string, unknown>)[axis]
+        if (typeof coordinate !== 'number' || !Number.isFinite(coordinate)) {
+          errors.push({ field: `${field}.position.${axis}`, message: `Position ${axis} must be finite` })
+        }
+      }
+    }
+  })
+
+  return errors
+}
+
+function normalizeIdealLinePoints(points: IdealLinePoint[] | undefined): IdealLinePoint[] | undefined {
+  if (!points || points.length === 0) return undefined
+  return points.map(({ id, leg, u, position }) => ({
+    id,
+    leg: {
+      from: { gateId: leg.from.gateId, openingId: leg.from.openingId },
+      to: { gateId: leg.to.gateId, openingId: leg.to.openingId },
+    },
+    u,
+    position: { x: position.x, y: position.y, z: position.z },
+  }))
+}
+
 function validateGateSequenceEntry(
   entry: unknown,
   index: number,
@@ -352,6 +429,7 @@ export function validateTrack(data: unknown): { valid: boolean; errors: Validati
     }
 
     errors.push(...validateFieldSize(track.fieldSize, 'track.fieldSize'))
+    errors.push(...validateIdealLinePoints(track.idealLinePoints))
 
     if (typeof track.createdAt !== 'string') {
       errors.push({ field: 'track.createdAt', message: 'CreatedAt must be an ISO date string' })
@@ -390,6 +468,7 @@ export function validateTrack(data: unknown): { valid: boolean; errors: Validati
 }
 
 export function serializeTrack(track: Track, config: Config): string {
+  const idealLinePoints = normalizeIdealLinePoints(track.idealLinePoints)
   const exportData: TrackExportSchema = {
     version: SCHEMA_VERSION,
     track: {
@@ -398,6 +477,7 @@ export function serializeTrack(track: Track, config: Config): string {
       gates: track.gates,
       gateSequence: track.gateSequence,
       fieldSize: track.fieldSize,
+      ...(idealLinePoints ? { idealLinePoints } : {}),
       createdAt: track.createdAt,
       updatedAt: track.updatedAt,
     },
@@ -437,6 +517,7 @@ export function deserializeTrack(jsonString: string): { track: Track; config: Co
     type: normalizeGateType(gate.type) ?? gate.type,
   }))
   const gates = normalizeGates(normalizedGates)
+  const idealLinePoints = normalizeIdealLinePoints(data.track.idealLinePoints)
 
   return {
     track: {
@@ -445,6 +526,7 @@ export function deserializeTrack(jsonString: string): { track: Track; config: Co
       gates,
       gateSequence: normalizeGateSequence(data.track.gateSequence, gates),
       fieldSize: data.track.fieldSize,
+      ...(idealLinePoints ? { idealLinePoints } : {}),
       createdAt: data.track.createdAt,
       updatedAt: data.track.updatedAt,
     },

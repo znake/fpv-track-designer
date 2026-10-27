@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { calculateFlightPath, DIVE_TOP_APPROACH_CLEARANCE, GATE_BASE_HEIGHT, GATE_STRUCTURE_CLEARANCE } from './flightPath'
-import type { Gate, GateSequenceItem } from '../types'
+import { Vector3 } from 'three'
+import { calculateFlightPath, calculateFlightPathWithControlPoints, DIVE_TOP_APPROACH_CLEARANCE, GATE_BASE_HEIGHT, GATE_STRUCTURE_CLEARANCE } from './flightPath'
+import type { Gate, GateSequenceItem, IdealLinePoint } from '../types'
 import { createDefaultGateOpenings, getHGateBackrestSide } from './gateOpenings'
 
 const createGate = (id: string, x: number, y: number, z: number): Gate => ({
@@ -691,5 +692,234 @@ describe('calculateFlightPath', () => {
     expect(transitionEnd.y).toBeCloseTo(GATE_BASE_HEIGHT / 2, 5)
     expect(transitionEnd.z).toBeCloseTo(diveGate.position.z, 5)
     expect(lowestPoint).toBeGreaterThanOrEqual(GATE_BASE_HEIGHT / 2 - 0.01)
+  })
+})
+
+
+
+
+type TestPoint = { x: number; y: number; z: number }
+
+const createZeroSizeGate = (id: string, y: number): Gate => ({
+  id,
+  type: 'standard',
+  position: { x: 0, y, z: 0 },
+  rotation: 0,
+  openings: [{ id: 'main', position: { x: 0, y: 0, z: 0 }, width: 0, height: 0, rotation: 0 }],
+})
+
+function polylineLength(points: readonly TestPoint[]): number {
+  let total = 0
+  for (let index = 1; index < points.length; index++) {
+    total += Math.sqrt(
+      (points[index].x - points[index - 1].x) ** 2
+      + (points[index].y - points[index - 1].y) ** 2
+      + (points[index].z - points[index - 1].z) ** 2,
+    )
+  }
+  return total
+}
+
+function distanceToSegment(point: TestPoint, start: TestPoint, end: TestPoint): number {
+  const delta = new Vector3(end.x - start.x, end.y - start.y, end.z - start.z)
+  const lengthSquared = delta.lengthSq()
+  const rawT = lengthSquared === 0
+    ? 0
+    : new Vector3(point.x - start.x, point.y - start.y, point.z - start.z).dot(delta) / lengthSquared
+  const t = Math.max(0, Math.min(1, rawT))
+  return new Vector3(point.x, point.y, point.z).distanceTo(new Vector3(
+    start.x + delta.x * t,
+    start.y + delta.y * t,
+    start.z + delta.z * t,
+  ))
+}
+
+function distanceToPolyline(point: TestPoint, polyline: readonly TestPoint[]): number {
+  let closest = Number.POSITIVE_INFINITY
+  for (let index = 1; index < polyline.length; index++) {
+    closest = Math.min(closest, distanceToSegment(point, polyline[index - 1], polyline[index]))
+  }
+  return closest
+}
+
+function authoredPoint(
+  data: ReturnType<typeof calculateFlightPathWithControlPoints>,
+  legIndex: number,
+  sampleIndex: number,
+  id: string,
+  delta: TestPoint,
+): IdealLinePoint {
+  const base = data.path.sampledLegs[legIndex][sampleIndex]
+  return {
+    id,
+    leg: data.legRefs[legIndex],
+    u: data.sampledLegUs[legIndex][sampleIndex],
+    position: { x: base.x + delta.x, y: base.y + delta.y, z: base.z + delta.z },
+  }
+}
+
+describe('calculateFlightPathWithControlPoints', () => {
+  const straightGates = [createGate('g1', 0, 0, 0), createGate('g2', 0, 0, 8)]
+
+  it('leaves the base route exact without points', () => {
+    // Given straight, dive, tunnel and same-gate fixtures
+    const diveGate: Gate = {
+      id: 'dive', type: 'dive', position: { x: 0, y: 0, z: 10 }, rotation: 0,
+      openings: createDefaultGateOpenings('dive', 'dive'),
+    }
+    const fixtures = [
+      { gates: straightGates, sequence: undefined },
+      { gates: [createGate('a', 0, 0, 0), createGate('b', 4, 0, 5), createGate('c', -2, 0, 9)], sequence: undefined },
+      { gates: [createGate('start', 0, 0, 0), diveGate], sequence: [
+        { gateId: 'start', openingId: 'main', reverse: false },
+        { gateId: 'dive', openingId: 'entry-top', reverse: false },
+        { gateId: 'dive', openingId: diveGate.openings[1].id, reverse: false },
+      ] },
+      { gates: [createOctagonalTunnelGate('tunnel', 0, 0), createGate('g2', 0, 0, 10)], sequence: undefined },
+      { gates: straightGates, sequence: [
+        { gateId: 'g1', openingId: 'main', reverse: false },
+        { gateId: 'g1', openingId: 'main', reverse: true },
+        { gateId: 'g2', openingId: 'main', reverse: false },
+      ] },
+    ]
+    // When calculating with absent and empty custom-point arrays
+    for (const fixture of fixtures) {
+      const base = calculateFlightPath(fixture.gates, fixture.sequence)
+      const wrapped = calculateFlightPathWithControlPoints(fixture.gates, fixture.sequence)
+      const explicitEmpty = calculateFlightPathWithControlPoints(fixture.gates, fixture.sequence, [])
+      // Then the path is exact and all metadata stays parallel
+      expect(wrapped.path).toEqual(base)
+      expect(explicitEmpty.path).toEqual(base)
+      expect(wrapped.idealLinePoints).toEqual([])
+      expect(wrapped.sampledLegIndexes).toHaveLength(base.sampledSegments.length)
+      expect(wrapped.sampledLegUs).toHaveLength(base.sampledLegs.length)
+      expect(wrapped.legRefs).toHaveLength(base.sampledLegs.length)
+    }
+  })
+
+  it('shapes only the leg that owns the point', () => {
+    // Given a three-gate route and one elevated point on leg zero
+    const gates = [createGate('a', 0, 0, 0), createGate('b', 0, 0, 8), createGate('c', 6, 0, 8)]
+    const base = calculateFlightPathWithControlPoints(gates)
+    const point = authoredPoint(base, 0, 20, 'p1', { x: 0, y: 2, z: 0 })
+    // When shaping that leg
+    const edited = calculateFlightPathWithControlPoints(gates, undefined, [point])
+    // Then only leg zero changes and its diagnostics stay intact
+    expect(edited.path.sampledLegs[0]).not.toEqual(base.path.sampledLegs[0])
+    expect(edited.path.sampledLegs.slice(1)).toEqual(base.path.sampledLegs.slice(1))
+    expect(edited.path.segments).toEqual(base.path.segments)
+    expect(edited.path.points).toEqual(base.path.points)
+    expect(edited.path.totalLength).toBeCloseTo(edited.path.sampledSegments.reduce((sum, segment) => sum + polylineLength(segment), 0), 9)
+    expect(edited.path.totalLength).not.toBe(base.path.totalLength)
+  })
+
+  it('passes exactly through every authored point and keeps anchors pinned', () => {
+    // Given two differently displaced points on one leg
+    const base = calculateFlightPathWithControlPoints(straightGates)
+    const points = [
+      { id: 'p1', leg: base.legRefs[0], u: 0.3, position: { x: 0, y: 2.6, z: 2 } },
+      { id: 'p2', leg: base.legRefs[0], u: 0.6, position: { x: 1, y: -0.4, z: 4 } },
+    ]
+    // When shaping the leg
+    const edited = calculateFlightPathWithControlPoints(straightGates, undefined, points)
+    // Then every point is an exact render sample and leg anchors are unchanged
+    for (const point of points) {
+      const index = edited.sampledLegUs[0].findIndex((u) => Math.abs(u - point.u) < 1e-12)
+      expect(index).toBeGreaterThanOrEqual(0)
+      expect(edited.path.sampledLegs[0][index]).toEqual(point.position)
+      expect(distanceToPolyline(point.position, edited.path.sampledLegs[0])).toBeLessThan(1e-9)
+    }
+    expect(edited.path.sampledLegs[0][0]).toEqual(base.path.sampledLegs[0][0])
+    expect(edited.path.sampledLegs[0].at(-1)).toEqual(base.path.sampledLegs[0].at(-1))
+  })
+
+  it('has no sharp kink at authored points', () => {
+    // Given two points that would create sharp corners with linear interpolation
+    const base = calculateFlightPathWithControlPoints(straightGates)
+    const points = [
+      { id: 'p1', leg: base.legRefs[0], u: 0.3, position: { x: 0, y: 2.6, z: 2 } },
+      { id: 'p2', leg: base.legRefs[0], u: 0.6, position: { x: 1, y: -0.4, z: 4 } },
+    ]
+    // When measuring the chords immediately before and after each point
+    const edited = calculateFlightPathWithControlPoints(straightGates, undefined, points)
+    for (const point of points) {
+      const index = edited.sampledLegUs[0].findIndex((u) => Math.abs(u - point.u) < 1e-12)
+      const samples = edited.path.sampledLegs[0]
+      const before = new Vector3(samples[index].x - samples[index - 1].x, samples[index].y - samples[index - 1].y, samples[index].z - samples[index - 1].z).normalize()
+      const after = new Vector3(samples[index + 1].x - samples[index].x, samples[index + 1].y - samples[index].y, samples[index + 1].z - samples[index].z).normalize()
+      // Then the visible direction change remains below thirty degrees
+      expect(before.angleTo(after)).toBeLessThan(Math.PI / 6)
+    }
+    expect(Math.max(...edited.path.sampledLegs[0].map((point) => point.y))).toBeGreaterThan(1)
+  })
+
+  it('ignores dormant points without changing the route', () => {
+    // Given a point whose leg is not present
+    const base = calculateFlightPathWithControlPoints(straightGates)
+    const dormant = {
+      id: 'dormant',
+      leg: { from: { gateId: 'missing-a', openingId: 'main' }, to: { gateId: 'missing-b', openingId: 'main' } },
+      u: 0.5,
+      position: { x: 0, y: 10, z: 0 },
+    }
+    // When calculating with that point
+    const edited = calculateFlightPathWithControlPoints(straightGates, undefined, [dormant])
+    // Then the route is exact and no point resolves
+    expect(edited.path).toEqual(base.path)
+    expect(edited.idealLinePoints).toEqual([])
+  })
+
+  it('keeps every sample list and leg-u mapping in sync', () => {
+    // Given two shaped legs
+    const gates = [createGate('a', 0, 0, 0), createGate('b', 0, 0, 8), createGate('c', 6, 0, 8)]
+    const base = calculateFlightPathWithControlPoints(gates)
+    const points = [authoredPoint(base, 0, 20, 'p1', { x: 0, y: 2, z: 0 }), authoredPoint(base, 1, 20, 'p2', { x: 1, y: 1, z: 0 })]
+    // When shaping both legs
+    const edited = calculateFlightPathWithControlPoints(gates, undefined, points)
+    // Then all sample projections and metadata have identical cardinality and order
+    expect(edited.path.sampledPoints).toEqual(edited.path.sampledSegments.flat())
+    expect(edited.path.sampledPoints).toEqual(edited.path.sampledLegs.flat())
+    expect(edited.sampledLegIndexes).toHaveLength(edited.path.sampledSegments.length)
+    expect(edited.legRefs).toHaveLength(edited.path.sampledLegs.length)
+    edited.sampledLegUs.forEach((us, legIndex) => {
+      expect(us).toHaveLength(edited.path.sampledLegs[legIndex].length)
+      us.forEach((u, index) => {
+        expect(Number.isFinite(u)).toBe(true)
+        if (index > 0) expect(u).toBeGreaterThanOrEqual(us[index - 1])
+      })
+    })
+  })
+
+  it('keeps the authored u and world point when a gate moves', () => {
+    // Given an authored point on the first leg
+    const base = calculateFlightPathWithControlPoints(straightGates)
+    const point = authoredPoint(base, 0, 20, 'stable', { x: 0, y: 2, z: 0 })
+    // When the second gate moves
+    const movedGates = [straightGates[0], { ...straightGates[1], position: { x: 2, y: 1, z: 9 } }]
+    const moved = calculateFlightPathWithControlPoints(movedGates, undefined, [point])
+    // Then identity, anchor and world position are unchanged while the route reshapes
+    expect(moved.idealLinePoints[0]).toEqual({ id: 'stable', legIndex: 0, u: point.u, position: point.position })
+    expect(moved.path.sampledLegs[0]).not.toEqual(base.path.sampledLegs[0])
+  })
+
+  it('keeps zero-length and sub-metre routes finite', () => {
+    // Given zero-length and sub-metre routes with a candidate point
+    const zeroGates = [createZeroSizeGate('a', 0), createZeroSizeGate('b', 0)]
+    const zeroBase = calculateFlightPathWithControlPoints(zeroGates)
+    const zeroPoint = { id: 'inert', leg: zeroBase.legRefs[0], u: 0.5, position: { x: 0, y: 2, z: 0 } }
+    // When resolving the zero-length route
+    const zero = calculateFlightPathWithControlPoints(zeroGates, undefined, [zeroPoint])
+    // Then the point is inert and every u is a finite zero
+    expect(zero.idealLinePoints).toEqual([])
+    expect(zero.sampledLegUs.flat().every((u) => u === 0)).toBe(true)
+    expect(zero.path.sampledPoints.every((point) => Number.isFinite(point.x + point.y + point.z))).toBe(true)
+
+    const subGates = [createZeroSizeGate('a', 0), createZeroSizeGate('b', 0.4)]
+    const subBase = calculateFlightPathWithControlPoints(subGates)
+    const subSampleIndex = subBase.sampledLegUs[0].findIndex((u) => u > 0 && u < 1)
+    const subPoint = authoredPoint(subBase, 0, subSampleIndex, 'sub', { x: 0, y: 1, z: 0 })
+    const sub = calculateFlightPathWithControlPoints(subGates, undefined, [subPoint])
+    expect(sub.idealLinePoints).toHaveLength(1)
+    expect(sub.path.sampledPoints.every((point) => Number.isFinite(point.x + point.y + point.z))).toBe(true)
   })
 })

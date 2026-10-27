@@ -125,6 +125,23 @@ describe('storage', () => {
       expect(result?.config.fieldSize).toEqual({ width: 100, height: 100 })
       expect(result?.config.snapGridSize).toBe(0.3)
     })
+
+    it('should preserve ideal-line points through save and load', () => {
+      const points = [{
+        id: 'point-a',
+        leg: {
+          from: { gateId: 'gate-1', openingId: 'main' },
+          to: { gateId: 'gate-2', openingId: 'main' },
+        },
+        u: 0.4,
+        position: { x: 1, y: 2, z: 3 },
+      }]
+
+      saveTrack(createTestTrack({ idealLinePoints: points }), createTestConfig())
+      const result = loadTrack('test-track-id')
+
+      expect(result?.track.idealLinePoints).toEqual(points)
+    })
   })
 
   describe('listTracks', () => {

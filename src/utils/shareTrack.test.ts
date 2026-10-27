@@ -74,6 +74,72 @@ describe('shareTrack helpers', () => {
     expect(decoded.config.theme).toBe(defaultConfig.theme)
   })
 
+  it('preserves ideal-line points through a compressed payload', () => {
+    const points = [{
+      id: 'point-a',
+      leg: {
+        from: { gateId: 'gate-1', openingId: 'main' },
+        to: { gateId: 'gate-2', openingId: 'main' },
+      },
+      u: 0.4,
+      position: { x: 1, y: 2, z: 3 },
+    }]
+    const track: Track = { ...createTestTrack(), idealLinePoints: points }
+    const payload = encodeTrackSharePayload(track, defaultConfig)
+
+    expect(payload.startsWith('z.')).toBe(true)
+
+    const decoded = decodeTrackSharePayload(payload)
+
+    expect('error' in decoded).toBe(false)
+    if ('error' in decoded) return
+    expect(decoded.track.idealLinePoints).toEqual(points)
+  })
+
+  it('decodes a literal field-free 1.3.0 base64 payload with legacy defaults', () => {
+    const literalLegacyPayload = {
+      version: '1.3.0',
+      track: {
+        id: 'legacy-track',
+        name: 'Legacy 1.3 Track',
+        gates: [
+          {
+            id: 'gate-1',
+            type: 'standard',
+            position: { x: 0, y: 0, z: 0 },
+            rotation: 90,
+            openings: createDefaultGateOpenings('standard'),
+          },
+        ],
+        gateSequence: ['gate-1'],
+        fieldSize: { width: 30, height: 15 },
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-02T00:00:00.000Z',
+      },
+      config: {
+        gateQuantities: { standard: 1 },
+        fieldSize: { width: 30, height: 15 },
+        venueId: null,
+      },
+    }
+
+    const decoded = decodeTrackSharePayload(encodeLegacyBase64Url(JSON.stringify(literalLegacyPayload)))
+
+    expect('error' in decoded).toBe(false)
+    if ('error' in decoded) return
+
+    expect('idealLinePoints' in decoded.track).toBe(false)
+    expect(decoded.track.id).toBe('legacy-track')
+    expect(decoded.track.gates[0].type).toBe('standard')
+    expect(decoded.track.gateSequence).toEqual([{ gateId: 'gate-1', openingId: 'main', reverse: false }])
+    expect(decoded.config.gateQuantities.standard).toBe(1)
+    expect(decoded.config.venueId).toBeNull()
+    expect(decoded.config.showGrid).toBe(false)
+    expect(decoded.config.showFlightPath).toBe(true)
+    expect(decoded.config.snapGridSize).toBe(0.3)
+    expect(decoded.config.theme).toBe('minimal')
+  })
+
   it('compresses larger share payloads below the legacy base64 size', () => {
     const track: Track = {
       ...createTestTrack(),

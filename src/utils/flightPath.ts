@@ -1,9 +1,20 @@
 import { CubicBezierCurve3, Quaternion, Vector3 } from 'three'
-import type { Gate, GateOpening, GateSequenceItem } from '../types'
+import type { Gate, GateOpening, GateSequenceItem, IdealLineLegRef, IdealLinePoint, Point3 } from '../types'
 import { getHGateBackrestSide, normalizeGates } from './gateOpenings'
 import { buildFallbackGateSequence, normalizeGateSequence } from './gateSequence'
+import {
+  basisPointAtU,
+  createIdealLineOffsetField,
+  groupIdealLinePointsByLeg,
+} from './idealLine'
+import type { IdealLineBasisSample } from './idealLine'
 
 export { GATE_BASE_HEIGHT } from '../constants/gateDimensions'
+
+/**
+ * Ideal-line geometry in one module: the base routing curves are built exactly as before, and
+ * optional custom points apply a smooth displacement to their individual legs.
+ */
 
 const MIN_CURVE_SAMPLES_PER_SEGMENT = 80
 const MAX_CURVE_SAMPLES_PER_SEGMENT = 400
@@ -42,6 +53,31 @@ export interface FlightPath {
   sampledLegs: { x: number; y: number; z: number }[][]
 }
 
+export interface ResolvedIdealLinePoint {
+  id: string
+  legIndex: number
+  u: number
+  position: Point3
+}
+
+export interface FlightPathWithControlPoints {
+  path: FlightPath
+  sampledLegIndexes: number[]
+  sampledLegUs: number[][]
+  idealLinePoints: ResolvedIdealLinePoint[]
+  legRefs: IdealLineLegRef[]
+}
+
+interface BaseCurve {
+  curve: CubicBezierCurve3
+  length: number
+  startDistance: number
+  legIndex: number
+  densePoints: Vector3[]
+  arcLengths: number[]
+  arcDivisions: number
+}
+
 interface GateVisit {
   gate: Gate
   opening: GateOpening
@@ -49,6 +85,7 @@ interface GateVisit {
 }
 
 const ARROW_SPACING = 1.5
+const ARROW_TANGENT_DELTA = 0.01
 
 function createStraightCurve(from: Vector3, to: Vector3): CubicBezierCurve3 {
   const delta = to.clone().sub(from)
@@ -389,17 +426,228 @@ function resolveVisits(gates: Gate[], gateSequence?: GateSequenceItem[]): GateVi
   }).filter((visit): visit is GateVisit => visit !== null)
 }
 
-export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceItem[]): FlightPath {
-  const orderedVisits = resolveVisits(gates, gateSequence)
-  if (orderedVisits.length < 2) {
-    return { segments: [], arrows: [], totalLength: 0, points: [], sampledPoints: [], sampledSegments: [], sampledLegs: [] }
+function sampleCurvePoints(curve: CubicBezierCurve3, length: number): Vector3[] {
+  const samples = getCurveSamples(length)
+  const points: Vector3[] = []
+
+  for (let i = 0; i < samples; i++) {
+    points.push(curve.getPoint(i / samples))
   }
 
-  const curves: { curve: CubicBezierCurve3; length: number }[] = []
-  const legCurveGroups: { curve: CubicBezierCurve3; length: number }[][] = []
+  points.push(curve.getPoint(1))
+  return points
+}
+
+function getArcDistanceAtT(baseCurve: BaseCurve, t: number): number {
+  const position = Math.max(0, Math.min(1, t)) * baseCurve.arcDivisions
+  const index = Math.min(Math.floor(position), baseCurve.arcDivisions - 1)
+  const fraction = position - index
+  const start = baseCurve.arcLengths[index]
+  const end = baseCurve.arcLengths[index + 1]
+  return start + (end - start) * fraction
+}
+
+interface LegGeometry {
+  length: number
+  basis: IdealLineBasisSample[]
+  points: { id: string; u: number; position: Point3 }[]
+  field: ((u: number) => Point3) | null
+  curveStartDistances: Record<number, number>
+}
+
+function createLegGeometries(
+  baseCurves: readonly BaseCurve[],
+  legCurveIndexes: readonly (readonly number[])[],
+  legRefs: readonly IdealLineLegRef[],
+  idealLinePoints: readonly IdealLinePoint[],
+): LegGeometry[] {
+  const groups = groupIdealLinePointsByLeg(idealLinePoints, legRefs)
+
+  return legCurveIndexes.map((curveIndexes, legIndex) => {
+    const curveStartDistances: Record<number, number> = {}
+    let length = 0
+    const basis: IdealLineBasisSample[] = []
+
+    for (const curveIndex of curveIndexes) {
+      const baseCurve = baseCurves[curveIndex]
+      curveStartDistances[curveIndex] = length
+      const sampleCount = baseCurve.densePoints.length - 1
+      baseCurve.densePoints.forEach((point, sampleIndex) => {
+        basis.push({
+          u: length + getArcDistanceAtT(baseCurve, sampleIndex / sampleCount),
+          point,
+        })
+      })
+      length += baseCurve.length
+    }
+
+    for (const sample of basis) sample.u = length > 0 ? sample.u / length : 0
+
+    const points = length > 1e-12
+      ? groups.find((group) => group.legIndex === legIndex)?.points ?? []
+      : []
+    const field = points.length > 0
+      ? createIdealLineOffsetField(points.map((point) => {
+        const base = basisPointAtU(basis, point.u)
+        return {
+          u: point.u,
+          offset: {
+            x: point.position.x - base.x,
+            y: point.position.y - base.y,
+            z: point.position.z - base.z,
+          },
+        }
+      }))
+      : null
+
+    return { length, basis, points, field, curveStartDistances }
+  })
+}
+
+interface RenderEntry {
+  u: number
+  base: Point3
+  authoredPosition?: Point3
+}
+
+function createRenderSamples(
+  baseCurve: BaseCurve,
+  leg: LegGeometry,
+  curveStartDistance: number,
+): { samples: Point3[]; us: number[] } {
+  const entries: RenderEntry[] = []
+  const sampleCount = baseCurve.densePoints.length - 1
+
+  baseCurve.densePoints.forEach((point, sampleIndex) => {
+    entries.push({
+      u: leg.length > 0
+        ? (curveStartDistance + getArcDistanceAtT(baseCurve, sampleIndex / sampleCount)) / leg.length
+        : 0,
+      base: point,
+    })
+  })
+
+  if (leg.field && leg.length > 0) {
+    const curveEndDistance = curveStartDistance + baseCurve.length
+    for (const point of leg.points) {
+      const distance = point.u * leg.length
+      if (distance <= curveStartDistance || distance >= curveEndDistance) continue
+      entries.push({ u: point.u, base: basisPointAtU(leg.basis, point.u), authoredPosition: point.position })
+    }
+    entries.sort((a, b) => a.u - b.u)
+  }
+
+  const samples = entries.map((entry) => {
+    if (!leg.field || entry.u <= 1e-12 || entry.u >= 1 - 1e-12) return { ...entry.base }
+    if (entry.authoredPosition) return { ...entry.authoredPosition }
+    const offset = leg.field(entry.u)
+    return { x: entry.base.x + offset.x, y: entry.base.y + offset.y, z: entry.base.z + offset.z }
+  })
+
+  return { samples, us: entries.map((entry) => entry.u) }
+}
+
+function getDeformedLegPoint(leg: LegGeometry, u: number): Point3 {
+  const base = basisPointAtU(leg.basis, u)
+  if (!leg.field || u <= 1e-12 || u >= 1 - 1e-12) return base
+  const offset = leg.field(u)
+  return { x: base.x + offset.x, y: base.y + offset.y, z: base.z + offset.z }
+}
+
+function getPolylineLength(points: readonly Point3[]): number {
+  let total = 0
+
+  for (let index = 1; index < points.length; index++) {
+    total += distance3d(points[index - 1], points[index])
+  }
+
+  return total
+}
+
+function createArrowPositions(
+  baseCurves: readonly BaseCurve[],
+  legs: readonly LegGeometry[],
+  baseTotalLength: number,
+): ArrowPosition[] {
+  const arrows: ArrowPosition[] = []
+  const arrowCount = Math.max(1, Math.floor(baseTotalLength / ARROW_SPACING))
+
+  for (let i = 0; i < arrowCount; i++) {
+    const targetDist = (i / arrowCount) * baseTotalLength
+    let accumulatedDist = 0
+
+    for (let curveIndex = 0; curveIndex < baseCurves.length; curveIndex++) {
+      const baseCurve = baseCurves[curveIndex]
+
+      if (accumulatedDist + baseCurve.length >= targetDist || curveIndex === baseCurves.length - 1) {
+        const localT = baseCurve.length > 0 ? (targetDist - accumulatedDist) / baseCurve.length : 0
+        const clampedT = Math.max(0, Math.min(1, localT))
+        const point = baseCurve.curve.getPointAt(clampedT)
+        const baseTangent = baseCurve.curve.getTangentAt(clampedT)
+        const leg = legs[baseCurve.legIndex]
+        let position: Point3 = point
+        let direction = baseTangent
+
+        if (leg.field) {
+          const curveStart = leg.curveStartDistances[curveIndex]
+          const u = (curveStart + clampedT * baseCurve.length) / leg.length
+          position = getDeformedLegPoint(leg, u)
+          const deltaU = ARROW_TANGENT_DELTA / leg.length
+          const before = getDeformedLegPoint(leg, u - deltaU)
+          const after = getDeformedLegPoint(leg, u + deltaU)
+          const deformed = normalize(new Vector3(after.x - before.x, after.y - before.y, after.z - before.z))
+          if (deformed.lengthSq() > 0) direction = deformed
+        }
+
+        const quaternion = new Quaternion().setFromUnitVectors(new Vector3(0, 0, -1), direction)
+        arrows.push({
+          position: { x: position.x, y: position.y, z: position.z },
+          direction: { x: direction.x, y: direction.y, z: direction.z },
+          quaternion: { x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w },
+        })
+        break
+      }
+
+      accumulatedDist += baseCurve.length
+    }
+  }
+
+  return arrows
+}
+
+function buildFlightPath(
+  gates: Gate[],
+  gateSequence: GateSequenceItem[] | undefined,
+  idealLinePoints: readonly IdealLinePoint[],
+): FlightPathWithControlPoints {
+  const orderedVisits = resolveVisits(gates, gateSequence)
+  if (orderedVisits.length < 2) {
+    return {
+      path: { segments: [], arrows: [], totalLength: 0, points: [], sampledPoints: [], sampledSegments: [], sampledLegs: [] },
+      sampledLegIndexes: [],
+      sampledLegUs: [],
+      idealLinePoints: [],
+      legRefs: [],
+    }
+  }
+
+  const baseCurves: BaseCurve[] = []
   const allPoints: Vector3[] = []
   const segments: PathSegment[] = []
-  let totalLength = 0
+  let baseTotalLength = 0
+
+  const registerCurve = (curve: CubicBezierCurve3, length: number, legIndex: number) => {
+    baseCurves.push({
+      curve,
+      length,
+      startDistance: baseTotalLength,
+      legIndex,
+      densePoints: sampleCurvePoints(curve, length),
+      arcLengths: curve.getLengths(),
+      arcDivisions: curve.arcLengthDivisions,
+    })
+    baseTotalLength += length
+  }
 
   for (let i = 0; i < orderedVisits.length; i++) {
     const fromVisit = orderedVisits[i]
@@ -407,10 +655,7 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceIt
 
     const throughGateCurve = createStraightCurve(getGateEntryPoint(fromVisit), getGateExitPoint(fromVisit))
     const throughGateLength = throughGateCurve.getLength()
-    const throughGate = { curve: throughGateCurve, length: throughGateLength }
-    const legCurves = [throughGate]
-    curves.push(throughGate)
-    totalLength += throughGateLength
+    registerCurve(throughGateCurve, throughGateLength, i)
     allPoints.push(throughGateCurve.v0, throughGateCurve.v1, throughGateCurve.v2)
 
     const from = getGateExitPoint(fromVisit)
@@ -473,14 +718,9 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceIt
     }
 
     for (const { curve, length } of transitionCurves) {
-      const transitionCurve = { curve, length }
-      curves.push(transitionCurve)
-      legCurves.push(transitionCurve)
-      totalLength += length
+      registerCurve(curve, length, i)
       allPoints.push(curve.v0, curve.v1, curve.v2)
     }
-
-    legCurveGroups.push(legCurves)
 
     segments.push({
       from: fromVisit.gate.position,
@@ -490,81 +730,67 @@ export function calculateFlightPath(gates: Gate[], gateSequence?: GateSequenceIt
     })
   }
 
-  const sampledPoints: { x: number; y: number; z: number }[] = []
-  const sampledSegments: { x: number; y: number; z: number }[][] = []
-  const sampledLegs = legCurveGroups.map((legCurves) => {
-    const legPoints: { x: number; y: number; z: number }[] = []
-
-    for (const { curve, length } of legCurves) {
-      const samples = getCurveSamples(length)
-
-      for (let i = 0; i < samples; i++) {
-        const point = curve.getPoint(i / samples)
-        legPoints.push({ x: point.x, y: point.y, z: point.z })
-      }
-
-      const endPoint = curve.getPoint(1)
-      legPoints.push({ x: endPoint.x, y: endPoint.y, z: endPoint.z })
-    }
-
-    return legPoints
+  const legCurveIndexes: number[][] = orderedVisits.map(() => [])
+  baseCurves.forEach((baseCurve, index) => {
+    legCurveIndexes[baseCurve.legIndex].push(index)
   })
 
-  for (const { curve, length } of curves) {
-    const samples = getCurveSamples(length)
-    const segmentPoints: { x: number; y: number; z: number }[] = []
-
-    for (let i = 0; i < samples; i++) {
-      const t = i / samples
-      const point = curve.getPoint(t)
-      const sampledPoint = { x: point.x, y: point.y, z: point.z }
-      sampledPoints.push(sampledPoint)
-      segmentPoints.push(sampledPoint)
+  const legRefs: IdealLineLegRef[] = orderedVisits.map((fromVisit, index) => {
+    const toVisit = orderedVisits[(index + 1) % orderedVisits.length]
+    return {
+      from: { gateId: fromVisit.gate.id, openingId: fromVisit.opening.id },
+      to: { gateId: toVisit.gate.id, openingId: toVisit.opening.id },
     }
-
-    const endPoint = curve.getPoint(1)
-    const sampledEndPoint = { x: endPoint.x, y: endPoint.y, z: endPoint.z }
-    sampledPoints.push(sampledEndPoint)
-    segmentPoints.push(sampledEndPoint)
-    sampledSegments.push(segmentPoints)
-  }
-
-  const arrows: ArrowPosition[] = []
-  const arrowCount = Math.max(1, Math.floor(totalLength / ARROW_SPACING))
-
-  for (let i = 0; i < arrowCount; i++) {
-    const targetDist = (i / arrowCount) * totalLength
-    let accumulatedDist = 0
-
-    for (let curveIndex = 0; curveIndex < curves.length; curveIndex++) {
-      const { curve, length } = curves[curveIndex]
-
-      if (accumulatedDist + length >= targetDist || curveIndex === curves.length - 1) {
-        const localT = length > 0 ? (targetDist - accumulatedDist) / length : 0
-        const clampedT = Math.max(0, Math.min(1, localT))
-        const point = curve.getPointAt(clampedT)
-        const tangent = curve.getTangentAt(clampedT)
-        const direction = normalize(tangent)
-        const quaternion = new Quaternion().setFromUnitVectors(new Vector3(0, 0, -1), direction)
-        arrows.push({
-          position: { x: point.x, y: point.y, z: point.z },
-          direction: { x: tangent.x, y: tangent.y, z: tangent.z },
-          quaternion: { x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w },
-        })
-        break
-      }
-
-      accumulatedDist += length
-    }
-  }
+  })
+  const legs = createLegGeometries(baseCurves, legCurveIndexes, legRefs, idealLinePoints)
+  const renderResults = baseCurves.map((baseCurve, index) => {
+    const leg = legs[baseCurve.legIndex]
+    return createRenderSamples(baseCurve, leg, leg.curveStartDistances[index])
+  })
+  const sampledSegments = renderResults.map((result) => result.samples)
+  const sampledPoints = sampledSegments.flat()
+  const sampledLegs = legCurveIndexes.map((curveIndexes) => curveIndexes.flatMap((curveIndex) => sampledSegments[curveIndex]))
+  const sampledLegUs = legCurveIndexes.map((curveIndexes) => curveIndexes.flatMap((curveIndex) => renderResults[curveIndex].us))
+  const resolvedPoints = legs.flatMap((leg, legIndex) => leg.points.map((point) => ({
+    id: point.id,
+    legIndex,
+    u: point.u,
+    position: point.position,
+  })))
+  const hasResolvedPoints = resolvedPoints.length > 0
+  const totalLength = hasResolvedPoints
+    ? sampledSegments.reduce((sum, segment) => sum + getPolylineLength(segment), 0)
+    : baseTotalLength
+  const arrows = createArrowPositions(baseCurves, legs, baseTotalLength)
 
   return {
-    segments,
-    arrows,
-    totalLength,
-    points: allPoints.map((point) => ({ x: point.x, y: point.y, z: point.z })),
-    sampledPoints,
-    sampledSegments,
-    sampledLegs,
+    path: {
+      segments,
+      arrows,
+      totalLength,
+      points: allPoints.map((point) => ({ x: point.x, y: point.y, z: point.z })),
+      sampledPoints,
+      sampledSegments,
+      sampledLegs,
+    },
+    sampledLegIndexes: baseCurves.map((baseCurve) => baseCurve.legIndex),
+    sampledLegUs,
+    idealLinePoints: resolvedPoints,
+    legRefs,
   }
+}
+
+export function calculateFlightPath(
+  gates: Gate[],
+  gateSequence?: GateSequenceItem[],
+): FlightPath {
+  return buildFlightPath(gates, gateSequence, []).path
+}
+
+export function calculateFlightPathWithControlPoints(
+  gates: Gate[],
+  gateSequence?: GateSequenceItem[],
+  idealLinePoints: readonly IdealLinePoint[] = [],
+): FlightPathWithControlPoints {
+  return buildFlightPath(gates, gateSequence, idealLinePoints)
 }

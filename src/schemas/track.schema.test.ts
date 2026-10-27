@@ -344,6 +344,113 @@ describe('track schema', () => {
     expect(result.config.venueId).toBeNull()
   })
 
+  const idealLinePoints: NonNullable<Track['idealLinePoints']> = [
+    {
+      id: 'point-a',
+      leg: {
+        from: { gateId: 'gate-1', openingId: 'main' },
+        to: { gateId: 'gate-2', openingId: 'main' },
+      },
+      u: 0.25,
+      position: { x: 1, y: 2, z: 3 },
+    },
+    {
+      id: 'point-b',
+      leg: {
+        from: { gateId: 'gate-2', openingId: 'main' },
+        to: { gateId: 'gate-1', openingId: 'main' },
+      },
+      u: 0.75,
+      position: { x: -2, y: 0.5, z: 4 },
+    },
+  ]
+
+  it('round-trips ideal-line points and discards extra properties', () => {
+    // Given a track with two authored points
+    const pointTrack: Track = { ...track, idealLinePoints }
+    // When serializing, adding unknown properties and deserializing
+    const payload = JSON.parse(serializeTrack(pointTrack, config)) as {
+      version: string
+      track: { idealLinePoints: unknown[] }
+    }
+    expect(payload.version).toBe('1.5.0')
+    payload.track.idealLinePoints[0] = { ...idealLinePoints[0], ignored: 'x' }
+    const result = deserializeTrack(JSON.stringify(payload))
+    // Then only the exact contract survives
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+    expect(result.track.idealLinePoints).toEqual(idealLinePoints)
+  })
+
+  it('omits absent and empty ideal-line point arrays from serialized payloads', () => {
+    // Given tracks without points and with an empty array
+    const absent = JSON.parse(serializeTrack(track, config)) as { track: Record<string, unknown> }
+    const empty = JSON.parse(serializeTrack({ ...track, idealLinePoints: [] }, config)) as { track: Record<string, unknown> }
+    // When checking exported keys
+    // Then neither payload materializes the optional field
+    expect('idealLinePoints' in absent.track).toBe(false)
+    expect('idealLinePoints' in empty.track).toBe(false)
+  })
+
+  const invalidPointCases: Array<{ name: string; points: unknown; expectedField: string }> = [
+    { name: 'non-array', points: { id: 'p' }, expectedField: 'track.idealLinePoints' },
+    { name: 'null entry', points: [null], expectedField: 'track.idealLinePoints[0]' },
+    { name: 'empty id', points: [{ ...idealLinePoints[0], id: '' }], expectedField: 'track.idealLinePoints[0].id' },
+    { name: 'duplicate id', points: [idealLinePoints[0], idealLinePoints[0]], expectedField: 'track.idealLinePoints[1].id' },
+    { name: 'zero u', points: [{ ...idealLinePoints[0], u: 0 }], expectedField: 'track.idealLinePoints[0].u' },
+    { name: 'unit u', points: [{ ...idealLinePoints[0], u: 1 }], expectedField: 'track.idealLinePoints[0].u' },
+    { name: 'non-finite u', points: [{ ...idealLinePoints[0], u: Number.NaN }], expectedField: 'track.idealLinePoints[0].u' },
+    { name: 'missing gate id', points: [{ ...idealLinePoints[0], leg: { ...idealLinePoints[0].leg, from: { openingId: 'main' } } }], expectedField: 'track.idealLinePoints[0].leg.from.gateId' },
+    { name: 'invalid opening id', points: [{ ...idealLinePoints[0], leg: { ...idealLinePoints[0].leg, to: { gateId: 'g', openingId: 2 } } }], expectedField: 'track.idealLinePoints[0].leg.to.openingId' },
+    { name: 'non-finite position', points: [{ ...idealLinePoints[0], position: { x: 1, y: 2, z: Number.POSITIVE_INFINITY } }], expectedField: 'track.idealLinePoints[0].position.z' },
+  ]
+
+  it.each(invalidPointCases)('rejects invalid ideal-line points: $name', ({ points, expectedField }) => {
+    // Given malformed point data before JSON encoding
+    const validation = validateTrack({ version: '1.5.0', track: { ...track, idealLinePoints: points }, config })
+    // When validating
+    // Then the exact indexed field is rejected
+    expect(validation.valid).toBe(false)
+    expect(validation.errors.map((error) => error.field)).toContain(expectedField)
+  })
+
+  it.each(['1.0.0', '1.1.0', '1.2.0', '1.3.0', '1.4.0'])('loads a literal %s payload without inventing ideal-line points', (version) => {
+    // Given a literal legacy payload without the field
+    const legacyPayload = {
+      version,
+      track: {
+        id: track.id, name: track.name, gates: track.gates, gateSequence: track.gateSequence,
+        fieldSize: track.fieldSize, createdAt: track.createdAt, updatedAt: track.updatedAt,
+      },
+      config: { gateQuantities: config.gateQuantities, fieldSize: config.fieldSize },
+    }
+    // When deserializing
+    const result = deserializeTrack(JSON.stringify(legacyPayload))
+    // Then no points are invented
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+    expect('idealLinePoints' in result.track).toBe(false)
+  })
+
+  it('drops the replaced height-offset field instead of migrating it', () => {
+    // Given a payload containing the unversioned predecessor field
+    const payload = JSON.parse(serializeTrack(track, config)) as {
+      version: string
+      track: Record<string, unknown>
+    }
+    payload.version = '1.4.0'
+    payload.track.flightPathHeightOffsets = [{ station: 1, offsetY: 8 }]
+    // When deserializing and serializing again
+    const result = deserializeTrack(JSON.stringify(payload))
+    // Then the old field is ignored and neither point system is invented
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+    expect('flightPathHeightOffsets' in result.track).toBe(false)
+    expect('idealLinePoints' in result.track).toBe(false)
+    const exported = JSON.parse(serializeTrack(result.track, result.config)) as { track: Record<string, unknown> }
+    expect('flightPathHeightOffsets' in exported.track).toBe(false)
+  })
+
   it('rejects unknown venue ids in track payload', () => {
     const unsupportedVenuePayload = {
       version: '1.3.0',

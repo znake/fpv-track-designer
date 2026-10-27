@@ -72,7 +72,7 @@ describe('viewer-main', () => {
     expect(state.config).toBeNull()
   })
 
-  it('loads track and config when decoding succeeds', async () => {
+  it('loads track, config and ideal-line points when decoding succeeds', async () => {
     window.location.hash = '#z.payload'
     const track = {
       id: 'track-id',
@@ -87,6 +87,15 @@ describe('viewer-main', () => {
         },
       }],
       gateSequence: [{ gateId: 'gate-1', openingId: 'main', reverse: false }],
+      idealLinePoints: [{
+        id: 'point-a',
+        leg: {
+          from: { gateId: 'gate-1', openingId: 'main' },
+          to: { gateId: 'gate-2', openingId: 'main' },
+        },
+        u: 0.4,
+        position: { x: 1, y: 2, z: 3 },
+      }],
       fieldSize: { width: 30, height: 15 },
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z',
@@ -115,6 +124,15 @@ describe('viewer-main', () => {
     const state = useViewerStore.getState()
     expect(mockDecodeTrackSharePayload).toHaveBeenCalledWith('z.payload')
     expect(state.track).toEqual(track)
+    expect(state.track?.idealLinePoints).toEqual([{
+      id: 'point-a',
+      leg: {
+        from: { gateId: 'gate-1', openingId: 'main' },
+        to: { gateId: 'gate-2', openingId: 'main' },
+      },
+      u: 0.4,
+      position: { x: 1, y: 2, z: 3 },
+    }])
     expect(state.config).toEqual(config)
     expect(state.error).toBeNull()
   })

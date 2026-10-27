@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { create } from 'zustand'
 import { createTrackSlice, type TrackSlice } from './trackSlice'
-import type { Config, Track, Gate } from '../types'
+import type { Config, Track, Gate, IdealLinePoint } from '../types'
 import { createDefaultGateOpenings } from '../utils/gateOpenings'
 import type { GenerationConfig } from '../utils/generationConfig'
 
@@ -36,6 +36,226 @@ const createSnapTestStore = (config: Pick<Config, 'snapGatesToGrid'> & Partial<P
     ...createTrackSlice(set, get, store),
   }))
 }
+
+describe('TrackSlice - ideal-line points', () => {
+  let store: ReturnType<typeof createTestStore>
+  const leg = {
+    from: { gateId: 'gate-1', openingId: 'main' },
+    to: { gateId: 'gate-2', openingId: 'main' },
+  }
+  const insertion = { leg, u: 0.5, position: { x: 2, y: 1, z: 3 } }
+
+  const insertedPoint = (): IdealLinePoint => {
+    const point = store.getState().currentTrack?.idealLinePoints?.[0]
+    if (!point) throw new Error('Missing inserted point')
+    return point
+  }
+
+  beforeEach(() => {
+    store = createTestStore()
+    store.getState().setTrack(createTestTrack([
+      createTestGate('gate-1', { position: { x: 1.1, y: 0.8, z: -1.1 } }),
+      createTestGate('gate-2', { position: { x: 8, y: 0, z: 0 } }),
+    ]))
+  })
+
+  it('inserts one selected point with a single dirty history entry', () => {
+    // Given a clean track and an out-of-range u
+    store.getState().moveGate('gate-1', 'N')
+    store.getState().undo()
+    // When inserting a point
+    store.getState().insertFlightPathPoint({ ...insertion, u: 2 })
+    // Then the point is selected, clamped inside the leg and undoable once
+    const point = insertedPoint()
+    expect(point.u).toBeGreaterThan(0)
+    expect(point.u).toBeLessThan(1)
+    expect(point.leg).toEqual(leg)
+    expect(store.getState().selectedFlightPathPointId).toBe(point.id)
+    expect(store.getState().isTrackModified).toBe(true)
+    expect(store.getState().past).toHaveLength(1)
+    expect(store.getState().future).toEqual([])
+  })
+
+  it('deletes a point with one undoable history entry', () => {
+    // Given an inserted and selected point
+    store.getState().insertFlightPathPoint(insertion)
+    const point = insertedPoint()
+    // When deleting it
+    store.getState().deleteFlightPathPoint(point.id)
+    // Then it disappears with one new dirty history entry and can be restored
+    expect(store.getState().currentTrack).not.toHaveProperty('idealLinePoints')
+    expect(store.getState().selectedFlightPathPointId).toBeNull()
+    expect(store.getState().past).toHaveLength(2)
+    expect(store.getState().isTrackModified).toBe(true)
+    store.getState().undo()
+    expect(store.getState().currentTrack?.idealLinePoints).toEqual([point])
+    store.getState().redo()
+    expect(store.getState().currentTrack).not.toHaveProperty('idealLinePoints')
+  })
+
+  it('allows inserting another point after deleting a dragged point', () => {
+    // Given an active point drag and its delete action
+    store.getState().insertFlightPathPoint(insertion)
+    const firstId = insertedPoint().id
+    store.getState().setFlightPathPointPosition(firstId, { x: 4, y: 3, z: 5 })
+    store.getState().setDraggingGate(true)
+    store.getState().deleteFlightPathPoint(firstId)
+    // When inserting another point
+    store.getState().insertFlightPathPoint({ ...insertion, u: 0.6 })
+    // Then the old drag cannot block insertion and the new point is independent
+    expect(store.getState().isDraggingGate).toBe(false)
+    expect(store.getState().dragHistoryEntry).toBeNull()
+    expect(store.getState().currentTrack?.idealLinePoints).toHaveLength(1)
+    expect(insertedPoint().id).not.toBe(firstId)
+    expect(store.getState().selectedFlightPathPointId).toBe(insertedPoint().id)
+  })
+
+  it('rejects insertion without a track or with a non-finite position', () => {
+    // Given no track and an invalid insertion
+    const emptyStore = createTestStore()
+    const before = emptyStore.getState()
+    // When inserting without a track and with NaN
+    emptyStore.getState().insertFlightPathPoint(insertion)
+    store.getState().insertFlightPathPoint({ ...insertion, position: { x: Number.NaN, y: 0, z: 0 } })
+    // Then neither operation mutates state
+    expect(emptyStore.getState()).toBe(before)
+    expect(store.getState().currentTrack?.idealLinePoints).toBeUndefined()
+  })
+
+  it('makes gate and point selection exclusive without dirtying the track', () => {
+    // Given an inserted point and a selected gate
+    store.getState().insertFlightPathPoint(insertion)
+    const id = insertedPoint().id
+    store.getState().markTrackSaved()
+    store.getState().selectGate('gate-1')
+    store.getState().openDeleteDialog()
+    // When selecting the point and then the ground
+    store.getState().selectFlightPathPoint(id)
+    // Then the gate selection and dialogs clear without dirtying
+    expect(store.getState()).toMatchObject({ selectedFlightPathPointId: id, selectedGateIds: [], isDeleteDialogOpen: false, isTrackModified: false })
+    store.getState().selectGate(null)
+    expect(store.getState().selectedFlightPathPointId).toBeNull()
+  })
+
+  it('applies the gate field and ground policy during a live drag', () => {
+    // Given an inserted point
+    store.getState().insertFlightPathPoint(insertion)
+    const id = insertedPoint().id
+    const originalTrack = store.getState().currentTrack
+    // When dragging outside the field and below ground
+    store.getState().setFlightPathPointPosition(id, { x: 200, y: -4, z: 3 })
+    // Then position is clamped like a gate and only a clean draft exists
+    expect(insertedPoint().position).toEqual({ x: 50, y: 0, z: 3 })
+    expect(store.getState().dragHistoryEntry?.track).toBe(originalTrack)
+    expect(store.getState().isTrackModified).toBe(true)
+    expect(store.getState().past).toHaveLength(1)
+  })
+
+  it('applies the active snap grid to point movement', () => {
+    // Given snapping and an inserted point
+    const snapStore = createSnapTestStore({ snapGatesToGrid: true })
+    snapStore.getState().setTrack(createTestTrack([createTestGate('gate-1'), createTestGate('gate-2')]))
+    snapStore.getState().insertFlightPathPoint(insertion)
+    const id = snapStore.getState().currentTrack?.idealLinePoints?.[0].id
+    if (!id) throw new Error('Missing point id')
+    // When moving to fractional coordinates
+    snapStore.getState().setFlightPathPointPosition(id, { x: 2.31, y: 1.32, z: 3.33 })
+    // Then every coordinate snaps to 0.3 metres
+    expect(snapStore.getState().currentTrack?.idealLinePoints?.[0].position).toEqual({ x: 2.4, y: 1.2, z: 3.3 })
+  })
+
+  it('ignores unknown point ids and non-finite drag positions', () => {
+    // Given an inserted point
+    store.getState().insertFlightPathPoint(insertion)
+    const before = store.getState()
+    // When updating an unknown id and NaN
+    store.getState().setFlightPathPointPosition('unknown', { x: 1, y: 1, z: 1 })
+    store.getState().setFlightPathPointPosition(insertedPoint().id, { x: 1, y: Number.NaN, z: 1 })
+    // Then state remains identical
+    expect(store.getState()).toBe(before)
+  })
+
+  it('captures one draft across multiple moves and commits one undo step', () => {
+    // Given an inserted point
+    store.getState().insertFlightPathPoint(insertion)
+    const id = insertedPoint().id
+    store.getState().setFlightPathPointPosition(id, { x: 3, y: 2, z: 4 })
+    const draft = store.getState().dragHistoryEntry
+    // When moving again and committing
+    store.getState().setFlightPathPointPosition(id, { x: 4, y: 3, z: 5 })
+    store.getState().commitGateDrag()
+    // Then one new history entry contains the first draft
+    expect(store.getState().past.at(-1)).toBe(draft)
+    expect(store.getState().dragHistoryEntry).toBeNull()
+    expect(insertedPoint().position).toEqual({ x: 4, y: 3, z: 5 })
+  })
+
+  it('undoes and redoes insertion and position edits', () => {
+    // Given an inserted and moved point
+    store.getState().insertFlightPathPoint(insertion)
+    const id = insertedPoint().id
+    store.getState().setFlightPathPointPosition(id, { x: 4, y: 3, z: 5 })
+    store.getState().commitGateDrag()
+    // When undoing twice and redoing twice
+    store.getState().undo()
+    expect(store.getState().currentTrack?.idealLinePoints?.[0].position).toEqual(insertion.position)
+    store.getState().undo()
+    expect(store.getState().currentTrack?.idealLinePoints).toBeUndefined()
+    expect(store.getState().isTrackModified).toBe(false)
+    store.getState().redo()
+    expect(store.getState().currentTrack?.idealLinePoints).toHaveLength(1)
+    store.getState().redo()
+    // Then both point and position are restored
+    expect(store.getState().currentTrack?.idealLinePoints?.[0].position).toEqual({ x: 4, y: 3, z: 5 })
+    expect(store.getState().selectedFlightPathPointId).toBeNull()
+  })
+
+  it('restores only the points when an unfinished drag is canceled', () => {
+    // Given an inserted point and a later gate rotation
+    store.getState().insertFlightPathPoint(insertion)
+    const id = insertedPoint().id
+    store.getState().setFlightPathPointPosition(id, { x: 9, y: 8, z: 7 })
+    store.getState().updateGate('gate-1', { rotation: 45 })
+    // When canceling the point drag
+    store.getState().cancelFlightPathPointDrag()
+    // Then the insertion position returns but the gate rotation remains
+    expect(insertedPoint().position).toEqual(insertion.position)
+    expect(store.getState().currentTrack?.gates[0].rotation).toBe(45)
+    expect(store.getState().dragHistoryEntry).toBeNull()
+    expect(store.getState().isDraggingGate).toBe(false)
+  })
+
+  it.each(['setTrack', 'replaceTrack'] as const)('clears selection and stale drafts on %s', (replace) => {
+    // Given an active point draft
+    store.getState().insertFlightPathPoint(insertion)
+    store.getState().setFlightPathPointPosition(insertedPoint().id, { x: 9, y: 8, z: 7 })
+    const replacement = createTestTrack([createTestGate('gate-2')])
+    // When replacing the track and invoking stale cleanup
+    store.getState()[replace](replacement)
+    store.getState().cancelFlightPathPointDrag()
+    // Then the replacement remains intact and no old draft restores
+    expect(store.getState().selectedFlightPathPointId).toBeNull()
+    expect(store.getState().dragHistoryEntry).toBeNull()
+    expect(store.getState().currentTrack).toEqual(replacement)
+  })
+
+  it('preserves authored points through gate edits and same-track synchronization', () => {
+    // Given an inserted point
+    store.getState().insertFlightPathPoint(insertion)
+    const points = store.getState().currentTrack?.idealLinePoints
+    // When editing gates and synchronizing the track name
+    store.getState().setGatePosition('gate-1', { x: 2, y: 2, z: 2 })
+    store.getState().rotateGate('gate-1', true)
+    store.getState().toggleGateDirection('gate-1', 'main')
+    store.getState().updateGate('gate-1', { type: 'h-gate' })
+    const current = store.getState().currentTrack
+    if (!current) throw new Error('Missing track')
+    store.getState().syncCurrentTrack({ ...current, name: 'Saved' })
+    // Then the authored data is unchanged
+    expect(store.getState().currentTrack?.idealLinePoints).toEqual(points)
+    expect(store.getState().currentTrack?.name).toBe('Saved')
+  })
+})
 
 describe('TrackSlice - Undo/Redo', () => {
   let store: ReturnType<typeof createTestStore>

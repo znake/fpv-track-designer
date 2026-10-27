@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { Config } from '../types/config'
-import type { Track, Gate } from '../types'
+import type { Track, Gate, IdealLineLegRef, Point3 } from '../types'
+import { clampIdealLineU } from '../utils/idealLine'
 import { GATE_BASE_WIDTH } from '../constants/gateDimensions'
 import { normalizeGates, recreateGateOpenings } from '../utils/gateOpenings'
 import { buildDefaultGateSequenceEntries, normalizeGateSequence } from '../utils/gateSequence'
@@ -68,10 +69,17 @@ interface SnapGridState {
   config?: Pick<Config, 'fieldSize' | 'snapGatesToGrid' | 'snapGridSize'>
 }
 
+export interface FlightPathPointInsertion {
+  leg: IdealLineLegRef
+  u: number
+  position: Point3
+}
+
 export interface TrackSlice {
   currentTrack: Track | null
   selectedGateId: string | null
   selectedGateIds: string[]
+  selectedFlightPathPointId: string | null
   isDeleteDialogOpen: boolean
   pendingGateInsertion: PendingGateInsertion | null
   sequenceEditor: SequenceEditorState | null
@@ -117,6 +125,11 @@ export interface TrackSlice {
   rotateGate: (gateId: string, clockwise: boolean) => void
   selectGate: (gateId: string | null, additive?: boolean) => void
   setSelectedGates: (gateIds: string[]) => void
+  selectFlightPathPoint: (id: string | null) => void
+  insertFlightPathPoint: (insertion: FlightPathPointInsertion) => void
+  deleteFlightPathPoint: (id: string) => void
+  setFlightPathPointPosition: (id: string, position: Point3) => void
+  cancelFlightPathPointDrag: () => void
   insertGateAtIndex: (gate: Gate, gateIndex: number, sequenceIndex: number) => void
   openGateInsertionDialog: (insertion: PendingGateInsertion) => void
   closeGateInsertionDialog: () => void
@@ -258,6 +271,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
   currentTrack: null,
   selectedGateId: null,
   selectedGateIds: [],
+  selectedFlightPathPointId: null,
   isDeleteDialogOpen: false,
   pendingGateInsertion: null,
   sequenceEditor: null,
@@ -273,6 +287,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
     currentTrack: track ? normalizeTrack(track) : null,
     selectedGateId: null,
     selectedGateIds: [],
+    selectedFlightPathPointId: null,
     isDeleteDialogOpen: false,
     pendingGateInsertion: null,
     sequenceEditor: null,
@@ -285,6 +300,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
     currentTrack: track ? normalizeTrack(track) : null,
     selectedGateId: null,
     selectedGateIds: [],
+    selectedFlightPathPointId: null,
     isDeleteDialogOpen: false,
     pendingGateInsertion: null,
     sequenceEditor: null,
@@ -455,11 +471,11 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
   }),
   selectGate: (gateId, additive = false) => set((state) => {
     if (!gateId) {
-      return { selectedGateId: null, selectedGateIds: [], isDeleteDialogOpen: false, pendingGateInsertion: null, sequenceEditor: null }
+      return { selectedGateId: null, selectedGateIds: [], selectedFlightPathPointId: null, isDeleteDialogOpen: false, pendingGateInsertion: null, sequenceEditor: null }
     }
 
     if (!additive) {
-      return { selectedGateId: gateId, selectedGateIds: [gateId], isDeleteDialogOpen: false, pendingGateInsertion: null, sequenceEditor: null }
+      return { selectedGateId: gateId, selectedGateIds: [gateId], selectedFlightPathPointId: null, isDeleteDialogOpen: false, pendingGateInsertion: null, sequenceEditor: null }
     }
 
     const isAlreadySelected = state.selectedGateIds.includes(gateId)
@@ -470,13 +486,14 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
     return {
       selectedGateIds,
       selectedGateId: selectedGateIds.length > 0 ? selectedGateIds[0] : null,
+      selectedFlightPathPointId: null,
       isDeleteDialogOpen: false,
       pendingGateInsertion: null,
       sequenceEditor: null,
     }
   }),
   setSelectedGates: (gateIds) => set((state) => {
-    if (!state.currentTrack) return { selectedGateId: null, selectedGateIds: [] }
+    if (!state.currentTrack) return { selectedGateId: null, selectedGateIds: [], selectedFlightPathPointId: null }
 
     const existingGateIds = new Set(state.currentTrack.gates.map((g) => g.id))
     const selectedGateIds = [...new Set(gateIds)].filter((id) => existingGateIds.has(id))
@@ -484,10 +501,93 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
     return {
       selectedGateIds,
       selectedGateId: selectedGateIds.length > 0 ? selectedGateIds[0] : null,
+      selectedFlightPathPointId: null,
       isDeleteDialogOpen: false,
       pendingGateInsertion: null,
       sequenceEditor: null,
     }
+  }),
+  selectFlightPathPoint: (id) => set(() => ({
+    selectedFlightPathPointId: id,
+    selectedGateId: null,
+    selectedGateIds: [],
+    isDeleteDialogOpen: false,
+    pendingGateInsertion: null,
+    sequenceEditor: null,
+  })),
+  insertFlightPathPoint: (insertion) => set((state) => {
+    if (!state.currentTrack || !Number.isFinite(insertion.position.x) || !Number.isFinite(insertion.position.y) || !Number.isFinite(insertion.position.z)) return state
+
+    const id = crypto.randomUUID()
+    const point = {
+      id,
+      leg: insertion.leg,
+      u: clampIdealLineU(insertion.u),
+      position: { ...insertion.position },
+    }
+    const history = pushHistory(state)
+
+    return {
+      currentTrack: normalizeTrack({
+        ...state.currentTrack,
+        idealLinePoints: [...state.currentTrack.idealLinePoints ?? [], point],
+        updatedAt: new Date().toISOString(),
+      }),
+      selectedFlightPathPointId: id,
+      selectedGateId: null,
+      selectedGateIds: [],
+      isDeleteDialogOpen: false,
+      pendingGateInsertion: null,
+      sequenceEditor: null,
+      ...history,
+      isTrackModified: true,
+    }
+  }),
+  deleteFlightPathPoint: (id) => set((state) => {
+    if (!state.currentTrack) return state
+    const points = state.currentTrack.idealLinePoints ?? []
+    if (!points.some((point) => point.id === id)) return state
+
+    const remaining = points.filter((point) => point.id !== id)
+    const currentTrack = { ...state.currentTrack, updatedAt: new Date().toISOString() }
+    if (remaining.length > 0) currentTrack.idealLinePoints = remaining
+    else delete currentTrack.idealLinePoints
+    const history = pushHistory(state)
+
+    return {
+      currentTrack,
+      selectedFlightPathPointId: state.selectedFlightPathPointId === id ? null : state.selectedFlightPathPointId,
+      isDraggingGate: false,
+      dragHistoryEntry: null,
+      ...history,
+      isTrackModified: true,
+    }
+  }),
+  setFlightPathPointPosition: (id, position) => set((state) => {
+    if (!state.currentTrack || !Number.isFinite(position.x) || !Number.isFinite(position.y) || !Number.isFinite(position.z)) return state
+    const points = state.currentTrack.idealLinePoints ?? []
+    if (!points.some((point) => point.id === id)) return state
+    const fieldSize = getActiveFieldSize(state)
+    if (!fieldSize) return state
+
+    const nextPosition = prepareGatePosition(position, shouldSnapToGrid(state), fieldSize, getSnapStep(state))
+    return {
+      currentTrack: {
+        ...state.currentTrack,
+        idealLinePoints: points.map((point) => point.id === id ? { ...point, position: nextPosition } : point),
+      },
+      dragHistoryEntry: state.dragHistoryEntry ?? createHistoryEntry(state),
+    }
+  }),
+  cancelFlightPathPointDrag: () => set((state) => {
+    if (!state.currentTrack || !state.dragHistoryEntry) return state
+
+    const currentTrack = { ...state.currentTrack }
+    const points = state.dragHistoryEntry.track.idealLinePoints
+    if (points !== undefined) currentTrack.idealLinePoints = points
+    else delete currentTrack.idealLinePoints
+
+    return { currentTrack, dragHistoryEntry: null, isDraggingGate: false }
   }),
   insertGateAtIndex: (gate, gateIndex, sequenceIndex) => set((state) => {
     if (!state.currentTrack) return state
@@ -515,6 +615,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
       }),
       selectedGateId: normalizedGate.id,
       selectedGateIds: [normalizedGate.id],
+      selectedFlightPathPointId: null,
       isDeleteDialogOpen: false,
       pendingGateInsertion: null,
       sequenceEditor: null,
@@ -539,6 +640,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
       }),
       selectedGateId: null,
       selectedGateIds: [],
+      selectedFlightPathPointId: null,
       isDeleteDialogOpen: false,
       pendingGateInsertion: null,
       sequenceEditor: null,
@@ -646,6 +748,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
     return {
       currentTrack: previous,
       ...getSelectionState(previous, previousEntry.selectedGateId, previousEntry.selectedGateIds),
+      selectedFlightPathPointId: null,
       past: newPast,
       future: [currentEntry, ...state.future],
       isDeleteDialogOpen: false,
@@ -668,6 +771,7 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
     return {
       currentTrack: next,
       ...getSelectionState(next, nextEntry.selectedGateId, nextEntry.selectedGateIds),
+      selectedFlightPathPointId: null,
       past: [...state.past, currentEntry],
       future: newFuture,
       isDeleteDialogOpen: false,
