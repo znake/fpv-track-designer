@@ -1,6 +1,7 @@
 # Viewer — Read-Only Share App
 
 **Domain:** Standalone viewer UI for compressed shared track links. It reuses the 3D scene but never exposes editor mutations.
+**Code state:** 56756ed (2026-10-27, worktree)
 
 ## STRUCTURE
 ```
@@ -28,12 +29,13 @@ Related files outside this folder:
 ## CONVENTIONS
 - Viewer passes `readOnly` to `Scene`; do not render editor handles, labels that mutate state, or store mutation controls.
 - Viewer state is intentionally separate from `src/store`; it only accepts decoded track/config, error, and reset.
-- Error/help/export strings go through `useTranslation()` with DE and EN values in `src/i18n.ts`, matching the editor UI.
+- Error/help/export strings go through `useTranslation()` with DE and EN values in `src/i18n.ts`, matching the editor UI; the "FPV Track Viewer" eyebrow is hardcoded.
+- Without a decoded track/config the shell renders the `noTrackLoaded` empty state; a payload error renders the error title, message, and reload hint instead.
 - First valid viewer load opens help once via `fpv-track-viewer-help-seen` cookie.
 - Export uses `serializeTrack(track, config)` so downloaded JSON remains importable by the editor.
 
 ## NOTES
-- The FPV button is disabled while fewer than 2 gates are loaded; a second click or Escape stops the flight.
+- The FPV button is disabled while fewer than 2 gates are loaded; a second click, Escape, or the scene's `onFpvComplete` stops the flight.
 - The download file name comes from the track name: whitespace becomes `-`, the result is lowercased, and `.json` is appended.
 - A `fpvooe.com` pill sits bottom-right and opens https://fpvooe.com in a new tab with `rel="noreferrer"`.
 
@@ -44,6 +46,7 @@ Related files outside this folder:
 - Do not bypass `deserializeTrack()` when accepting shared payload data.
 
 ## TESTING
-- `ViewerApp.test.tsx` mocks `Scene` and asserts `readOnly=true`.
+- `ViewerApp.test.tsx` mocks `Scene` and asserts `readOnly=true`, plus the error/empty states, export, help, and FPV start/stop/completion flows.
+- `src/viewer-main.test.ts` covers missing, invalid, and valid hash bootstrapping into the viewer store.
 - `viewer-store.test.ts` asserts no editor mutation actions are exposed.
 - `shareTrack.test.ts` covers compressed round-trip, legacy payloads, and invalid payloads.

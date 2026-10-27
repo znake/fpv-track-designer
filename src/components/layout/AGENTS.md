@@ -1,11 +1,12 @@
 # Layout — Editor Shell Controls
 
 **Domain:** Top toolbar, side tool rail, pole counter, import/export/share/shuffle controls around the 3D editor
+**Code state:** 56756ed (2026-10-27, worktree)
 
 ## STRUCTURE
 ```
 layout/
-├── TopBar.tsx              # undo/redo, FPV toggle, import/export, view toggles, language
+├── TopBar.tsx              # undo/redo, FPV toggle, import/export, view toggles, help/shortcuts, language, fpvooe.com link
 ├── LeftToolPanel.tsx       # shuffle/save/share/gallery/settings/design tool rail
 ├── PoleCounter.tsx         # pole breakdown popover in TopBar + max pole limit input and over-limit alert dialog
 ├── PoleCounter.test.tsx    # pole total, over-limit warning, limit persistence
@@ -24,7 +25,7 @@ layout/
 | Save/gallery/settings/design | `LeftToolPanel.tsx`, `src/App.tsx`, `src/components/ui/` | Panel opens are parent-owned where provided |
 | Language toggle DE/EN | `TopBar.tsx`, `src/i18n.ts` | Flag button flips the whole UI language |
 | Pole totals | `PoleCounter.tsx`, `src/utils/poleCount.ts` | Hurdle, Dive, and Octagonal-Tunnel are not buildable from poles (every type with `polesPerGate === 0`); the badge renders nothing while no gates exist |
-| Max pole limit + warning | `PoleCounter.tsx`, `src/utils/poleLimit.ts` | Limit is stored in `localStorage` (default 60) and edited inside the popover; exceeding it turns the badge destructive and opens a centered, dismissible alert dialog (Radix `Dialog` portal, since the TopBar's `backdrop-blur` traps `fixed` children), shown once per crossing and re-armed after the count drops back to or below the limit |
+| Max pole limit + warning | `PoleCounter.tsx`, `src/utils/poleLimit.ts` | Limit is stored in `localStorage` (default 60, input `min={1}`) and edited inside the popover; exceeding it turns the badge destructive and opens a centered, dismissible `role="alertdialog"` (Radix `Dialog` portal, since the TopBar's `backdrop-blur` traps `fixed` children), shown once per crossing and re-armed after the count drops back to or below the limit |
 
 ## CONVENTIONS
 - Layout components may read editor state with `useAppStore`; they are app shell, not shadcn primitives.
