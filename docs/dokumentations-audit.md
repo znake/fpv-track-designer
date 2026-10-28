@@ -1,6 +1,6 @@
 # Dokumentations-Audit
 
-**Stand:** Code-Stand `78693b5` (2026-10-28); Doku-Pass vom 2026-10-28
+**Stand:** Code-Stand `78693b5` (2026-10-28); Doku-Pass vom 2026-10-28; Nachtrag „Offizielle Strecken“ gegen `f2e53af` und den noch unversionierten Arbeitsstand (`tracks/`, `src/utils/officialTracks.ts`, `src/components/ui/OfficialTracksDialog.tsx`)
 **Geprüfte Flächen:** `README.md`, `CHANGELOG.md`, `docs/NUTZERDOKUMENTATION.md`, `docs/coolify-track-sharing.md`, dieses Dokument, `AGENTS.md` samt verschachtelten `AGENTS.md`, In-App-Hilfe in `src/i18n.ts` (`KeyboardShortcutsDialog`, `ViewerHelpDialog`, Tooltips)
 **Methode:** Jede prüfbare Aussage wurde einzeln gegen den Code gehalten (Datei lesen, `grep`); eine Behauptung galt als falsch, bis ein Kommando sie bestätigte. Danach `npx vitest run` (386 Tests grün), `npm run lint`, `npm run build`. Kein Browser-QA – laut Projektkonvention prüft der Nutzer die Oberfläche selbst.
 
@@ -23,6 +23,7 @@
 | 11 | README | Projektstruktur war veraltet: `hooks/` ohne Drag-Hooks, `scene/` ohne Leitpunkt-Editor, `utils/` ohne Ideallinie/Feldvorlagen | `src/hooks/useGateMoveDrag.ts`, `useFlightPathPointDrag.ts`, `scene/FlightPathEditor.tsx`, `utils/idealLine.ts`, `utils/venuePresets.ts` | Strukturbaum aktualisiert |
 | 12 | In-App-Hilfe (DE + EN) | `settingsHelp` nannte „Raster“ und keine Feldvorlage | `i18n.ts` | beide Sprachen korrigiert |
 | 13 | dieses Dokument | Stand war `db57870` (2026-10-16) und verwies auf gelöschte `/tmp`-Artefakte | — | neu geschrieben, auf `78693b5` gestempelt |
+| 14 | README, Nutzerdoku, Changelog, AGENTS.md | „Offizielle Strecken“ (Ordner `tracks/`, Dialog, Button in der Werkzeugleiste) war in keiner Doku-Fläche beschrieben | `utils/officialTracks.ts` (`import.meta.glob('?raw')`, `deserializeTrack()`), `components/ui/OfficialTracksDialog.tsx`, `LeftToolPanel.tsx` (Button zwischen Galerie und Einstellungen), `i18n.ts` | README-Feature und -Absatz samt Maintainer-Hinweis, Nutzerdoku-Abschnitt 10.3, Changelog-Eintrag unter „Unveröffentlicht“, WHERE-TO-LOOK-Zeile und NOTES-Stichpunkt in `AGENTS.md`, Runbook `docs/OFFIZIELLE-TRACKS-HINZUFUEGEN.md` |
 
 ### 1.1 Nachprüfung der neu geschriebenen Texte
 

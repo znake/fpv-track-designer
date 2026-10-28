@@ -18,6 +18,7 @@ Das Projekt kombiniert eine interaktive React-Oberfläche mit einer Three.js/R3F
 - **Undo/Redo-Verlauf** für Bearbeitungsschritte
 - **Lokale Speicherung** von Tracks im Browser über `localStorage`
 - **Track-Galerie** zum Laden, Duplizieren und Löschen gespeicherter Strecken
+- **Offizielle Strecken** aus dem Repository-Ordner `tracks/`, beim Build gebündelt und per Klick in den Editor ladbar
 - **JSON-Import und -Export** für den Austausch von Strecken
 - **Teilen per Link**: Langlink, Kurzlink und QR-Code als PNG oder SVG
 - **Read-only Share-Viewer** auf eigener URL inklusive JSON-Download und FPV-Flug
@@ -205,6 +206,8 @@ Eine Ausnahme ist das Erzeugen eines Kurzlinks: Dabei wird die vollständige lan
 Strecken lassen sich in der TopBar als `.json`-Datei exportieren und aus einer `.json`-Datei wieder importieren. Der Import läuft über die Schema-Validierung: Eine ungültige Datei wird abgewiesen und die aktuelle Strecke bleibt unverändert, die App stürzt dabei nicht ab. Eine sichtbare Fehlermeldung im UI gibt es derzeit noch nicht, der Fehler landet nur in der Browser-Konsole. Die gleiche Validierung schützt auch die per Share-Link übertragenen Daten.
 
 Vor destruktiven Aktionen wie Import, Verwerfen oder Galerie-Laden erscheint bei ungespeicherten Änderungen ein Dialog mit den Optionen „Abbrechen“, „Zuerst speichern“ und „Verwerfen“. Wählst du „Zuerst speichern“, wird die vorgemerkte Aktion nach dem erfolgreichen Speichern automatisch ausgeführt. Beim ersten Besuch wird automatisch eine Strecke generiert und die Hilfe einmalig geöffnet.
+
+Offizielle Strecken liegen als JSON im Ordner `tracks/` direkt im Repository. Der Button **Offizielle Tracks** in der linken Werkzeugleiste öffnet eine Liste mit Gate-Anzahl und Feldmaß; als Streckenname dient der Dateiname ohne `.json`. Ein Klick auf **Laden** setzt die Strecke samt Konfiguration in den Editor, nennt sie nach der Datei und ersetzt die aktuelle, bei ungespeicherten Änderungen mit der normalen Rückfrage. Die Dateien werden beim Build gebündelt und laufen durch dieselbe Schema-Validierung wie der JSON-Import: Eine kaputte Datei bricht nichts, sie erscheint mit ihrem Dateinamen als Hinweis im Dialog. Als Maintainer legst du eine exportierte Track-JSON einfach in `tracks/` ab, baust die App neu und deployst sie; beim nächsten Öffnen steht die Strecke in der Liste, ohne weitere Registrierung. Die Datei ist die Identität des Eintrags: Leerzeichen und Punkte im Dateinamen sind erlaubt, und mehrere Exporte, die intern dieselbe Track-ID oder denselben Namen tragen, bleiben getrennt – die Datei bestimmt ID und Anzeigename. Die vollständige Schritt-für-Schritt-Anleitung für neue Strecken (Datei prüfen, ablegen, validieren, Changelog, committen, deployen und nachprüfen) steht in `docs/OFFIZIELLE-TRACKS-HINZUFUEGEN.md`.
 
 ## Stangenzähler
 
