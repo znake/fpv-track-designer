@@ -41,10 +41,10 @@ const createMockTrack = (id: string): Track => ({
   updatedAt: '2024-01-01T00:00:00.000Z',
 })
 
-const renderPanel = () =>
+const renderPanel = (props?: { onOfficialTracksClick?: () => void }) =>
   render(
     <TooltipProvider>
-      <LeftToolPanel />
+      <LeftToolPanel {...props} />
     </TooltipProvider>,
   )
 
@@ -77,8 +77,25 @@ describe('LeftToolPanel', () => {
 
     const buttonNames = screen.getAllByRole('button').map((button) => button.getAttribute('aria-label'))
 
-    expect(buttonNames).toEqual(['Shuffle', 'Speichern', 'Track Teilen', 'Galerie', 'Einstellungen', 'Design'])
+    expect(buttonNames).toEqual([
+      'Shuffle',
+      'Speichern',
+      'Track Teilen',
+      'Galerie',
+      'Offizielle Tracks',
+      'Einstellungen',
+      'Design',
+    ])
     expect(screen.queryByRole('button', { name: 'Neue Strecke' })).toBeNull()
+  })
+
+  it('calls onOfficialTracksClick when Offizielle Tracks is clicked', () => {
+    const onOfficialTracksClick = vi.fn()
+    renderPanel({ onOfficialTracksClick })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Offizielle Tracks' }))
+
+    expect(onOfficialTracksClick).toHaveBeenCalledTimes(1)
   })
 
   it('disables Track Teilen when no track is loaded', () => {

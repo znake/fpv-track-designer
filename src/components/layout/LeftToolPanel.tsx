@@ -1,6 +1,6 @@
 import type { FC } from 'react'
 import { useState, useCallback } from 'react'
-import { Dice5, Save, Settings2, GalleryVertical, Share2, Palette } from 'lucide-react'
+import { Dice5, Save, Settings2, GalleryVertical, Share2, Palette, Trophy } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { generateTrack } from '@/utils/generator'
 import { extractGenerationConfig } from '@/utils/generationConfig'
@@ -18,6 +18,7 @@ import { useTranslation } from '@/i18n'
 interface LeftToolPanelProps {
   onSaveClick?: () => void
   onGalleryClick?: () => void
+  onOfficialTracksClick?: () => void
   onSettingsClick?: () => void
   onDesignClick?: () => void
 }
@@ -25,6 +26,7 @@ interface LeftToolPanelProps {
 export const LeftToolPanel: FC<LeftToolPanelProps> = ({
   onSaveClick,
   onGalleryClick,
+  onOfficialTracksClick,
   onSettingsClick,
   onDesignClick,
 }) => {
@@ -60,6 +62,10 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
   const handleGalleryClick = useCallback(() => {
     onGalleryClick?.()
   }, [onGalleryClick])
+
+  const handleOfficialTracksClick = useCallback(() => {
+    onOfficialTracksClick?.()
+  }, [onOfficialTracksClick])
 
   const handleShareClick = useCallback(() => {
     if (!currentTrack) return
@@ -125,6 +131,12 @@ export const LeftToolPanel: FC<LeftToolPanelProps> = ({
       label: t('gallery'),
       shortcut: 'G',
       action: handleGalleryClick,
+    },
+    {
+      icon: Trophy,
+      label: t('officialTracks'),
+      shortcut: '',
+      action: handleOfficialTracksClick,
     },
     {
       icon: Settings2,

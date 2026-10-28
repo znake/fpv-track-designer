@@ -6,6 +6,12 @@ Regel für neue Einträge: Vor jedem Commit prüfen, ob die Änderung hierher ge
 
 Der Changelog beginnt mit den Commits der letzten Woche (ab 2026-10-23). Frühere Stände beschreiben `README.md` und `docs/NUTZERDOKUMENTATION.md`. Reine Interna aus diesem Zeitraum – `8ae7727` und `78693b5` (AGENTS.md-Wissensbasis) – stehen bewusst nicht darin.
 
+## Unveröffentlicht
+
+**Neu**
+
+- Offizielle FPVOOE-Strecken liegen jetzt als JSON im Ordner `tracks/` und werden beim Build mit ausgeliefert. Der neue Button „Offizielle Tracks“ in der linken Werkzeugleiste öffnet eine Liste mit Gate-Anzahl und Feldmaß; der angezeigte Streckenname ist der Dateiname ohne `.json`. Ein Klick auf „Laden“ holt die Strecke unter diesem Namen in den Editor. Jede Datei ist ein eigener Eintrag – auch wenn mehrere Exporte dieselbe interne Track-ID und denselben Namen tragen. Dateien, die nicht gelesen werden können, werden mit ihrem Dateinamen genannt.
+
 ## 2026-10-28
 
 **Neu**

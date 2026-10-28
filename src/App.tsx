@@ -10,6 +10,7 @@ import type { GateType } from './types'
 import { SaveTrackDialog } from './components/ui/SaveTrackDialog'
 import { UnsavedChangesDialog } from './components/ui/UnsavedChangesDialog'
 import { TrackGallery } from './components/ui/TrackGallery'
+import { OfficialTracksDialog } from './components/ui/OfficialTracksDialog'
 import { KeyboardShortcutsDialog } from './components/ui/KeyboardShortcutsDialog'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
@@ -77,6 +78,7 @@ function App() {
   // SaveTrackDialog is now globally controlled via store (isSaveDialogOpen).
   // We keep the gallery/shortcuts/settings sheet state local.
   const [galleryOpen, setGalleryOpen] = useState(false)
+  const [officialTracksOpen, setOfficialTracksOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [designOpen, setDesignOpen] = useState(false)
@@ -97,6 +99,7 @@ function App() {
       )
     },
     onOpenGallery: () => {
+      setOfficialTracksOpen(false)
       setSettingsOpen(false)
       setDesignOpen(false)
       setGalleryOpen(true)
@@ -216,17 +219,26 @@ function App() {
           <LeftToolPanel
             onSaveClick={() => openSaveDialog()}
             onGalleryClick={() => {
+              setOfficialTracksOpen(false)
               setSettingsOpen(false)
               setDesignOpen(false)
               setGalleryOpen(true)
             }}
+            onOfficialTracksClick={() => {
+              setGalleryOpen(false)
+              setSettingsOpen(false)
+              setDesignOpen(false)
+              setOfficialTracksOpen(true)
+            }}
             onSettingsClick={() => {
               setGalleryOpen(false)
+              setOfficialTracksOpen(false)
               setDesignOpen(false)
               setSettingsOpen(true)
             }}
             onDesignClick={() => {
               setGalleryOpen(false)
+              setOfficialTracksOpen(false)
               setSettingsOpen(false)
               setDesignOpen(true)
             }}
@@ -272,6 +284,7 @@ function App() {
       <SaveTrackDialog />
       <UnsavedChangesDialog />
       <TrackGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
+      <OfficialTracksDialog open={officialTracksOpen} onOpenChange={setOfficialTracksOpen} />
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <Dialog open={pendingGateInsertion !== null} onOpenChange={(open) => {
         if (!open) closeGateInsertionDialog()

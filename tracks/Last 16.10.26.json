@@ -1,0 +1,699 @@
+{
+  "version": "1.5.0",
+  "track": {
+    "id": "e1eebf0d-d08c-4746-ab7c-f3abb53c4a97",
+    "name": "lastTrack 2026-04-24",
+    "gates": [
+      {
+        "id": "d764f338-83f1-44c9-b956-43c49f6bfd9b",
+        "type": "start-finish",
+        "position": {
+          "x": -11.7,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": 3.066619873046875,
+        "openings": [
+          {
+            "id": "main",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": true
+          }
+        ]
+      },
+      {
+        "id": "1f1b0911-c178-4883-85ef-079aac0ac181",
+        "type": "flag-small",
+        "position": {
+          "x": -9,
+          "y": 0,
+          "z": -3.3
+        },
+        "rotation": 270,
+        "openings": [
+          {
+            "id": "main",
+            "position": {
+              "x": -0.35,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 0.6,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": true
+          }
+        ]
+      },
+      {
+        "id": "89bbc63e-f9ea-4522-a708-e8026939d815",
+        "type": "octagonal-tunnel",
+        "position": {
+          "x": -5.1,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": 30,
+        "openings": [
+          {
+            "id": "main",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": -1
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0
+          }
+        ]
+      },
+      {
+        "id": "a40faaf9-8e7b-408f-a870-3186e37ea934",
+        "type": "flag-small",
+        "position": {
+          "x": -0.6,
+          "y": 0,
+          "z": 3.9
+        },
+        "rotation": 75,
+        "openings": [
+          {
+            "id": "main",
+            "position": {
+              "x": -0.35,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 0.6,
+            "height": 1.2,
+            "rotation": 0
+          }
+        ]
+      },
+      {
+        "id": "250a03d2-18e6-4267-99cf-9438b995e199",
+        "type": "double-h",
+        "position": {
+          "x": 3.3,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": 180,
+        "openings": [
+          {
+            "id": "lower",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": false
+          },
+          {
+            "id": "middle",
+            "position": {
+              "x": 0,
+              "y": 1.7999999999999998,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": false
+          },
+          {
+            "id": "upper",
+            "position": {
+              "x": 0,
+              "y": 3,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": false
+          }
+        ]
+      },
+      {
+        "id": "03694703-adaa-4d12-a0c9-d223c8493a4e",
+        "type": "h-gate",
+        "position": {
+          "x": 4.8,
+          "y": 0,
+          "z": 5.3999999999999995
+        },
+        "rotation": 90,
+        "openings": [
+          {
+            "id": "lower",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": false
+          },
+          {
+            "id": "backrest-pass",
+            "position": {
+              "x": 0,
+              "y": 1.7999999999999998,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.08,
+            "rotation": 0,
+            "reverse": true
+          }
+        ]
+      },
+      {
+        "id": "ff650f75-9e2b-469f-93af-0cba0498e56d",
+        "type": "h-gate",
+        "position": {
+          "x": 10.5,
+          "y": 0,
+          "z": 5.3999999999999995
+        },
+        "rotation": 270,
+        "openings": [
+          {
+            "id": "lower",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": true
+          },
+          {
+            "id": "backrest-pass",
+            "position": {
+              "x": 0,
+              "y": 1.7999999999999998,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.08,
+            "rotation": 0,
+            "reverse": true
+          }
+        ]
+      },
+      {
+        "id": "deb7d734-b2dd-45fe-a8d4-f78e3c46d128",
+        "type": "h-gate",
+        "position": {
+          "x": 12.6,
+          "y": 0,
+          "z": 0.8999999999999999
+        },
+        "rotation": 0,
+        "openings": [
+          {
+            "id": "lower",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0
+          },
+          {
+            "id": "backrest-pass",
+            "position": {
+              "x": 0,
+              "y": 1.7999999999999998,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.08,
+            "rotation": 0,
+            "reverse": true
+          }
+        ]
+      },
+      {
+        "id": "95c98e44-893a-474a-892f-eb7ca1cf19c8",
+        "type": "h-gate",
+        "position": {
+          "x": 11.4,
+          "y": 0,
+          "z": -3
+        },
+        "rotation": 180,
+        "openings": [
+          {
+            "id": "lower",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0
+          },
+          {
+            "id": "backrest-pass",
+            "position": {
+              "x": 0,
+              "y": 1.7999999999999998,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.08,
+            "rotation": 0
+          }
+        ]
+      },
+      {
+        "id": "63692a90-d903-4ef1-9af8-b57f94351da5",
+        "type": "flag-small",
+        "position": {
+          "x": -0.3,
+          "y": 0,
+          "z": -4.8
+        },
+        "rotation": 0,
+        "openings": [
+          {
+            "id": "main",
+            "position": {
+              "x": -0.35,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 0.6,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": false
+          }
+        ]
+      },
+      {
+        "id": "65ab7076-9a32-4aa9-abe5-2925749790f6",
+        "type": "h-gate",
+        "position": {
+          "x": 1.7999999999999998,
+          "y": 0,
+          "z": -6.6
+        },
+        "rotation": 270,
+        "openings": [
+          {
+            "id": "lower",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": false
+          },
+          {
+            "id": "backrest-pass",
+            "position": {
+              "x": 0,
+              "y": 1.7999999999999998,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.08,
+            "rotation": 0,
+            "reverse": false
+          }
+        ]
+      },
+      {
+        "id": "2cdcc238-d533-43ef-8113-3d36cc8be79f",
+        "type": "flag-small",
+        "position": {
+          "x": -0.3,
+          "y": 1.2,
+          "z": -4.8
+        },
+        "rotation": 315,
+        "openings": [
+          {
+            "id": "main",
+            "position": {
+              "x": -0.35,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 0.6,
+            "height": 1.2,
+            "rotation": 0
+          }
+        ]
+      },
+      {
+        "id": "4fb29dde-3fa4-4ce2-bbfb-d9944a038a58",
+        "type": "h-gate",
+        "position": {
+          "x": 1.7999999999999998,
+          "y": 0,
+          "z": -3.3
+        },
+        "rotation": 270,
+        "openings": [
+          {
+            "id": "lower",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": true
+          },
+          {
+            "id": "backrest-pass",
+            "position": {
+              "x": 0,
+              "y": 1.7999999999999998,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.08,
+            "rotation": 0,
+            "reverse": true
+          }
+        ]
+      },
+      {
+        "id": "b5f9c1a4-464e-4786-818e-626e3701ad52",
+        "type": "standard",
+        "position": {
+          "x": 11.4,
+          "y": 0,
+          "z": 0.8999999999999999
+        },
+        "rotation": 0,
+        "openings": [
+          {
+            "id": "main",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": true
+          }
+        ]
+      },
+      {
+        "id": "257e98d9-b11e-4924-aa7a-fc881d14f94e",
+        "type": "double-h",
+        "position": {
+          "x": 6.6,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": 0,
+        "openings": [
+          {
+            "id": "lower",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": false
+          },
+          {
+            "id": "middle",
+            "position": {
+              "x": 0,
+              "y": 1.7999999999999998,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": false
+          },
+          {
+            "id": "upper",
+            "position": {
+              "x": 0,
+              "y": 3,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0,
+            "reverse": false
+          }
+        ]
+      },
+      {
+        "id": "d22d6497-b370-42a3-a089-90a120bf808a",
+        "type": "standard",
+        "position": {
+          "x": -5.1,
+          "y": 1.2,
+          "z": 0
+        },
+        "rotation": 315,
+        "openings": [
+          {
+            "id": "main",
+            "position": {
+              "x": 0,
+              "y": 0.6,
+              "z": 0
+            },
+            "width": 1.2,
+            "height": 1.2,
+            "rotation": 0
+          }
+        ]
+      },
+      {
+        "id": "a947f870-fd61-4535-b026-c812e0767ddd",
+        "type": "flag",
+        "position": {
+          "x": -9,
+          "y": 0,
+          "z": 2.6999999999999997
+        },
+        "rotation": 90,
+        "openings": [
+          {
+            "id": "main",
+            "position": {
+              "x": -0.45,
+              "y": 1.1,
+              "z": 0
+            },
+            "width": 0.8,
+            "height": 1.6,
+            "rotation": 0,
+            "reverse": true
+          }
+        ]
+      }
+    ],
+    "gateSequence": [
+      {
+        "gateId": "d764f338-83f1-44c9-b956-43c49f6bfd9b",
+        "openingId": "main",
+        "reverse": true
+      },
+      {
+        "gateId": "1f1b0911-c178-4883-85ef-079aac0ac181",
+        "openingId": "main",
+        "reverse": true
+      },
+      {
+        "gateId": "89bbc63e-f9ea-4522-a708-e8026939d815",
+        "openingId": "main",
+        "reverse": false
+      },
+      {
+        "gateId": "a40faaf9-8e7b-408f-a870-3186e37ea934",
+        "openingId": "main",
+        "reverse": false
+      },
+      {
+        "gateId": "250a03d2-18e6-4267-99cf-9438b995e199",
+        "openingId": "lower",
+        "reverse": false
+      },
+      {
+        "gateId": "257e98d9-b11e-4924-aa7a-fc881d14f94e",
+        "openingId": "lower",
+        "reverse": false
+      },
+      {
+        "gateId": "250a03d2-18e6-4267-99cf-9438b995e199",
+        "openingId": "middle",
+        "reverse": false
+      },
+      {
+        "gateId": "257e98d9-b11e-4924-aa7a-fc881d14f94e",
+        "openingId": "middle",
+        "reverse": false
+      },
+      {
+        "gateId": "250a03d2-18e6-4267-99cf-9438b995e199",
+        "openingId": "upper",
+        "reverse": false
+      },
+      {
+        "gateId": "257e98d9-b11e-4924-aa7a-fc881d14f94e",
+        "openingId": "upper",
+        "reverse": false
+      },
+      {
+        "gateId": "03694703-adaa-4d12-a0c9-d223c8493a4e",
+        "openingId": "backrest-pass",
+        "reverse": true
+      },
+      {
+        "gateId": "03694703-adaa-4d12-a0c9-d223c8493a4e",
+        "openingId": "lower",
+        "reverse": false
+      },
+      {
+        "gateId": "ff650f75-9e2b-469f-93af-0cba0498e56d",
+        "openingId": "lower",
+        "reverse": true
+      },
+      {
+        "gateId": "ff650f75-9e2b-469f-93af-0cba0498e56d",
+        "openingId": "backrest-pass",
+        "reverse": true
+      },
+      {
+        "gateId": "deb7d734-b2dd-45fe-a8d4-f78e3c46d128",
+        "openingId": "backrest-pass",
+        "reverse": true
+      },
+      {
+        "gateId": "95c98e44-893a-474a-892f-eb7ca1cf19c8",
+        "openingId": "backrest-pass",
+        "reverse": false
+      },
+      {
+        "gateId": "deb7d734-b2dd-45fe-a8d4-f78e3c46d128",
+        "openingId": "lower",
+        "reverse": false
+      },
+      {
+        "gateId": "b5f9c1a4-464e-4786-818e-626e3701ad52",
+        "openingId": "main",
+        "reverse": true
+      },
+      {
+        "gateId": "95c98e44-893a-474a-892f-eb7ca1cf19c8",
+        "openingId": "lower",
+        "reverse": false
+      },
+      {
+        "gateId": "65ab7076-9a32-4aa9-abe5-2925749790f6",
+        "openingId": "lower",
+        "reverse": false
+      },
+      {
+        "gateId": "63692a90-d903-4ef1-9af8-b57f94351da5",
+        "openingId": "main",
+        "reverse": false
+      },
+      {
+        "gateId": "4fb29dde-3fa4-4ce2-bbfb-d9944a038a58",
+        "openingId": "lower",
+        "reverse": true
+      },
+      {
+        "gateId": "4fb29dde-3fa4-4ce2-bbfb-d9944a038a58",
+        "openingId": "backrest-pass",
+        "reverse": true
+      },
+      {
+        "gateId": "65ab7076-9a32-4aa9-abe5-2925749790f6",
+        "openingId": "backrest-pass",
+        "reverse": false
+      },
+      {
+        "gateId": "2cdcc238-d533-43ef-8113-3d36cc8be79f",
+        "openingId": "main",
+        "reverse": false
+      },
+      {
+        "gateId": "d22d6497-b370-42a3-a089-90a120bf808a",
+        "openingId": "main",
+        "reverse": false
+      },
+      {
+        "gateId": "a947f870-fd61-4535-b026-c812e0767ddd",
+        "openingId": "main",
+        "reverse": true
+      }
+    ],
+    "fieldSize": {
+      "width": 30,
+      "height": 15
+    },
+    "createdAt": "2026-04-25T15:41:20.141Z",
+    "updatedAt": "2026-10-15T10:38:19.855Z"
+  },
+  "config": {
+    "gateQuantities": {
+      "standard": 2,
+      "h-gate": 1,
+      "double-h": 1,
+      "hurdle": 0,
+      "dive": 1,
+      "double": 1,
+      "ladder": 1,
+      "start-finish": 1,
+      "flag": 5,
+      "flag-small": 0,
+      "octagonal-tunnel": 0
+    },
+    "fieldSize": {
+      "width": 30,
+      "height": 15
+    },
+    "venueId": null,
+    "snapGatesToGrid": true,
+    "snapGridSize": 0.3,
+    "showGrid": true,
+    "showFlightPath": true,
+    "showOpeningLabels": true,
+    "theme": "minimal"
+  }
+}
