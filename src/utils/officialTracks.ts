@@ -42,6 +42,29 @@ function officialTrackId(sourceFile: string): string {
   return `official:${sourceFile}`
 }
 
+const ISO_DATE = /(\d{4})[.-](\d{2})[.-](\d{2})/
+const EURO_DATE = /(\d{2})[.-](\d{2})[.-](\d{2,4})/
+
+function dateToTime(year: number, month: number, day: number): number | null {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+
+  return Date.UTC(year, month - 1, day)
+}
+
+// Owners name their files by date: older exports read `Last 21.08.26` (day.month.year),
+// newer ones `2026.08.21`. Comparing the parsed date instead of the string keeps the
+// list chronological whichever style a file uses; names without a date sort last.
+function dateTimeOf(name: string): number | null {
+  const iso = ISO_DATE.exec(name)
+  if (iso) return dateToTime(Number(iso[1]), Number(iso[2]), Number(iso[3]))
+
+  const european = EURO_DATE.exec(name)
+  if (!european) return null
+
+  const year = european[3].length === 2 ? 2000 + Number(european[3]) : Number(european[3])
+  return dateToTime(year, Number(european[2]), Number(european[1]))
+}
+
 function parseTrackFile(content: string): ParsedTrackFile | { message: string } {
   let parsed: ReturnType<typeof deserializeTrack>
 
@@ -83,7 +106,19 @@ function parseAllFiles(files: Record<string, string>): ParsedTrackFiles {
     })
   }
 
-  entries.sort((a, b) => a.name.localeCompare(b.name, 'de') || a.sourceFile.localeCompare(b.sourceFile))
+  // Newest first: the list reads as a date list, most recent track on top.
+  entries.sort((a, b) => {
+    const aTime = dateTimeOf(a.name)
+    const bTime = dateTimeOf(b.name)
+
+    if (aTime !== bTime) {
+      if (aTime === null) return 1
+      if (bTime === null) return -1
+      return bTime - aTime
+    }
+
+    return b.name.localeCompare(a.name, 'de') || b.sourceFile.localeCompare(a.sourceFile)
+  })
 
   return { result: { tracks: entries, invalidFiles }, tracksBySourceFile }
 }

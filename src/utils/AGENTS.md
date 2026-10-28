@@ -21,6 +21,7 @@ utils/
 ├── generationConfig.ts   # Detect settings that require regeneration
 ├── poleCount.ts          # Gate/pole totals for buildability reporting
 ├── poleLimit.ts          # localStorage-backed max pole limit (default 60) + `useMaxPoles()` hook
+├── officialTracks.ts     # Bundles tracks/*.json, validates via `deserializeTrack`, newest-first list
 ├── venuePreference.ts    # localStorage-backed last picked venue, seeds the next visit
 ├── gateTypeOptions.ts    # Canonical gate type order/labels for UI + metrics
 └── themeColors.ts        # Theme lookup and gate material color helpers
@@ -50,6 +51,7 @@ utils/
 | Change pole totals | `poleCount.ts`, `gateTypeOptions.ts` | pole count/grouping logic and display order |
 | Change theme material colors | `themeColors.ts`, `src/types/theme.ts` | `getThemeConfig()`, `getGateColors()` |
 | Change the remembered venue | `venuePreference.ts`, `src/store/configSlice.ts` | `readStoredVenueId()`, `writeStoredVenueId()`, `createInitialConfig()` |
+| Official track list and load | `officialTracks.ts` | `parseOfficialTrackFiles()`, `dateTimeOf()` (newest-first order), `listOfficialTracks()`, `loadOfficialTrack()` |
 | Change venue presets | `venuePresets.ts`, `src/types/venue.ts` | `VENUE_PRESETS`, `getVenuePreset()`, `isVenueId()` |
 | Change the ground watermark size | `fieldWatermark.ts`, `src/components/scene/Grid.tsx` | `calculateFieldWatermarkMetrics()`, `FIELD_WATERMARK_TEXT` |
 

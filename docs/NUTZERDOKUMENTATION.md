@@ -234,7 +234,7 @@ Das gewählte Theme wird mit der Strecke gespeichert und **beim Teilen mitgegebe
 
 ### 10.3 Offizielle Strecken laden
 
-In der linken Werkzeugleiste sitzt direkt unter der **Galerie** der Button **Offizielle Tracks** (Pokal-Symbol). Er öffnet eine Liste aller Strecken, die im Repository unter `tracks/` liegen. Jede Karte zeigt den Streckennamen – das ist der Dateiname ohne `.json` –, die Gate-Anzahl und das Feldmaß. Weil exportierte Strecken intern oft denselben Namen tragen, gilt einfach der Dateiname: `Last 16.10.26.json` erscheint als „Last 16.10.26“.
+In der linken Werkzeugleiste sitzt direkt unter der **Galerie** der Button **Offizielle Tracks** (Pokal-Symbol). Er öffnet eine Liste aller Strecken, die im Repository unter `tracks/` liegen. Jede Karte zeigt den Streckennamen – das ist der Dateiname ohne `.json` –, die Gate-Anzahl und das Feldmaß. Weil exportierte Strecken intern oft denselben Namen tragen, gilt einfach der Dateiname: `Last 16.10.26.json` erscheint als „Last 16.10.26“. Die Liste ist chronologisch sortiert – das Datum im Dateinamen entscheidet, die neueste Strecke steht ganz oben und die älteren folgen darunter. Verstanden werden Dateien wie `Last 21.08.26.json` (Tag.Monat.Jahr) und `2026.08.21.json`; Dateien ohne Datum stehen alphabetisch am Ende.
 
 Ein Klick auf **Laden** holt die Strecke samt Konfiguration in den Editor und ersetzt die aktuelle. Sind ungespeicherte Änderungen vorhanden, erscheint vorher die gewohnte Rückfrage mit Speichern, Verwerfen und Abbrechen. Dateien, die die Prüfung nicht bestehen, erscheinen nicht als Strecke; der Dialog nennt stattdessen, wie viele Dateien aus dem Ordner nicht geladen werden konnten.
 

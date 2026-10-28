@@ -83,11 +83,36 @@ describe('officialTracks', () => {
       })
 
       expect(result.invalidFiles).toHaveLength(0)
+      // Newest first: 16 October 2026 sits above 21 August 2026.
       expect(result.tracks.map((track) => track.name)).toEqual([
         'Last 16.10.26',
         'Last 21.08.26',
       ])
       expect(result.tracks[0].sourceFile).toBe('/tracks/Last 16.10.26.json')
+    })
+
+    it('orders mixed date styles by their date, newest first', () => {
+      const result = parseOfficialTrackFiles({
+        '/tracks/Last 24.04.26.json': sampleJson,
+        '/tracks/2026.10.02.json': sampleJson,
+        '/tracks/Last 21.08.26.json': sampleJson,
+      })
+
+      expect(result.tracks.map((track) => track.name)).toEqual([
+        '2026.10.02',
+        'Last 21.08.26',
+        'Last 24.04.26',
+      ])
+    })
+
+    it('puts files without a date after the dated ones, alphabetically', () => {
+      const result = parseOfficialTrackFiles({
+        '/tracks/zebra.json': sampleJson,
+        '/tracks/2026.04.24.json': sampleJson,
+        '/tracks/alpha.json': sampleJson,
+      })
+
+      expect(result.tracks.map((track) => track.name)).toEqual(['2026.04.24', 'zebra', 'alpha'])
     })
 
     it('names every track after its file, including spaces and dots', () => {

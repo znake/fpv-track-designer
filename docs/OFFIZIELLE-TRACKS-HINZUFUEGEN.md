@@ -26,6 +26,7 @@ Regeln für den Dateinamen, weil er der Anzeigename ist:
 
 - Der Dateiname ohne `.json` ist der Name in der App — also so benennen, wie die Strecke heißen soll (`Last 16.10.26.json`, nicht `track1.json`).
 - Leerzeichen und Punkte sind getestet und funktionieren. Umlaute und Sonderzeichen sind nicht getestet: ASCII bevorzugen.
+- **Das Datum im Dateinamen bestimmt die Position in der Liste.** Sortiert wird chronologisch, die neueste Strecke steht oben. Erkannt werden `Last 21.08.26` (Tag.Monat.Jahr, so heißen die bisherigen Dateien) und `2026.08.21`; Dateien ohne Datum landen alphabetisch am Ende.
 - Vorhandene Dateien nicht umbenennen, ohne es zu wollen — das ändert den Namen in der App.
 - Den Inhalt der JSON nicht bearbeiten (weder `track.name` noch `track.id`); die Datei bestimmt beides.
 
