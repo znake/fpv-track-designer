@@ -23,7 +23,8 @@ Das Projekt kombiniert eine interaktive React-Oberfläche mit einer Three.js/R3F
 - **Read-only Share-Viewer** auf eigener URL inklusive JSON-Download und FPV-Flug
 - **Design-Panel** mit den Themes Minimal Standard, Realistisch und Nacht
 - **Sprachumschaltung** zwischen Deutsch und Englisch
-- **Stangenzähler** mit Aufschlüsselung der benötigten Stangen je Gate-Typ
+- **Feldvorlagen** für bekannte Hallen (z. B. „Last OG3“) samt Säulen als Hindernisse in der Szene
+- **Stangenzähler** mit Aufschlüsselung der benötigten Stangen je Gate-Typ und eigener Stangen-Obergrenze
 - **Keyboard-Shortcuts** für schnelle Bedienung
 
 ## Tech Stack
@@ -78,31 +79,33 @@ npm run test          # Vitest starten
 
 ### Oberfläche im Überblick
 
-- **TopBar (oben):** links der App-Titel mit dem Badge „Beta Version“; in der Mitte Rückgängig/Wiederholen, der FPV-Flug, der Stangenzähler und die Anzeige-Schalter (Raster, Grid-Snap, Snap-Genauigkeit, Flugbahn, Durchflüge); rechts JSON-Import und -Export, das „#fpvooe“-Badge (Link auf fpvooe.com), der Name der geladenen Strecke, die Sprachumschaltung und der Hilfe-Button.
+- **TopBar (oben):** links der App-Titel mit dem Badge „Beta Version“; in der Mitte Rückgängig/Wiederholen, der FPV-Flug, der Stangenzähler und die Anzeige-Schalter (Grid anzeigen, Grid-Snap, Flugbahn, Durchflüge – die Snap-Genauigkeit erscheint zusätzlich, solange Grid-Snap aktiv ist); rechts das „#fpvooe“-Badge (Link auf fpvooe.com), der Name der geladenen Strecke, JSON-Import und -Export, die Sprachumschaltung und der Hilfe-Button.
 - **Linke Werkzeugleiste:** Shuffle, Speichern, Track teilen, Galerie, Einstellungen und Design.
 - **3D-Szene (Mitte):** die Strecke selbst. Angeklickt erscheinen direkt am Gate die Bearbeitungswerkzeuge. In der Feldmitte liegt ein dezentes Wasserzeichen „#FPVOOE“.
 
-Der Hilfe-Button öffnet einen Dialog mit bebilderten Bearbeitungsschritten und den gruppierten Tastenkürzeln (auf dem Mac mit ⌘-Anzeige); beim ersten Besuch öffnet er sich einmalig von selbst.
+Der Hilfe-Button öffnet einen Dialog mit fünf bebilderten Bearbeitungsschritten und den gruppierten Tastenkürzeln (auf dem Mac mit ⌘-Anzeige); beim ersten Besuch öffnet er sich einmalig von selbst.
 
 Läuft beim Rendern etwas schief, zeigt die App statt der Szene einen Fehlerbildschirm („Etwas ist schiefgelaufen“) mit einem „Erneut versuchen“-Button.
 
 ### Strecke konfigurieren
 
-Über die Einstellungen lassen sich die Anzahl der Gates je Typ sowie die Feldbreite und -länge anpassen. Beim Mischen wird daraus automatisch eine neue Strecke erzeugt. „Auf Standard zurücksetzen“ stellt die Werkseinstellungen der Konfiguration wieder her.
+Über die Einstellungen lassen sich die Anzahl der Gates je Typ sowie die Feldbreite und -länge anpassen. Alternativ legt eine **Feldvorlage** die Maße fest – „Last OG3“ etwa 10,5 × 22,7 m mit vier Hallensäulen; Breite und Länge sind dann gesperrt. Diese Werte gelten für die nächste Generierung, nicht rückwirkend für die aktuelle Strecke. „Auf Standard zurücksetzen“ stellt die Werkseinstellungen der Konfiguration wieder her (Benutzerdefiniert, 30 × 15 m).
 
-Änderungen an der Konfiguration erzeugen die Strecke nicht von selbst neu. Sobald die aktuelle Strecke von der Generierungs-Konfiguration abweicht, erscheint im Einstellungs-Panel der Button „Neue Kurskonfiguration anwenden“, der einen neuen Track erzeugt.
+Änderungen an der Konfiguration erzeugen die Strecke nicht von selbst neu. Sobald die aktuelle Strecke aus einer Generierung stammt und die Konfiguration davon abweicht, erscheint im Einstellungs-Panel der Button „Neue Kurskonfiguration anwenden“, der einen neuen Track erzeugt. Nach Galerie-Laden oder JSON-Import gibt es keinen Generierungsstand: Dann bleibt der Button aus, und die geänderten Werte greifen erst beim nächsten Shuffle.
 
-Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in der TopBar: Raster, Flugbahn und Durchflüge lassen sich dort einzeln ein- und ausblenden.
+Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in der TopBar: Grid anzeigen, Grid-Snap (samt Snap-Genauigkeit), Flugbahn und Durchflüge lassen sich dort einzeln ein- und ausblenden.
 
 ### Gates bearbeiten
 
 1. Gate in der 3D-Szene anklicken. Shift-, Cmd- oder Ctrl-Klick erweitert die Auswahl.
-2. Verschieben-, Anheben- oder Drehen-Werkzeug direkt am Gate verwenden. Das Drehen läuft kontinuierlich mit 1° pro Pixel und rastet nur bei aktivem Snap auf 15°-Schritte ein. Alternativ hebt und senkt **`Shift` + Ziehen am Gate** die Höhe direkt, ohne das Höhen-Werkzeug zu greifen.
+2. Verschieben-, Anheben- oder Drehen-Werkzeug direkt am Gate verwenden. Ohne Werkzeug geht es genauso direkt am Gate: **Gate gedrückt halten und ziehen** verschiebt es in der Feldebene, **`Shift` + Ziehen** hebt und senkt die Höhe, **`Strg`/`Control` + seitliches Ziehen** dreht. Das Drehen läuft kontinuierlich mit 1° pro Pixel und rastet nur bei aktivem Grid-Snap auf 15°-Schritte ein.
 3. **Einflug- und Ausflugseite:** Bei aktivem Schalter „Durchflüge“ zeigt jede Öffnung eine grüne Einflug- und eine rote Ausflugsfläche; das ⇄-Symbol an der Öffnung dreht die Durchflugrichtung um. Je nach Kameraposition ist nur die zugewandte Seite beschriftet.
 4. **Durchflugreihenfolge:** Ein Klick auf die Durchflugnummer einer Öffnung öffnet den Dialog „Durchflugnummer ändern“. Die Nummer muss zwischen 1 und der Gesamtzahl der Durchflüge liegen.
 5. Neue Gates können relativ zu einem ausgewählten Gate davor oder danach eingefügt werden. Beim Einfügen wird der Gate-Typ gewählt; ein bereits vorhandenes Start/Ziel-Gate ist ausgegraut.
 6. Ausgewählte Gates lassen sich per Dialog oder Shortcut löschen.
 7. Ein Klick auf den Boden hebt die Auswahl wieder auf.
+
+> **Hinweis:** Drehbewegungen – über das Dreh-Werkzeug und über `Strg`-Ziehen – landen nicht im Rückgängig-Verlauf und markieren die Strecke nicht als geändert. Die Drehung steckt danach in den Daten; beim Verlassen, Neuladen oder einer destruktiven Aktion fragt die App aber nicht nach ungespeicherten Änderungen.
 
 ### Ideallinie mit Leitpunkten formen
 
@@ -155,7 +158,10 @@ Auf Touch-Geräten verschiebt ein Zwei-Finger-Ziehen die Ansicht, ein Auf- und Z
 | Strecke speichern | `Cmd/Ctrl + S` |
 | Galerie öffnen | `G` |
 | Ansicht verschieben | `Space + linke Maustaste ziehen` |
+| Gate verschieben (direkt) | Gate gedrückt halten und ziehen |
 | Gate anheben oder absenken | `Shift` gedrückt halten und Gate ziehen |
+| Gate drehen (direkt) | `Strg`/`Control` gedrückt halten und Gate seitlich ziehen |
+| Leitpunkt verschieben (direkt) | Leitpunkt gedrückt halten und ziehen |
 | Leitpunkt anheben oder absenken | `Shift` gedrückt halten und Leitpunkt ziehen |
 | Gate abwählen / Dialoge schließen | `Escape` |
 | FPV-Flug beenden | `Escape` |
@@ -168,11 +174,11 @@ Die Tooltips der Rückgängig-/Wiederholen-Knöpfe in der TopBar zeigen in Klamm
 
 ### Snap und Raster
 
-Der "Grid-Snap"-Schalter in der TopBar aktiviert das Einrasten und rastet beim Einschalten sofort alle Gates ein. Die Rastergröße lässt sich auf 0,3 m, 0,5 m oder 1,0 m stellen; ein Wechsel rastet alle Gates neu ein. Der separate „Grid anzeigen“-Schalter blendet das Bodenraster mit 1-m-Zellen und 5-m-Markierungen ein oder aus. Der Feldrand wird unabhängig davon immer gezeichnet.
+Der "Grid-Snap"-Schalter in der TopBar aktiviert das Einrasten und rastet beim Einschalten sofort alle Gates ein. Die Rastergröße lässt sich auf 0,3 m, 0,5 m oder 1,0 m stellen; sie wirkt auf X, Z und die Höhe, und ein Wechsel rastet alle Gates neu ein. Der Größen-Schalter erscheint nur, solange Grid-Snap aktiv ist. Der separate „Grid anzeigen“-Schalter blendet das Bodenraster mit 1-m-Zellen und 5-m-Markierungen ein oder aus. Der Feldrand wird unabhängig davon immer gezeichnet.
 
 ## Teilen
 
-Der „Track teilen"-Button in der linken Werkzeugleiste erzeugt eine Viewer-URL, die die komplette Strecke als komprimierten Hash-Payload trägt (Langlink). Zusätzlich schickt die App den Langlink an einen Shortener-Dienst und zeigt den zurückgelieferten Kurzlink an. Der Share-Dialog zeigt beide Links gleichzeitig, erlaubt das Kopieren und zeigt eine QR-Vorschau, die sich als PNG oder SVG herunterladen lässt.
+Der „Track teilen"-Button in der linken Werkzeugleiste erzeugt eine Viewer-URL, die die komplette Strecke als komprimierten Hash-Payload trägt (Langlink). Zusätzlich schickt die App den Langlink an einen Shortener-Dienst und zeigt den zurückgelieferten Kurzlink an. Der Share-Dialog zeigt beide Links gleichzeitig, erlaubt das Kopieren und zeigt – sobald der Kurzlink vorliegt – eine QR-Vorschau, die sich als PNG oder SVG herunterladen lässt.
 
 Die Daten für Lang- und Kurzlink kommen ausschließlich aus der Strecke im Editor. Ohne geladenen Track bleibt der Teilen-Button deaktiviert.
 
@@ -206,6 +212,8 @@ Die TopBar zeigt ein Hammer-Badge mit der Gesamtzahl der benötigten Stangen. Oh
 
 Nicht alle Gate-Typen lassen sich aus Stangen bauen. Für Hurdle, Dive und den Tunnel ist die Stangenanzahl pro Gate null, sie werden in der Aufschlüsselung separat als nicht aus Stangen baubar geführt.
 
+Unter der Tabelle steht das Feld **Max. Stangen** (Standard 60). Die Obergrenze liegt nur im Browser und wandert nicht in Exporte oder Share-Links. Übersteigt die Strecke sie, wird das Badge rot, das Popover meldet „Über deinem Limit von … Stangen.“ und ein einmaliger Hinweisdialog erscheint; nach dem Wegklicken warnt die App erst wieder, wenn die Strecke zwischenzeitlich unter das Limit gefallen ist.
+
 ## Projektstruktur
 
 ```text
@@ -213,18 +221,18 @@ src/
 ├── components/
 │   ├── gates/        # 3D-Komponenten für Gate-Typen, Handles und Öffnungs-Indikatoren
 │   ├── layout/       # TopBar, linke Werkzeugleiste und Stangenzähler
-│   ├── scene/        # R3F-Canvas, Kamera, Grid, Flugpfad und FPV-Flug
+│   ├── scene/        # R3F-Canvas, Kamera, Grid, Flugpfad, Leitpunkt-Editor und FPV-Flug
 │   ├── ui/           # Dialoge, Panels und shadcn/ui-Primitives
 │   ├── viewer/       # Read-only Share-Viewer-UI
 │   ├── icons/        # Gate-Typ-Icons
 │   └── ErrorBoundary.tsx  # Fehlergrenze (einzige Klassenkomponente)
 ├── constants/        # geteilte Gate-Maße
-├── hooks/            # Keyboard-, Auswahl- und Theme-Logik
+├── hooks/            # Keyboard, Auswahl, Theme und Drag-Hooks für Gates und Leitpunkte
 ├── lib/              # cn-Helfer für shadcn-Klassen
 ├── schemas/          # Schema-Validierung (handgeschrieben) für Track-Daten
 ├── store/            # Zustand-Slices für Config und Tracks
 ├── types/            # TypeScript-Domänenmodelle
-├── utils/            # Generator, Flugpfad, Stangenzählung, Share-Links und Storage
+├── utils/            # Generator, Flugpfad/Ideallinie, Stangenzählung, Share-Links, Storage und Feldvorlagen
 ├── i18n.ts           # typisierte DE/EN-Übersetzungen
 ├── viewer-main.tsx   # Einstieg des Share-Viewers
 └── viewer-store.ts   # eigener Zustand-Store für den Viewer
@@ -262,6 +270,7 @@ Der Viewer hat einen eigenen Build (`npm run build:viewer`) nach `dist-viewer/`,
 
 ## Weiterführende Dokumentation
 
+- [Changelog](./CHANGELOG.md)
 - [Ausführliche Anleitung](./docs/NUTZERDOKUMENTATION.md)
 - [Deployment und Teilen-Technik](./docs/coolify-track-sharing.md)
 

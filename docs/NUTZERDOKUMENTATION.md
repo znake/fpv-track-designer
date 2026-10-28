@@ -43,7 +43,7 @@ Alles Weitere in dieser Anleitung baut darauf auf.
 
 Die Oberfläche besteht aus drei Bereichen:
 
-- **TopBar (oben):** Links stehen der App-Titel **FPV-Track-Designer** und daneben das Badge **"Beta Version".** In der Mitte folgen Rückgängig/Wiederholen, FPV-Flug, der Stangenzähler und die Anzeige-Optionen (Grid, Grid-Snap, Snap-Genauigkeit, Flugbahn, Durchflüge). Rechts findest du in der Desktop-Ansicht das Badge **„#fpvooe“** (verlinkt auf `https://fpvooe.com`, öffnet in einem neuen Tab), den Namen der geladenen Strecke als Badge (abgeschnittene Namen erscheinen vollständig als Tooltip), JSON Import/Export, Sprache und Hilfe.
+- **TopBar (oben):** Links stehen der App-Titel **FPV-Track-Designer** und daneben das Badge **"Beta Version".** In der Mitte folgen Rückgängig/Wiederholen, FPV-Flug, der Stangenzähler und die Anzeige-Optionen (Grid anzeigen, Grid-Snap, Snap-Genauigkeit, Flugbahn, Durchflüge); die Snap-Genauigkeit erscheint nur, solange Grid-Snap aktiv ist. Rechts findest du in der Desktop-Ansicht das Badge **"#fpvooe"** (verlinkt auf `https://fpvooe.com`, öffnet in einem neuen Tab), den Namen der geladenen Strecke als Badge (abgeschnittene Namen erscheinen vollständig als Tooltip), JSON Import/Export, Sprache und Hilfe.
 - **Linke Werkzeugleiste:** Shuffle (neu generieren), Speichern, Track Teilen, Galerie, Einstellungen, Design.
 - **3D-Szene (Mitte):** die Strecke selbst. Angeklickt erscheinen direkt am Gate die Bearbeitungswerkzeuge. In der Feldmitte liegt ein dezentes Wasserzeichen **„#FPVOOE"**.
 
@@ -77,7 +77,7 @@ Gespeicherte Strecken lädst du über die **Galerie** wieder (siehe [Abschnitt 1
 - **Feldeinstellungen → Feldgröße (m):** **Breite** und **Länge** des Spielfelds.
 - **Auf Standard zurücksetzen:** setzt die Konfiguration auf die Werkseinstellungen zurück.
 
-**Anwenden:** Änderst du Werte, erscheint der Hinweis, dass die Kurskonfiguration geändert wurde. Mit **„Neue Kurskonfiguration anwenden"** wird daraus eine neue Strecke generiert. Da dabei die aktuelle Strecke ersetzt wird, greift auch hier der Nachfrage-Dialog bei ungespeicherten Änderungen.
+**Anwenden:** Änderst du Werte, erscheint der Hinweis, dass die Kurskonfiguration geändert wurde. Mit **„Neue Kurskonfiguration anwenden"** wird daraus eine neue Strecke generiert. Da dabei die aktuelle Strecke ersetzt wird, greift auch hier der Nachfrage-Dialog bei ungespeicherten Änderungen. Das gilt für Strecken, die aus einer Generierung stammen: Nach **Galerie-Laden** oder **JSON-Import** gibt es keinen Generierungsstand, der Hinweis bleibt aus und die neuen Werte wirken erst beim nächsten Shuffle.
 
 **Standardwerte** (werksseitig): Standard-Gate 3, Start/Ziel 1, h-Gate 2, Dive 1, Doppel 1, Flagge 1, Flagge klein 1, Tunnel 1; Doppel-h, Hurdle und Leiter sind standardmäßig auf 0.
 
@@ -103,8 +103,8 @@ Diese Optionen ändern nur die Darstellung, nicht die Strecke:
 | Option | Wirkung |
 | --- | --- |
 | **Grid anzeigen** | blendet das Boden-Grid (1-m-Zellen, 5-m-Markierungen) ein. Standardmäßig aus. |
-| **Grid-Snap** | Gates rasten beim Verschieben auf einem Positions-Grid ein. Beim Drehen rastet die Drehung dann zusätzlich auf 15°-Schritte ein. Ohne aktiven Grid-Snap dreht sie stufenlos. |
-| **Snap-Genauigkeit** | wie grob eingerastet wird: **Fein · 0,3 m**, **1/2 Feld · 0,5 m** oder **1 Feld · 1,0 m**. |
+| **Grid-Snap** | Gates rasten beim Verschieben und in der Höhe auf einem Positions-Grid ein. Beim Drehen rastet die Drehung dann zusätzlich auf 15°-Schritte ein. Ohne aktiven Grid-Snap dreht sie stufenlos. |
+| **Snap-Genauigkeit** | wie grob eingerastet wird – für X, Z und Höhe: **Fein · 0,3 m**, **1/2 Feld · 0,5 m** oder **1 Feld · 1,0 m**. Der Schalter erscheint nur, solange Grid-Snap aktiv ist. |
 | **Flugbahn** | zeigt die Ideallinie durch alle Gates inkl. Richtungspfeilen. |
 | **Durchflüge** | markiert an jedem Gate die Reihenfolge der Durchflüge und die Ein-/Ausflugseite. |
 
@@ -142,7 +142,7 @@ So bearbeitest du einzelne Gates direkt in der 3D-Szene:
 2. **Mehrere Gates wählen:** Halte beim Klicken **`Shift`**, **`Cmd`** oder **`Ctrl`** gedrückt, um weitere Gates zur Auswahl hinzuzufügen oder bereits gewählte wieder abzuwählen. Ein Klick auf die **Bodenfläche** hebt die gesamte Auswahl auf.
 3. **Verschieben:** Halte das Verschieben-Symbol am Gate und ziehe es frei über das Feld. Alternativ hältst du das Gate direkt gedrückt und ziehst es. Mit aktivem Grid-Snap rastet es in der gewählten Snap-Genauigkeit ein.
 4. **Höhe verstellen:** Nutze das Höhen-Werkzeug am Gate, um es anzuheben oder abzusenken. Schneller geht es direkt am Gate: **`Shift` gedrückt halten und das Gate ziehen** – die Höhe ändert sich dabei um 0,03 m pro Pixel, genau wie beim Höhen-Werkzeug.
-5. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Direkt am Gate funktioniert das ebenso mit **`Strg`/`Control` gedrückt halten und dem Gate seitlich ziehen**. Die Drehung läuft stufenlos mit. Nur bei aktivem Grid-Snap rastet sie auf **15°-Schritte** ein.
+5. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Direkt am Gate funktioniert das ebenso mit **`Strg`/`Control` gedrückt halten und dem Gate seitlich ziehen**. Die Drehung läuft stufenlos mit. Nur bei aktivem Grid-Snap rastet sie auf **15°-Schritte** ein. Drehungen landen nicht im Rückgängig-Verlauf und markieren die Strecke nicht als geändert (siehe [6.3](#63-rückgängig--wiederholen)).
 6. **Einfügen:** Klicke ein Gate an und nutze am Gate das **„vorher“**- oder **„nachher“**-Symbol. Der Dialog **„Gate einfügen“** fragt dann nur noch den **Gate-Typ** ab. Das neue Gate wird passend in die Durchflugreihenfolge eingefügt.
 7. **Löschen:** Wähle das Gate und drücke **`Backspace`** (öffnet den Bestätigungsdialog) oder nutze das Löschen-Symbol. Bestätigen mit **`Enter`** oder **„Gate löschen"**.
 
@@ -156,7 +156,9 @@ Mit aktivem **„Durchflüge"** zeigt jede Öffnung ihre **Durchflugnummer**. Kl
 
 ### 6.3 Rückgängig / Wiederholen
 
-Alle Bearbeitungsschritte lassen sich mit **`Cmd/Ctrl + Z`** rückgängig machen und mit **`Cmd/Ctrl + Y`** (oder `Cmd/Ctrl + Shift + Z`) wiederherstellen. Fährst du mit der Maus über den Rückgängig- oder Wiederholen-Knopf in der TopBar, zeigt der Tooltip in Klammern an, wie viele Schritte gerade verfügbar sind. Ohne Verlauf sind die Knöpfe deaktiviert.
+Bearbeitungsschritte lassen sich mit **`Cmd/Ctrl + Z`** rückgängig machen und mit **`Cmd/Ctrl + Y`** (oder `Cmd/Ctrl + Shift + Z`) wiederherstellen. Fährst du mit der Maus über den Rückgängig- oder Wiederholen-Knopf in der TopBar, zeigt der Tooltip in Klammern an, wie viele Schritte gerade verfügbar sind. Ohne Verlauf sind die Knöpfe deaktiviert.
+
+**Ausnahme Drehen:** Drehbewegungen – über das Dreh-Symbol und über `Strg`/`Control` + Ziehen – legen keinen Rückgängig-Schritt an und setzen die Strecke nicht auf „geändert“. Die neue Ausrichtung bleibt in der Szene und wird beim nächsten Speichern mitgeschrieben, beim Verlassen oder Laden fragt die App aber nicht nach ungespeicherten Änderungen.
 
 ---
 
@@ -278,7 +280,9 @@ Ist ein Link leer oder beschädigt, erscheint **„Track kann nicht geladen werd
 Oben in der TopBar zeigt der **Stangenzähler** die Gesamtzahl der für den Aufbau benötigten Stangen. Solange die Strecke keine Gates enthält, wird der Stangenzähler gar nicht angezeigt. Ein Klick öffnet die detaillierte **Stangenkalkulation**:
 
 - Tabelle mit **Gate-Typ**, **Anzahl**, **Stangen pro Gate** und **Summe**,
-- separater Bereich **„Nicht aus Stangen baubar"** für Hurdle, Dive-Gate und Tunnel.
+- separater Bereich **„Nicht aus Stangen baubar“** für Hurdle, Dive-Gate und Tunnel.
+
+Unter der Tabelle steht dein Feld **Max. Stangen** (Standard 60). Die Obergrenze wird nur in deinem Browser gespeichert und wandert weder in Exporte noch in Share-Links. Übersteigt deine Strecke das Limit, wird das Badge rot, das Popover meldet **„Über deinem Limit von … Stangen.“** und ein einmaliger Hinweisdialog erscheint. Nach dem Wegklicken warnt die App erst wieder, wenn die Strecke zwischenzeitlich wieder unter das Limit gefallen ist.
 
 So planst du den Materialbedarf deiner Strecke direkt mit.
 
@@ -307,7 +311,12 @@ Während eines **FPV-Flugs** sind die Kamera-Bedienelemente deaktiviert, bis du 
 | Strecke shuffeln (neu generieren) | `S` |
 | Strecke speichern | `Cmd/Ctrl + S` |
 | Galerie öffnen | `G` |
+| Ansicht verschieben | `Space` + linke Maustaste ziehen |
+| Gate direkt verschieben | Gate gedrückt halten und ziehen |
 | Gate anheben oder absenken | `Shift` gedrückt halten und Gate ziehen |
+| Gate direkt drehen | `Strg`/`Control` gedrückt halten und Gate seitlich ziehen |
+| Leitpunkt direkt verschieben | Leitpunkt gedrückt halten und ziehen |
+| Leitpunkt anheben oder absenken | `Shift` gedrückt halten und Leitpunkt ziehen |
 | Rückgängig | `Cmd/Ctrl + Z` |
 | Wiederholen | `Cmd/Ctrl + Y` oder `Cmd/Ctrl + Shift + Z` |
 | Ausgewähltes Gate löschen (Dialog) | `Backspace` |
