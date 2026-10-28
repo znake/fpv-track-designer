@@ -53,6 +53,7 @@ function DragProbe() {
   const { isMoving, beginMoveDrag, startPressDrag } = useGateMoveDrag({
     gateId: 'gate-1',
     position: gate?.position ?? { x: 0, y: 0, z: 0 },
+    rotation: gate?.rotation ?? 0,
   })
 
   return (
@@ -68,6 +69,12 @@ function DragProbe() {
         data-testid="gate-body-shift"
         data-moving={String(isMoving)}
         onPointerDown={(event) => startPressDrag(event.clientX, event.clientY, { vertical: true })}
+      />
+      <button
+        type="button"
+        data-testid="gate-body-ctrl"
+        data-moving={String(isMoving)}
+        onPointerDown={(event) => startPressDrag(event.clientX, event.clientY, { rotate: true })}
       />
       <button
         type="button"
@@ -88,6 +95,7 @@ const dispatch = (target: EventTarget, event: Event) => {
 }
 
 const gatePosition = () => useAppStore.getState().currentTrack?.gates[0].position
+const gateRotation = () => useAppStore.getState().currentTrack?.gates[0].rotation
 
 describe('useGateMoveDrag', () => {
   beforeEach(() => {
@@ -126,6 +134,37 @@ describe('useGateMoveDrag', () => {
     expect(position?.z).toBeCloseTo(0, 6)
     expect(position?.y).toBe(0.5)
     expect(useAppStore.getState().selectedGateId).toBe('gate-1')
+  })
+
+  it('rotates and selects the gate when Ctrl is held during a gate-body drag', () => {
+    // Given
+    const { getByTestId } = render(<DragProbe />)
+
+    // When
+    dispatch(getByTestId('gate-body-ctrl'), pointer('pointerdown', 400, 300))
+    dispatch(window, pointer('pointermove', 410, 300))
+    dispatch(window, pointer('pointermove', 460, 300))
+
+    // Then
+    expect(gateRotation()).toBe(60)
+    expect(gatePosition()).toEqual({ x: 0, y: 0.5, z: 0 })
+    expect(useAppStore.getState().selectedGateId).toBe('gate-1')
+  })
+
+  it('snaps Ctrl-drag rotation to 15 degrees when grid snapping is enabled', () => {
+    // Given
+    useAppStore.setState((state) => ({
+      config: { ...state.config, snapGatesToGrid: true },
+    }))
+    const { getByTestId } = render(<DragProbe />)
+
+    // When
+    dispatch(getByTestId('gate-body-ctrl'), pointer('pointerdown', 400, 300))
+    dispatch(window, pointer('pointermove', 410, 300))
+    dispatch(window, pointer('pointermove', 417, 300))
+
+    // Then
+    expect(gateRotation()).toBe(15)
   })
 
   it('keeps a press without real pointer travel a plain click', () => {

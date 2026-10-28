@@ -9,15 +9,20 @@ type GatePosition = { x: number; y: number; z: number }
 interface UseGateMoveDragOptions {
   gateId: string
   position: GatePosition
+  rotation: number
 }
 
 interface StartPressDragOptions {
   /** Shift + press on the gate body raises/lowers it instead of ground dragging. */
   vertical?: boolean
+  /** Ctrl + press on the gate body rotates it horizontally. */
+  rotate?: boolean
 }
 
 const RAYCASTER = new Raycaster()
 const PRESS_DRAG_THRESHOLD_PX = 3
+const DEGREES_PER_PIXEL = 1
+const ROTATION_SNAP_STEP_DEGREES = 15
 
 function setControlsEnabled(controls: unknown, enabled: boolean) {
   if (controls && typeof controls === 'object' && 'enabled' in controls) {
@@ -31,8 +36,8 @@ function getControlsEnabled(controls: unknown): boolean | undefined {
     : undefined
 }
 
-/** Ground dragging for the move handle (immediate), the gate body (press + travel), and vertical press + travel while Shift is held. */
-export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
+/** Ground dragging for the move handle (immediate), gate-body press + travel, vertical dragging with Shift, and rotation with Ctrl. */
+export function useGateMoveDrag({ gateId, position, rotation }: UseGateMoveDragOptions) {
   const { camera, gl, controls } = useThree()
   const [isMoving, setIsMoving] = useState(false)
   const isDraggingRef = useRef(false)
@@ -42,9 +47,11 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
   const controlsEnabledBeforeDragRef = useRef<boolean | undefined>(undefined)
 
   const setGatePosition = useAppStore((state) => state.setGatePosition)
+  const setGateRotation = useAppStore((state) => state.setGateRotation)
   const commitGateDrag = useAppStore((state) => state.commitGateDrag)
   const setDraggingGate = useAppStore((state) => state.setDraggingGate)
   const selectGate = useAppStore((state) => state.selectGate)
+  const snapGatesToGrid = useAppStore((state) => state.config.snapGatesToGrid)
 
   const getGroundPoint = useCallback((clientX: number, clientY: number): { x: number; z: number } => {
     const rect = gl.domElement.getBoundingClientRect()
@@ -169,6 +176,39 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
     setGatePosition,
   ])
 
+  const beginRotateDrag = useCallback((clientX: number) => {
+    if (isDraggingRef.current) return
+
+    if (controlsEnabledBeforeDragRef.current === undefined) {
+      controlsEnabledBeforeDragRef.current = getControlsEnabled(controls)
+    }
+    const pressX = clientX
+    const startRotation = rotation
+
+    isDraggingRef.current = true
+    setControlsEnabled(controls, false)
+    setDraggingGate(true)
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!isDraggingRef.current) return
+      const pointerDeltaX = event.clientX - pressX
+      const rawRotation = startRotation + pointerDeltaX * DEGREES_PER_PIXEL
+      const newRotation = snapGatesToGrid
+        ? Math.round(rawRotation / ROTATION_SNAP_STEP_DEGREES) * ROTATION_SNAP_STEP_DEGREES
+        : rawRotation
+      setGateRotation(gateId, newRotation)
+    }
+
+    stopMoveRef.current = () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', endDrag)
+      window.removeEventListener('pointercancel', endDrag)
+    }
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', endDrag)
+    window.addEventListener('pointercancel', endDrag)
+  }, [controls, endDrag, gateId, rotation, setDraggingGate, setGateRotation, snapGatesToGrid])
+
   const startPressDrag = useCallback((clientX: number, clientY: number, options?: StartPressDragOptions) => {
     if (isDraggingRef.current) return
 
@@ -194,7 +234,9 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
 
       stopPress()
       selectGate(gateId)
-      if (options?.vertical) {
+      if (options?.rotate) {
+        beginRotateDrag(pressX)
+      } else if (options?.vertical) {
         beginElevateDrag(pressY)
       } else {
         beginMoveDrag(pressX, pressY)
@@ -210,7 +252,7 @@ export function useGateMoveDrag({ gateId, position }: UseGateMoveDragOptions) {
     window.addEventListener('pointermove', handlePressMove)
     window.addEventListener('pointerup', handlePressUp)
     window.addEventListener('pointercancel', handlePressUp)
-  }, [beginElevateDrag, beginMoveDrag, controls, gateId, restoreControls, selectGate])
+  }, [beginElevateDrag, beginMoveDrag, beginRotateDrag, controls, gateId, restoreControls, selectGate])
 
   useEffect(() => {
     return () => {

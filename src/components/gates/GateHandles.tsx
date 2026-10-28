@@ -114,7 +114,7 @@ function getGateTopOffset(gateType: GateType): number {
 export function GateHandles({ gateId, gateType, position, rotation }: GateHandlesProps) {
   const { t } = useTranslation()
   const { controls } = useThree()
-  const { isMoving, beginMoveDrag } = useGateMoveDrag({ gateId, position })
+  const { isMoving, beginMoveDrag } = useGateMoveDrag({ gateId, position, rotation })
   const modeRef = useRef<DragMode>('none')
   const [activeMode, setActiveMode] = useState<DragMode>('none')
   const openDeleteDialog = useAppStore((state) => state.openDeleteDialog)

@@ -28,7 +28,7 @@ interface GateProps {
 export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly = false }: GateProps) {
   const shadowGroupRef = useRef<THREE.Group>(null)
   const { isSelected, handleClick } = useGateSelection(gate.id)
-  const { startPressDrag } = useGateMoveDrag({ gateId: gate.id, position: gate.position })
+  const { startPressDrag } = useGateMoveDrag({ gateId: gate.id, position: gate.position, rotation: gate.rotation })
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const currentTrack = useAppStore((state) => state.currentTrack)
   const toggleGateDirection = useAppStore((state) => state.toggleGateDirection)
@@ -70,7 +70,7 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly =
     if (e.button !== 0 || e.nativeEvent.pointerType === 'touch') return
 
     e.stopPropagation()
-    startPressDrag(e.clientX, e.clientY, { vertical: e.shiftKey })
+    startPressDrag(e.clientX, e.clientY, { rotate: e.ctrlKey, vertical: e.shiftKey })
   }
 
   const commonProps = {
