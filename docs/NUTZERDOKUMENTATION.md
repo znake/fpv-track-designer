@@ -140,9 +140,9 @@ So bearbeitest du einzelne Gates direkt in der 3D-Szene:
 
 1. **Gate anklicken.** Es wird markiert und zeigt die Werkzeuge.
 2. **Mehrere Gates wählen:** Halte beim Klicken **`Shift`**, **`Cmd`** oder **`Ctrl`** gedrückt, um weitere Gates zur Auswahl hinzuzufügen oder bereits gewählte wieder abzuwählen. Ein Klick auf die **Bodenfläche** hebt die gesamte Auswahl auf.
-3. **Verschieben:** Halte das Verschieben-Symbol am Gate und ziehe es frei über das Feld. Mit aktivem Grid-Snap rastet es in der gewählten Snap-Genauigkeit ein.
+3. **Verschieben:** Halte das Verschieben-Symbol am Gate und ziehe es frei über das Feld. Alternativ hältst du das Gate direkt gedrückt und ziehst es. Mit aktivem Grid-Snap rastet es in der gewählten Snap-Genauigkeit ein.
 4. **Höhe verstellen:** Nutze das Höhen-Werkzeug am Gate, um es anzuheben oder abzusenken. Schneller geht es direkt am Gate: **`Shift` gedrückt halten und das Gate ziehen** – die Höhe ändert sich dabei um 0,03 m pro Pixel, genau wie beim Höhen-Werkzeug.
-5. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Die Drehung läuft stufenlos mit. Nur bei aktivem Grid-Snap rastet sie auf **15°-Schritte** ein.
+5. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Direkt am Gate funktioniert das ebenso mit **`Strg`/`Control` gedrückt halten und dem Gate seitlich ziehen**. Die Drehung läuft stufenlos mit. Nur bei aktivem Grid-Snap rastet sie auf **15°-Schritte** ein.
 6. **Einfügen:** Klicke ein Gate an und nutze am Gate das **„vorher“**- oder **„nachher“**-Symbol. Der Dialog **„Gate einfügen“** fragt dann nur noch den **Gate-Typ** ab. Das neue Gate wird passend in die Durchflugreihenfolge eingefügt.
 7. **Löschen:** Wähle das Gate und drücke **`Backspace`** (öffnet den Bestätigungsdialog) oder nutze das Löschen-Symbol. Bestätigen mit **`Enter`** oder **„Gate löschen"**.
 

@@ -83,7 +83,25 @@ export function KeyboardShortcutsDialog({
         { description: t('deselectClose'), keys: ['Escape'] },
       ],
     },
-    { category: t('gateEditing'), shortcuts: [{ description: t('deleteSelectedGate'), keys: ['Backspace'] }, { description: t('confirmDelete'), keys: ['Enter'] }, { description: t('dragRotateGate'), keys: [t('dragRotateGateKey')] }, { description: t('elevateGate'), keys: [t('elevateGateKey')] }] },
+    {
+      category: t('gateEditing'),
+      shortcuts: [
+        { description: t('deleteSelectedGate'), keys: ['Backspace'] },
+        { description: t('confirmDelete'), keys: ['Enter'] },
+        { description: t('dragRotateGate'), keys: [t('dragRotateGateKey')] },
+        { description: t('moveGateDirect'), keys: [t('moveGateDirectKey')] },
+        { description: t('rotateGateDirect'), keys: [t('rotateGateDirectKey')] },
+        { description: t('elevateGate'), keys: [t('elevateGateKey')] },
+      ],
+    },
+    {
+      category: t('idealLineEditing'),
+      shortcuts: [
+        { description: t('insertFlightPathPoint'), keys: [t('insertFlightPathPointKey')] },
+        { description: t('moveFlightPathPoint'), keys: [t('moveFlightPathPointKey')] },
+        { description: t('elevateFlightPathPoint'), keys: [t('elevateFlightPathPointKey')] },
+      ],
+    },
     { category: t('history'), shortcuts: [{ description: t('undo'), keys: [ctrl, 'Z'] }, { description: t('redo'), keys: [ctrl, 'Y', '/', ctrl, 'Shift', 'Z'] }] },
   ]
   return (
