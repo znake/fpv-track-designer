@@ -10,6 +10,7 @@ Der Changelog beginnt mit den Commits der letzten Woche (ab 2026-10-23). Früher
 
 **Geändert**
 
+- Die Liste der offiziellen Tracks zeigt schlichte, einzeilige Einträge mit Trennlinien statt Karten. Name, Gate-Anzahl und Feldmaß stehen nebeneinander, damit deutlich mehr Strecken gleichzeitig sichtbar sind.
 - Die Liste der offiziellen Tracks ist chronologisch sortiert: die neueste Strecke steht oben, ältere darunter. Maßgeblich ist das Datum im Dateinamen – `Last 21.08.26` und `2026.08.21` werden beide verstanden; Dateien ohne Datum stehen alphabetisch am Ende.
 
 **Neu**

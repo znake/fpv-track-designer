@@ -5,7 +5,6 @@ import { useAppStore } from '@/store'
 import { listOfficialTracks, loadOfficialTrack } from '@/utils/officialTracks'
 import { useTranslation } from '@/i18n'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -66,39 +65,42 @@ export function OfficialTracksDialog({ open, onOpenChange }: OfficialTracksDialo
           </div>
         )}
 
-        <ScrollArea className="min-h-0 flex-1 pr-4">
+        <ScrollArea className="min-h-0 flex-1 px-4">
           {tracks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Ghost className="mb-3 size-10 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">{t('officialTracksEmpty')}</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 py-4">
+            <ul className="py-2">
               {tracks.map((track) => (
-                <Card key={track.sourceFile} className="border-border/50">
-                  <CardContent className="flex items-center justify-between gap-3 p-4">
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <span className="break-words text-sm font-semibold text-foreground">
-                        {track.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {t('officialTracksGateCount', { count: track.gateCount })}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {t('officialTracksFieldSize', {
-                          width: track.fieldSize.width,
-                          height: track.fieldSize.height,
-                        })}
-                      </span>
-                    </div>
-                    <Button size="sm" onClick={() => handleLoad(track.sourceFile)}>
-                      <Play />
-                      {t('load')}
-                    </Button>
-                  </CardContent>
-                </Card>
+                <li
+                  key={track.sourceFile}
+                  className="flex items-center justify-between gap-3 border-b border-border/50 py-2 last:border-b-0"
+                >
+                  <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                    <span
+                      className="truncate text-sm font-semibold text-foreground"
+                      title={track.name}
+                    >
+                      {track.name}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {t('officialTracksGateCount', { count: track.gateCount })}
+                      {' · '}
+                      {t('officialTracksFieldSize', {
+                        width: track.fieldSize.width,
+                        height: track.fieldSize.height,
+                      })}
+                    </span>
+                  </div>
+                  <Button size="xs" onClick={() => handleLoad(track.sourceFile)}>
+                    <Play />
+                    {t('load')}
+                  </Button>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </ScrollArea>
       </SheetContent>
