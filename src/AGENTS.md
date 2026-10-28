@@ -1,7 +1,7 @@
 # Src — App Entrypoints, Shell & Cross-App State
 
 **Domain:** Editor/viewer bootstraps, editor orchestration, i18n, viewer store, shared CSS import, top-level app contracts
-**Code state:** 56756ed (2026-10-27, worktree)
+**Code state:** b738218 (2026-10-28, worktree)
 
 ## STRUCTURE
 ```
@@ -12,19 +12,15 @@ src/
 ├── viewer-store.ts      # read-only viewer Zustand state
 ├── i18n.ts              # DE/EN translations, localStorage language, hook helpers
 ├── index.css            # Tailwind v4 CSS-first theme tokens
-├── components/          # gates, layout, scene, ui, viewer, icons, ErrorBoundary
-├── hooks/               # shortcuts, theme, gate selection
-├── schemas/             # trusted import/export validation
-├── store/               # editor-only Zustand slices
-├── types/               # domain contracts
-└── utils/               # pure/shared logic
+└── components/ constants/ hooks/ lib/ schemas/ store/ types/ utils/
+    # nested AGENTS.md: components/{gates,layout,scene,ui,viewer}, hooks, schemas, store, types, utils
 ```
 
 ## WHERE TO LOOK
 | Task | File / Directory | Notes |
 |------|------------------|-------|
-| Editor startup | `main.tsx`, `App.tsx` | StrictMode effects must stay idempotent; `App` generates a starter track while none exists and opens the help dialog once per browser (cookie) |
-| Viewer startup | `viewer-main.tsx`, `viewer-store.ts`, `components/viewer/` | Decode hash before mount; store has no editor actions; empty/invalid payloads map to translated error states, the help dialog auto-opens once (cookie), and the track downloads as JSON |
+| Editor startup | `main.tsx`, `App.tsx` | StrictMode effects must stay idempotent; `App` owns first-load generation and the dialog wiring |
+| Viewer startup | `viewer-main.tsx`, `viewer-store.ts`, `components/viewer/` | Decode the hash before mount; empty and invalid payloads map to translated error states and the track downloads as JSON |
 | App dialogs / saved-track gallery | `components/ui/`, `App.tsx` | `components/ui/` owns save, share, unsaved-changes, shortcuts, and gallery dialogs; the gate-insert and sequence dialogs are JSX inline in `App.tsx` |
 | Translations | `i18n.ts` | Add matching `de` and `en` keys; `TranslationKey` is inferred from `de`; gate-type labels are a separate bilingual map (`gateTypeLabels`), so a new gate type needs both |
 | Global CSS/theme tokens | `index.css`, `components/ui/`, `types/theme.ts` | Tailwind v4 CSS-first; no Tailwind config file |
@@ -32,20 +28,20 @@ src/
 | Import/export boundary | `schemas/`, `schemas/AGENTS.md` | Unknown JSON must pass through schema helpers |
 | Core calculations | `utils/`, `utils/AGENTS.md` | Generator, flight path, storage, share links |
 | Keyboard/selection/theme hooks | `hooks/`, `hooks/AGENTS.md` | Shortcut map, R3F gate selection, active theme hook |
+| Mouse drag gestures | `components/gates/Gate.tsx`, `hooks/useGateMoveDrag.ts`, `hooks/useFlightPathPointDrag.ts` | Gate body press-drag moves (Shift = height, Ctrl = rotate), ideal-line dots drag the same way |
 | Domain contracts / theme presets | `types/`, `types/AGENTS.md` | Gate/config/track contracts + `THEME_PRESETS` |
 
 ## CONVENTIONS
 - `main.tsx` imports `App` as the only default export; new top-level modules should use named exports.
 - Both bootstraps wrap UI in `StrictMode` and `ErrorBoundary`; do not add mount effects that double-create durable state.
 - `viewer-main.tsx` owns hash parsing and translated error setup; keep payload parsing out of `ViewerApp`.
-- `viewer-store.ts` stores only `{ track, config, error }` plus set/reset helpers; never add editor mutation actions.
 - `i18n.ts` is the translation source of truth; add every key in both language objects and use placeholders as `{name}`.
 - Language state is a small external store: `fpv-track-designer-language` key, default `de`, notifying through `fpv-track-designer-language-change` plus cross-tab `storage`.
 - `translateOutsideReact()` exists for non-component code such as viewer bootstrap; components should use `useTranslation()`.
-- `components/ErrorBoundary.tsx` is the only class component and hardcodes German copy — a deliberate exception to the i18n rule for the crash fallback.
+- `components/ErrorBoundary.tsx` hardcodes German copy on purpose (crash fallback, outside React state and i18n).
 
 ## ANTI-PATTERNS
-- Do not import `useAppStore` into viewer boot/store/components. `ViewerApp` mounts `Scene`, which does import it, so the viewer bundle still carries the editor store.
+- Do not import `useAppStore` into viewer boot/store/components; `Scene` already pulls it into that bundle, so adding more keeps it there.
 - Do not parse share hashes or imported JSON without `decodeTrackSharePayload()` / `deserializeTrack()`.
 - Do not add a second app-level `<Canvas>` outside `components/scene/Scene.tsx`.
 - Do not split translations into ad-hoc per-component constants.

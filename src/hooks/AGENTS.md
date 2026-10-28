@@ -1,15 +1,15 @@
 # Hooks — Editor Interaction
 
 **Domain:** Keyboard shortcuts, R3F gate selection and gate-body dragging, active theme resolution. Editor-only; not used by the read-only viewer.
-**Code state:** 56756ed (2026-10-27, worktree)
+**Code state:** b738218 (2026-10-28, worktree)
 
 ## STRUCTURE
 ```
 hooks/
 ├── useKeyboardShortcuts.ts       # Global keydown map -> store actions + UI callbacks
 ├── useKeyboardShortcuts.test.tsx # Shortcut coverage
-├── useGateMoveDrag.ts            # Ground drag from the move handle / gate-body press, vertical drag with Shift
-├── useGateMoveDrag.test.tsx      # Press-vs-click threshold, field clamp, shift elevation, commit coverage
+├── useGateMoveDrag.ts            # Ground drag from the move handle / gate-body press, Shift vertical, Ctrl rotation
+├── useGateMoveDrag.test.tsx      # Press-vs-click threshold, field clamp, shift elevation, ctrl rotation + 15 deg snap, commit coverage
 ├── useFlightPathPointDrag.ts     # Same drag mechanics for ideal-line points (marker press, Shift vertical, move/elevate handles)
 ├── useFlightPathPointDrag.test.tsx # Point press-vs-click threshold, field clamp, shift elevation, commit coverage
 ├── useGateSelection.ts           # R3F click -> selectGate, additive selection guard
@@ -20,8 +20,8 @@ hooks/
 | Task | File | Notes |
 |------|------|-------|
 | Change shortcut map | `useKeyboardShortcuts.ts`, `src/components/ui/KeyboardShortcutsDialog.tsx` | S shuffle, Cmd/Ctrl+S save, G gallery, Cmd/Ctrl+Z undo, Cmd/Ctrl+Y or Cmd/Ctrl+Shift+Z redo, Escape, Backspace delete (single selection only), Enter confirms the open delete dialog; the dialog's key list is a second copy that must change with the map |
-| Change gate click/selection | `useGateSelection.ts`, `src/store/trackSlice.ts` | Shift/Meta/Ctrl = additive; ignored while dragging or camera-gesturing |
-| Change gate-body / move-handle dragging | `useGateMoveDrag.ts`, `src/components/gates/Gate.tsx`, `GateHandles.tsx` | Ground-raycast X/Z through `setGatePosition`, one `commitGateDrag` undo entry, controls disabled, `isDraggingGate` set so the follow-up click is not a selection; Shift + press on a gate body runs the same 0.03 m/px vertical drag as the elevation handle |
+| Change gate click/selection | `useGateSelection.ts`, `src/store/trackSlice.ts` | Shift/Meta/Ctrl make a click additive; ignored while dragging or camera-gesturing. Ctrl+press-drag on a body rotates and selects non-additively |
+| Change gate-body / move-handle dragging | `useGateMoveDrag.ts`, `src/components/gates/Gate.tsx`, `GateHandles.tsx` | Ground-raycast X/Z through `setGatePosition`, one `commitGateDrag` undo entry, controls disabled, `isDraggingGate` set so the follow-up click is not a selection; Shift + press on a gate body runs the same 0.03 m/px vertical drag as the elevation handle, Ctrl + press rotates at 1 deg/px (15 deg snap while grid snap is on) and records no undo entry |
 | Change ideal-line point dragging | `useFlightPathPointDrag.ts`, `src/components/scene/FlightPathPointControls.tsx` | Same press threshold, Shift-at-press vertical mode, ground raycast, selection on the threshold, and one undo entry per drag as `useGateMoveDrag`, but through `setFlightPathPointPosition` / `cancelFlightPathPointDrag`; the move and height handles keep starting immediately |
 | Change active theme hook | `useTheme.ts`, `src/utils/themeColors.ts`, `src/types/theme.ts` | Thin selector over `config.theme` |
 
@@ -45,6 +45,6 @@ hooks/
 
 ## TESTING
 - `useKeyboardShortcuts.test.tsx` is the shortcut regression suite; extend it (and `KeyboardShortcutsDialog`) when adding or changing keys.
-- `useGateMoveDrag.test.tsx` covers press-without-travel as a click, field clamping, the dragging flag, shift-driven vertical drag, and one commit per drag.
+- `useGateMoveDrag.test.tsx` covers press-without-travel as a click, field clamping, the dragging flag, shift-driven vertical drag, Ctrl-driven rotation with 15 deg snapping, and one commit per drag.
 - `useFlightPathPointDrag.test.tsx` mirrors that coverage for ideal-line points, including both handles and the ground clamp.
 - `useGateSelection` and `useTheme` have no co-located tests; add one if behavior grows beyond a store selector.

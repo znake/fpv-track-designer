@@ -1,7 +1,7 @@
 # UI Components — Panels, Dialogs & shadcn Primitives
 
 **Domain:** 35 UI files plus this `AGENTS.md`: editor panels/dialogs, shadcn/Radix primitives, variant helpers
-**Code state:** 56756ed (2026-10-27, worktree)
+**Code state:** b738218 (2026-10-28, worktree)
 
 ## STRUCTURE
 ```
@@ -13,7 +13,7 @@ ui/
 ├── TrackGallery.tsx          # Saved tracks list with load/delete/duplicate
 ├── ShareTrackDialog.tsx      # Long/short viewer link, QR preview, PNG/SVG download
 ├── UnsavedChangesDialog.tsx  # Destructive-action save/discard/cancel flow
-├── KeyboardShortcutsDialog.tsx
+├── KeyboardShortcutsDialog.tsx # Shortcut reference incl. the drag gestures (`dragRotateGate`, `moveGateDirect`, `rotateGateDirect`, `elevateGate`)
 ├── directional-pad.tsx       # N/S/E/W movement pad
 ├── icon-button.tsx           # Tooltip + Button composition
 ├── *-variants.ts             # cva variant definitions
@@ -25,7 +25,7 @@ ui/
 - shadcn primitives import `cn` from `@/lib/utils` and keep Radix composition patterns.
 - Variant files (`button-variants.ts`, `badge-variants.ts`, `tabs-variants.ts`, `toggle-variants.ts`) own `cva` class maps.
 - Theme-aware visual language uses dark cockpit surfaces, sky-blue/slate panels, and warm yellow primary accents.
-- All user-facing copy goes through `useTranslation()`; add DE + EN keys together in `src/i18n.ts`. Known hardcoded exceptions: `DirectionalPad` aria-labels, shadcn `dialog`/`sheet` "Close" text, and `ViewerApp`'s "FPV Track Viewer" eyebrow.
+- Copy goes through `useTranslation()`. Hardcoded exceptions: `DirectionalPad` aria-labels, shadcn `dialog`/`sheet` "Close" text, and `ViewerApp`'s "FPV Track Viewer" eyebrow.
 - Destructive editor actions use `UnsavedChangesDialog`, not ad-hoc confirm dialogs.
 
 ## WHERE TO LOOK
@@ -41,7 +41,7 @@ ui/
 | Primitive styling | primitive file + matching `*-variants.ts` if present |
 
 ## NOTES
-- `ApplyConfigFooter` renders only while `hasConfigDrift(config, generationConfig)` is true; its Apply button regenerates via `generateTrack(config)` (active config, so the remembered venue's field size applies) through `requestDestructiveAction`, never a separate discard button.
+- `ApplyConfigFooter` renders only while `hasConfigDrift(config, generationConfig)` is true; Apply regenerates from the active config (so the remembered venue's field size applies) through `requestDestructiveAction`, with no separate discard button.
 - The DE/EN language toggle lives in `TopBar` (`toggleLanguage`), which flips every translated string at once.
 
 ## TESTING
@@ -49,4 +49,4 @@ ui/
 - `GateConfigPanel` drives the venue `Select` through `pointerDown` + `click` and needs local element mocks jsdom lacks: `hasPointerCapture`/`setPointerCapture`/`releasePointerCapture`, `scrollIntoView`, and `ResizeObserver`.
 - Mock browser APIs locally in the relevant suite (`localStorage`, clipboard, URL, random UUID).
 - Do not snapshot broad shadcn output; test app behavior and accessible labels instead.
-- `directional-pad.tsx` has no caller in the editor UI (`GateHandles` owns dragging); keep it in sync if you wire it up.
+- `directional-pad.tsx` has no caller in the editor UI (dragging is owned by `Gate.tsx` → `useGateMoveDrag` and the `GateHandles` handles); keep it in sync if you wire it up.

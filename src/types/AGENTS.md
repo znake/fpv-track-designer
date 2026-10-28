@@ -1,7 +1,7 @@
 # Types — Domain Contracts
 
 **Domain:** Pure TypeScript domain contracts and theme presets. No runtime logic, no store, no React imports.
-**Code state:** 56756ed (2026-10-27, worktree)
+**Code state:** b738218 (2026-10-28, worktree)
 
 ## STRUCTURE
 ```
@@ -32,7 +32,6 @@ types/
 - Keep color values here; keep their rendering consumers noted in `theme.ts` (Scene sky/fog/light, Grid ground, `themeColors.ts` gates).
 
 ## ANTI-PATTERNS
-- Do not add enums, namespaces, or constructor parameter properties (banned by `erasableSyntaxOnly`).
 - Do not put store actions, hooks, or helper functions in this directory.
 - Do not change `GateType` without updating `gates/Gate.tsx`, `schemas/track.schema.ts`, `utils/gateTypeOptions.ts`, the bilingual `gateTypeLabels` in `i18n.ts`, `icons/GateIcon.tsx` silhouettes, per-type gate colors in `theme.ts`, `POLES_PER_GATE` in `utils/poleCount.ts`, the default quantities in `store/configSlice.ts`, and default openings in `utils/gateOpenings.ts`.
 - Do not duplicate `Config`/`ThemeId` shapes elsewhere; import from here.

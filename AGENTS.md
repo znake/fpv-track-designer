@@ -1,7 +1,7 @@
 # FPV TRACK DESIGNER - PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-10-27
-**Code state:** 56756ed (2026-10-27, worktree)
+**Generated:** 2026-10-28
+**Code state:** b738218 (2026-10-28, worktree)
 **Branch:** main
 
 ## OVERVIEW
@@ -15,6 +15,7 @@ fpv-track-designer/
 ├── src/
 │   ├── App.tsx                # editor shell: dialogs, first-load flow, scene composition
 │   ├── i18n.ts                # typed DE/EN translations + localStorage language store
+│   ├── index.css              # Tailwind v4 CSS entry + theme tokens
 │   ├── main.tsx               # editor bootstrap, StrictMode + ErrorBoundary
 │   ├── viewer-main.tsx        # hash payload decode + viewer bootstrap
 │   ├── viewer-store.ts        # viewer-only Zustand store; no editor mutations
@@ -26,7 +27,8 @@ fpv-track-designer/
 │   │   ├── viewer/            # read-only share viewer UI
 │   │   ├── icons/             # gate-type SVG icon
 │   │   └── ErrorBoundary.tsx  # only class component; hardcoded DE copy
-│   ├── hooks/                 # keyboard shortcuts, R3F selection, theme selector
+│   ├── hooks/                 # keyboard shortcuts, R3F selection, drag hooks, theme selector
+│   ├── lib/                   # `cn` class-merge helper
 │   ├── schemas/               # track export/import validation boundary
 │   ├── store/                 # editor Zustand config + track slices
 │   ├── types/                 # domain contracts + theme presets
@@ -39,6 +41,7 @@ fpv-track-designer/
 ├── docker-compose.yml         # local editor-only compose (8080:80)
 ├── .env.development/.production/.example  # build-time VITE_* values, all baked in
 ├── public/                    # favicon.svg, icons.svg, screenshot.png
+├── README.md / components.json # German feature readme; shadcn config
 └── docs/                      # Coolify deploy, German user docs, docs audit
 ```
 
@@ -75,16 +78,13 @@ fpv-track-designer/
 | `useViewerStore` | Zustand store | `src/viewer-store.ts` | 3 | Viewer-only `{ track, config, error }` state |
 | `createTrackSlice` | Zustand slice | `src/store/trackSlice.ts` | 3 | Selection incl. ideal-line points, undo/redo, dirty-state, destructive actions |
 | `generateTrack` | function | `src/utils/generator.ts` | 6 | Random track generation and initial sequence |
-| `calculateFlightPath` / `calculateFlightPathWithControlPoints` | functions | `src/utils/flightPath.ts` | 4 / 4 | Path segments, samples, arrows, gate-specific avoidance, ideal-line shaping |
+| `calculateFlightPath` / `calculateFlightPathWithControlPoints` | functions | `src/utils/flightPath.ts` | 2 / 4 | Base route (called only by its test); the wrapper applies per-leg ideal-line points for scene, FPV and insertion previews |
 | `GateHandles` | component | `src/components/gates/GateHandles.tsx` | 2 | Move/rotate/elevate/insert/delete controls in 3D |
-| `Scene` | component | `src/components/scene/Scene.tsx` | 6 | Single Canvas owner (used by App + ViewerApp); imports `useAppStore` |
+| `Scene` | component | `src/components/scene/Scene.tsx` | 3 | Single Canvas owner (App + ViewerApp); imports `useAppStore` |
 | `serializeTrack` / `deserializeTrack` | functions | `src/schemas/track.schema.ts` | 7 / 5 | Export/import shape validation and normalization |
 | `encodeTrackSharePayload` / `decodeTrackSharePayload` | functions | `src/utils/shareTrack.ts` | 2 | Compressed share payload boundary; QR PNG/SVG in `qrCode.ts` |
-| `THEME_PRESETS` | constant | `src/types/theme.ts` | 2 | Minimal/realistic/night renderer and color presets |
 | `FpvFlyThrough` | component | `src/components/scene/FpvFlyThrough.tsx` | 2 | Automated FPV camera flight |
 | `VENUE_PRESETS` / `getVenuePreset` | constant / function | `src/utils/venuePresets.ts` | 3 / 5 | Venue presets (field size + obstacles) and lookup by `VenueId` |
-| `VenueObstacles` | component | `src/components/scene/VenueObstacles.tsx` | 2 | Renders the active venue's fixed obstacles (hall pillars) |
-| `TrackGallery` | component | `src/components/ui/TrackGallery.tsx` | 3 | Saved-track sheet: list, load, duplicate, delete |
 | `PoleCounter` / `calculatePoleBreakdown` | component / function | `src/components/layout/PoleCounter.tsx`, `src/utils/poleCount.ts` | 3 / 3 | Pole-count badge plus per-type breakdown with a `notBuildable` flag |
 
 ## CONVENTIONS
@@ -112,7 +112,7 @@ fpv-track-designer/
 - Do not assume `src/components/gates/index.ts` is authoritative; it is incomplete (missing `LadderGate`, `FlagSmall`, `GateHandles`, `GateOpeningIndicators`) and bypassed by `Scene.tsx`/`Gate.tsx`.
 
 ## UNIQUE STYLES
-- Gate rotation/movement: the rotate handle is continuous at 1 degree per pixel and rounds to 15 degree steps only while `config.snapGatesToGrid` is on; the generator aligns new gates to 30 degree steps. Moving runs through the move handle and a gate-body press-drag (`src/hooks/useGateMoveDrag.ts`); the store `moveGate` (N/S/E/W, default 1 m) and `rotateGate` actions and `DirectionalPad` have no UI caller.
+- Gate drag: moving runs through the move handle or a press-drag on the gate body (`src/hooks/useGateMoveDrag.ts`); at press, Shift switches to 0.03 m/px vertical and Ctrl to rotation at 1 degree per pixel that rounds to 15 only while `config.snapGatesToGrid` is on. Both rotation paths (`GateHandles` handle and Ctrl press-drag) record no undo entry and leave the dirty flag false. The generator aligns new gates to 30 degree steps; the store `moveGate` (N/S/E/W, default 1 m) and `rotateGate` actions and `DirectionalPad` have no UI caller.
 - Snap grid: sizes are 0.3 m, 0.5 m, and 1.0 m (`SNAP_GRID_SIZES`); the fallback step is `GATE_BASE_WIDTH / 4` = 0.3 m.
 - Undo/redo: `past`/`future` arrays, `MAX_HISTORY=50`, dirty flag captured in history entries.
 - Flight path: gate-sequence visits, Bezier sampling, disjoint native `THREE.Line` segments, arrows along path.
@@ -145,4 +145,4 @@ npm run preview        # preview production editor build only
 - First-visit flow: `src/App.tsx` generates a starter track while no track exists and opens the help dialog once per browser using the `fpv-track-designer-visited` cookie (max-age `60 * 60 * 24 * 365`, one year).
 - Max pole limit: browser preference `fpv-track-designer-max-poles` (default 60, `src/utils/poleLimit.ts`); the pole-count badge turns destructive above it and opens a one-shot alert dialog. It never travels in exports or share links.
 - Viewer: an empty hash shows `viewerMissingPayload` and an undecodable one `viewerInvalidPayload` (`src/viewer-main.tsx`); `ViewerApp` adds the error title, a "no track loaded" state, a JSON download, and a help dialog that auto-opens once via the `fpv-track-viewer-help-seen` cookie.
-- Toolchain requires Node `^20.19.0 || >=22.12.0` (Vite's engine range); `package.json` pins no `engines` field.
+- Toolchain requires Node `^20.19.0 || >=22.12.0` (Vite's engine range); `package.json` pins no `engines` field. Docker images diverge: editor `node:20-alpine`, viewer `node:24-alpine`.

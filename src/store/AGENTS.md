@@ -1,7 +1,7 @@
 # Store — Editor Zustand State
 
 **Domain:** Global editor state via Zustand slice pattern. The share viewer uses separate `src/viewer-store.ts`.
-**Code state:** 56756ed (2026-10-27, worktree)
+**Code state:** b738218 (2026-10-28, worktree)
 
 ## STRUCTURE
 ```
@@ -18,7 +18,7 @@ store/
 - `import type` is required for type-only imports.
 - Config actions update nested config immutably; `theme` values come from `src/types/theme.ts`.
 - The initial `config` comes from `createInitialConfig()`: factory defaults plus the venue remembered in this browser (`utils/venuePreference.ts`). `setVenue` writes that preference, `resetToDefault` clears it, and `setConfig` (gallery load, import, share) leaves it untouched.
-- Committed track actions call `pushHistory()` and set `isTrackModified: true`. The live setters `setGatePosition`, `setFlightPathPointPosition`, and `setGateRotation` only draft state (`setGatePosition` captures `dragHistoryEntry` once); `commitGateDrag()` turns the draft into the undo entry.
+- Committed track actions call `pushHistory()` and set `isTrackModified: true`. The live setters `setGatePosition` and `setFlightPathPointPosition` only draft state and capture `dragHistoryEntry` once; `commitGateDrag()` turns that draft into the undo entry. `setGateRotation` captures nothing, so rotation drags stay outside history and leave the dirty flag untouched.
 
 ## WHERE TO LOOK
 | Task | File |
@@ -50,7 +50,7 @@ const action = (payload) => set((state) => {
 ## DIRTY-STATE / UNSAVED-CHANGES FLOW
 `isTrackModified` is the single source of truth for unsaved editor changes.
 
-- Set `true` by undoable mutations such as `updateGate`, `moveGate`, `moveSelectedGates`, `rotateGate`, `insertGateAtIndex`, `deleteSelectedGates`, `toggleGateDirection`, `moveGateSequenceEntry`, `snapAllGatesToGrid`, and drag commits.
+- Set `true` by undoable mutations such as `updateGate`, `moveGate`, `moveSelectedGates`, `rotateGate`, `insertGateAtIndex`, `deleteSelectedGates`, `toggleGateDirection`, `moveGateSequenceEntry`, `snapAllGatesToGrid`, and move/elevate drag commits. Rotation drags (Ctrl press-drag, rotate handle) add no past entry and leave it `false`.
 - Reset to `false` by `setTrack`, `replaceTrack`, and `markTrackSaved` after successful localStorage save.
 - Stored in `TrackHistoryEntry` so undo/redo restores the dirty flag of each snapshot.
 
@@ -63,12 +63,11 @@ Destructive actions (Shuffle, Import JSON, Gallery Load/Duplicate, Apply Config)
 The global save dialog is store-driven via `isSaveDialogOpen`, `openSaveDialog()`, and `dismissSaveDialog()`.
 
 ## NOTES
-- `trackSlice.ts` reimplements the `moveGate`/`rotateGate` helpers from `utils/gateOperations.ts` inline. `gateOperations.ts` is dead code (only its own test imports it).
-- The `moveGate`/`rotateGate` actions and `DirectionalPad` (`src/components/ui/directional-pad.tsx`) currently have no callers in the editor UI; rotation runs through the `GateHandles` rotate handle instead. Keep them in sync if you wire them up.
-- `MAX_HISTORY = 50`; `pushHistory` snapshots `{ track, selectedGateId, selectedGateIds, isTrackModified }`, caps `past` at 50 entries and clears `future`, and returns untouched history while `currentTrack` is null.
+- `trackSlice.ts` reimplements the `moveGate`/`rotateGate` helpers from `utils/gateOperations.ts` inline; keep the two in sync only if that test-only helper is ever wired up.
+- The `moveGate`/`rotateGate` actions and `DirectionalPad` (`src/components/ui/directional-pad.tsx`) currently have no callers in the editor UI; rotation runs through the `GateHandles` rotate handle or a Ctrl press-drag on the gate body. Keep them in sync if you wire them up.
+- `MAX_HISTORY = 50`; `pushHistory` snapshots `{ track, selectedGateId, selectedGateIds, isTrackModified }`, caps `past` at 50 entries and always clears `future` — with `currentTrack` null only `past` survives.
 - Every committed mutation normalizes through `normalizeTrack` (`enforceSingletonGates` + `normalizeGates` + `normalizeGateSequence`). The live setters `setGatePosition`, `setGateRotation`, and `setFlightPathPointPosition` write raw state and touch neither `updatedAt` nor history. Transient `isDraggingGate` / `setDraggingGate` makes gate selection ignore the click that ends a drag.
 - `commitGateDrag()` pushes the drag-start snapshot once, avoiding undo stack pollution during pointer moves.
-- Viewer state intentionally does not expose editor mutation actions.
 
 ## TESTING
 - `trackSlice.test.ts` is the largest suite; keep new store invariants there.

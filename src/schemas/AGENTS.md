@@ -1,5 +1,5 @@
 # Schemas - Persistence Boundary
-**Code state:** 56756ed (2026-10-27, worktree)
+**Code state:** b738218 (2026-10-28, worktree)
 
 ## OVERVIEW
 `track.schema.ts` owns import/export validation for saved track data. It converts unknown JSON-like input into domain-safe `Track` + config data or structured validation errors.
@@ -35,9 +35,8 @@ schemas/
 - `idealLinePoints` is optional and omitted when absent or empty. Each entry needs a unique non-empty `id`, `leg.from`/`leg.to` with string `gateId` and `openingId`, finite `0 < u < 1`, and finite world `position.x/y/z`. Validation reports indexed paths and checks shape only. Deserialization rebuilds only those fields and drops extras; the replaced `flightPathHeightOffsets` field is discarded rather than migrated.
 - Schema version changes require matching migration/rejection behavior and `track.schema.test.ts` coverage.
 - There is no supported-version gate: `version` is only checked to be a string, so any value validates and is re-serialized as the current `SCHEMA_VERSION`.
-- Sequence rules: two consecutive entries for the same gate are rejected, and a looped track may not start and end on the same gate.
+- Sequence rules: byte-identical consecutive entries are rejected, and a looped track may not start and end with an identical entry. Consecutive entries for the same gate with a different opening or direction are legal (a double-h loop is valid).
 - Exported contract types are `TrackExportSchema` and `ValidationError` (`{ field, message }`).
-- Storage/import code should call schema helpers, not parse and trust raw JSON directly.
 
 ## ANTI-PATTERNS
 - Do not accept unknown legacy gate types silently.

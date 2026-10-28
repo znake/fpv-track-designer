@@ -1,7 +1,7 @@
 # Scene — R3F Canvas, Camera & Themes
 
 **Domain:** 3D scene orchestration, theme-specific environment, camera controls, flight path visualization
-**Code state:** 56756ed (2026-10-27, worktree)
+**Code state:** b738218 (2026-10-28, worktree)
 
 ## STRUCTURE
 ```
@@ -19,7 +19,7 @@ scene/
 ```
 
 ## CONVENTIONS
-- `Scene.tsx` owns the only `<Canvas>`; R3F hooks stay below it.
+- R3F hooks stay below the Canvas; every scene file renders into `Scene`'s children.
 - `Scene` accepts optional `track`, `configOverride`, `readOnly`, `fpvModeActive`, and `onFpvComplete` for the standalone viewer. It passes `currentTrack.idealLinePoints` into `calculateFlightPathWithControlPoints()` and shares the resulting path with `FlightPath` and FPV (FPV receives `path.sampledPoints`).
 - With `showFlightPath` on, `Scene` uses exactly one render branch: `FlightPathEditor` in the editor outside FPV with no gate selected (single or multi), otherwise the plain `FlightPath`. The read-only viewer never mounts interaction, hover markers, or point controls.
 - `FlightPathEditor` renders one interactive `FlightPath` plus `FlightPathPointControls`. Hovering a native line draws a 32 px `+` exactly under the cursor (`calculatePosition` pins it to the pointer, `pointer-events: none`), so the line stays traceable and the plus is never a click target; a left click on the line (delta <= 4 px) pins that spot and expands two symbols: a gate symbol (opens the existing gate-insertion dialog with the position from the resolver in `src/utils/gateInsertion.ts`: on the line, rotated along the tangent, inserted into the sequence before the leg's target visit) and an ideal-line point symbol (inserts a point at that visible position with its base-leg `u`). A second click on the line closes the menu, so does a click without a line hit, a click outside the scene, choosing a symbol, or opening the dialog. Leaving the canvas only clears the hover marker, so the menu stays reachable with the mouse. Existing points are plain yellow dots; pressing and dragging a dot moves it on the ground plane exactly like a gate body, `Shift` at the press switches to the vertical drag, and a press without travel still selects it. A selected point shows 44 px Move, up/down, and destructive delete controls in one row, mirroring the gate handle row. Move follows ground-raycast X/Z, elevation changes Y by 0.03 m/pixel, and all paths use `useFlightPathPointDrag` with the store's gate position policy and one history entry per drag. Deletion is a separate undoable store action. `FlightPathPointControls` unmounts and cancels a running drag while FPV is active.
@@ -45,7 +45,7 @@ scene/
 
 ## NOTES
 - CameraPan: Space+left-drag or right-drag; disables OrbitControls while active.
-- No Shift camera gesture exists: Shift+left-drag on a gate body raises/lowers that gate through `useGateMoveDrag`, and the same gesture on an ideal-line point dot raises/lowers that point through `useFlightPathPointDrag`.
+- No Shift or Ctrl camera gesture exists: Shift+left-drag on a gate body raises/lowers it (`useGateMoveDrag`), Ctrl+left-drag on a gate body rotates it, and Shift+left-drag on an ideal-line point dot raises/lowers that point (`useFlightPathPointDrag`).
 - SmoothZoom: wheel and middle-drag with frame-rate independent lerp.
 - Realistic theme uses sunset environment/shadows; night theme uses stars, environment, and bloom.
 - Grid details: the field boundary is always drawn, 1 m cells and 5 m sections appear only while `showGrid` is on, the `#FPVOOE` watermark sits at the field center, and a click on the ground deselects the current gate.

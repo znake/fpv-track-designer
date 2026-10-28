@@ -1,7 +1,7 @@
 # Layout — Editor Shell Controls
 
 **Domain:** Top toolbar, side tool rail, pole counter, import/export/share/shuffle controls around the 3D editor
-**Code state:** 56756ed (2026-10-27, worktree)
+**Code state:** b738218 (2026-10-28, worktree)
 
 ## STRUCTURE
 ```
@@ -10,7 +10,7 @@ layout/
 ├── LeftToolPanel.tsx       # shuffle/save/share/gallery/settings/design tool rail
 ├── PoleCounter.tsx         # pole breakdown popover in TopBar + max pole limit input and over-limit alert dialog
 ├── PoleCounter.test.tsx    # pole total, over-limit warning, limit persistence
-├── TopBar.test.tsx         # import/export/top-bar behavior
+├── TopBar.test.tsx         # FPV buttons, mobile undo/redo visibility, language toggle, grid + snap controls
 └── LeftToolPanel.test.tsx  # tool rail behavior
 ```
 
@@ -24,12 +24,12 @@ layout/
 | Share link | `LeftToolPanel.tsx`, `src/utils/shareTrack.ts`, `ShareTrackDialog.tsx` | Long URL first, optional n8n shortener fallback |
 | Save/gallery/settings/design | `LeftToolPanel.tsx`, `src/App.tsx`, `src/components/ui/` | Panel opens are parent-owned where provided |
 | Language toggle DE/EN | `TopBar.tsx`, `src/i18n.ts` | Flag button flips the whole UI language |
-| Pole totals | `PoleCounter.tsx`, `src/utils/poleCount.ts` | Hurdle, Dive, and Octagonal-Tunnel are not buildable from poles (every type with `polesPerGate === 0`); the badge renders nothing while no gates exist |
-| Max pole limit + warning | `PoleCounter.tsx`, `src/utils/poleLimit.ts` | Limit is stored in `localStorage` (default 60, input `min={1}`) and edited inside the popover; exceeding it turns the badge destructive and opens a centered, dismissible `role="alertdialog"` (Radix `Dialog` portal, since the TopBar's `backdrop-blur` traps `fixed` children), shown once per crossing and re-armed after the count drops back to or below the limit |
+| Pole totals | `PoleCounter.tsx`, `src/utils/poleCount.ts` | The badge renders nothing while no gates exist; the breakdown flags every type with `polesPerGate === 0` as not buildable from poles |
+| Max pole limit + warning | `PoleCounter.tsx`, `src/utils/poleLimit.ts` | Limit edited inside the popover (`min={1}`); exceeding it turns the badge destructive and opens a centered, dismissible `role="alertdialog"` (Radix `Dialog` portal, since the TopBar's `backdrop-blur` traps `fixed` children), shown once per crossing and re-armed after the count drops back |
 
 ## CONVENTIONS
 - Layout components may read editor state with `useAppStore`; they are app shell, not shadcn primitives.
-- Keep destructive actions (`shuffle`, JSON import, gallery loads) behind `requestDestructiveAction()` so dirty tracks prompt first.
+- `shuffle`, JSON import, and gallery loads stage through `requestDestructiveAction()` so dirty tracks prompt first.
 - Import/export/share must route through schema/share utilities; never build payloads manually in layout.
 - Share flow: `LeftToolPanel` builds the long URL and opens `ShareTrackDialog` right away, then fills in the short URL when the shortener responds. The dialog shows both links at once (long link read-only, short link with spinner and copy), not one replacing the other.
 - Text comes from `useTranslation()` except stable product labels like `FPV-Track-Designer` and `Beta Version`.
@@ -43,6 +43,6 @@ layout/
 - Do not move pole-count business rules into `PoleCounter`; keep calculations in `src/utils/poleCount.ts`.
 
 ## TESTING
-- Update `TopBar.test.tsx` for import/export, toggles, language, FPV, and undo/redo behavior.
-- Update `LeftToolPanel.test.tsx` for shuffle/save/share/gallery/settings/design interactions.
-- Mock browser APIs per test file: `FileReader`, `Blob`, `URL.createObjectURL`, clipboard/shortener fetch as needed.
+- `TopBar.test.tsx` covers the mobile FPV button/stop state, hiding undo/redo on mobile, the language toggle, the grid toggle, and the snap-precision control; import/export has no test.
+- `LeftToolPanel.test.tsx` covers only shuffle and the share button/dialog; save, gallery, settings, and design panel opens are untested.
+- Mock browser APIs per test file: `Blob`, `URL.createObjectURL`, clipboard/shortener fetch as needed.
