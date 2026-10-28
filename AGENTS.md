@@ -1,7 +1,7 @@
 # FPV TRACK DESIGNER - PROJECT KNOWLEDGE BASE
 
 **Generated:** 2026-10-28
-**Code state:** b738218 (2026-10-28, worktree)
+**Code state:** 78693b5 (2026-10-28, worktree)
 **Branch:** main
 
 ## OVERVIEW
@@ -41,6 +41,7 @@ fpv-track-designer/
 ├── docker-compose.yml         # local editor-only compose (8080:80)
 ├── .env.development/.production/.example  # build-time VITE_* values, all baked in
 ├── public/                    # favicon.svg, icons.svg, screenshot.png
+├── CHANGELOG.md               # German user-facing release log; checked before every commit
 ├── README.md / components.json # German feature readme; shadcn config
 └── docs/                      # Coolify deploy, German user docs, docs audit
 ```
@@ -66,6 +67,7 @@ fpv-track-designer/
 | Keyboard/mouse selection | `src/hooks/`, `src/components/gates/GateHandles.tsx` | Desktop mouse/keyboard first; shortcut tests in hooks |
 | Unsaved-changes guard | `src/components/ui/UnsavedChangesDialog.tsx`, `src/store/trackSlice.ts` | Destructive actions stage through `requestDestructiveAction`; the dialog offers cancel / save first / discard |
 | FPV fly-through | `src/components/scene/FpvFlyThrough.tsx`, `src/App.tsx` | Automated camera flight along the ideal line; disabled with fewer than 2 gates (editor and viewer) |
+| User-visible change / release notes | `CHANGELOG.md`, `README.md`, `docs/NUTZERDOKUMENTATION.md`, `src/i18n.ts` | Changelog check before every commit; in-app help rows and the user manual are part of the feature's definition of done |
 
 ## CODE MAP
 | Symbol | Type | Location | Refs | Role |
@@ -110,6 +112,7 @@ fpv-track-designer/
 - Do not bypass the unsaved-changes flow for destructive editor actions; route them through `requestDestructiveAction` and the three-action dialog (cancel / save first / discard).
 - Do not expose editor mutation actions in the read-only viewer store/UI.
 - Do not assume `src/components/gates/index.ts` is authoritative; it is incomplete (missing `LadderGate`, `FlagSmall`, `GateHandles`, `GateOpeningIndicators`) and bypassed by `Scene.tsx`/`Gate.tsx`.
+- Do not commit a user-visible feat, fix, or removal without a `CHANGELOG.md` entry; pure internal work stays out of the changelog.
 
 ## UNIQUE STYLES
 - Gate drag: moving runs through the move handle or a press-drag on the gate body (`src/hooks/useGateMoveDrag.ts`); at press, Shift switches to 0.03 m/px vertical and Ctrl to rotation at 1 degree per pixel that rounds to 15 only while `config.snapGatesToGrid` is on. Both rotation paths (`GateHandles` handle and Ctrl press-drag) record no undo entry and leave the dirty flag false. The generator aligns new gates to 30 degree steps; the store `moveGate` (N/S/E/W, default 1 m) and `rotateGate` actions and `DirectionalPad` have no UI caller.
@@ -118,6 +121,15 @@ fpv-track-designer/
 - Flight path: gate-sequence visits, Bezier sampling, disjoint native `THREE.Line` segments, arrows along path.
 - Ideal-line points: optional `track.idealLinePoints` shape the route per leg; dormant points (dead leg refs) stay stored but render nothing.
 - UI copy is bilingual through `src/i18n.ts`; add DE/EN keys together.
+
+## CHANGELOG
+`CHANGELOG.md` is the user-facing release log: German, one `## YYYY-MM-DD` heading per commit date, groups **Neu / Geändert / Behoben / Entfernt / Dokumentation**, short commit sha in parentheses, newest first; work that is not committed yet lives under `## Unveröffentlicht`.
+
+Check it before every commit:
+- **Entry required** when a user or viewer visitor can notice the change: new feature or gesture, changed behaviour or copy that changes what the app promises, bug fix, removed control or feature. Write the entry in the same commit under `## Unveröffentlicht`; move it under a dated heading once the commit carries that date.
+- **No entry** for refactors, tests, comments, internal `AGENTS.md` refreshes, and wording-only doc corrections that do not change what the docs promise.
+- Keep entries short and behavioural (what the user sees), not a file list and not a restatement of the commit message, and never a claim that was not verified against the code.
+- Move the documentation surfaces with the feature: `README.md`, `docs/NUTZERDOKUMENTATION.md`, the in-app help in `src/i18n.ts`, and the nested `AGENTS.md` files. Refresh `docs/dokumentations-audit.md` (stamped with the HEAD it describes) whenever a documentation pass lands.
 
 ## COMMANDS
 ```bash
@@ -136,7 +148,7 @@ npm run preview        # preview production editor build only
 - `utils/gateOperations.ts` is dead in production (only its own test imports it); `src/store/trackSlice.ts` reimplements `moveGate`/`rotateGate` inline.
 - Test libraries live in `dependencies` (normally `devDependencies`); `@testing-library/jest-dom` is declared but never imported (no Vitest setup file), so tests use plain matchers.
 - Root has generated QA/build artifacts at times (`qa-*.png`, `dist/`, `dist-viewer/`); keep generated artifacts out of commits unless intentionally requested.
-- `docs/` holds `coolify-track-sharing.md` (two-service deploy + n8n proxy), `NUTZERDOKUMENTATION.md` (German user docs), and `dokumentations-audit.md`.
+- `docs/` holds `coolify-track-sharing.md` (two-service deploy + n8n proxy), `NUTZERDOKUMENTATION.md` (German user docs), and `dokumentations-audit.md`; `CHANGELOG.md` at the repo root is the user-facing log.
 - No CI workflows exist; build/test/lint are run manually.
 - Short-link flow: the dev Vite server and the editor nginx both proxy `/api/shorten-track` to the n8n webhook; use `/webhook/shorten-track`, not `/webhook-test/`. `.env.development` and `.env.production` set only `VITE_TRACK_SHORTENER_ENDPOINT`; `.env.example` additionally documents `VITE_VIEWER_DOMAIN`, which is optional and falls back to the `DEFAULT_VIEWER_DOMAIN` constant in `src/utils/shareTrack.ts`. All `VITE_*` values are baked in at build time.
 - `components/scene/Scene.tsx` and `Grid.tsx` import `useAppStore` at module level, so the viewer bundle includes the editor store even though the viewer passes `track`/`configOverride`.
