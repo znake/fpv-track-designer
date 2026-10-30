@@ -15,14 +15,14 @@ Das Projekt kombiniert eine interaktive React-Oberfläche mit einer Three.js/R3F
 - **Flugpfad-Visualisierung** mit Gate-Reihenfolge, Richtungspfeilen und automatischen Ausweichkurven
 - **Freie Ideallinien-Bearbeitung**: Per Hover das Plus auf der Flugbahn anklicken und zwischen zwei Aktionen wählen: ein neues Gate an dieser Stelle einfügen oder einen frei verschiebbaren Leitpunkt setzen, um die Linie zu formen
 - **FPV-Flug** entlang der Ideallinie (ab zwei Gates)
-- **Drohnen-Rennen** in der Szene: vier Tinywhoops in Rosa, Blau, Rot und Grün fliegen dauerhaft mit eigenem Tempo und eigener, leicht versetzter Spur entlang der Ideallinie, mit Neonstreifen am Heck und verblassender Leuchtspur; auf Geraden werden sie schneller, in engen Passagen langsamer, sie legen sich in die Kurve und werfen einen Lichtschein auf den Boden. Der Schalter „Drohnen“ in der TopBar blendet sie aus
+- **Drohnen-Rennen** in der Szene: vier Tinywhoops in Rosa, Blau, Rot und Grün fliegen dauerhaft mit eigenem Tempo und eigener, leicht versetzter Spur entlang der Ideallinie, mit Neonstreifen am Heck und verblassender Leuchtspur; auf Geraden werden sie schneller, in engen Passagen langsamer, sie legen sich in die Kurve und werfen einen Lichtschein auf den Boden. Der Schalter „Drohnen“ in der TopBar blendet sie aus; im Share-Viewer fliegen sie ebenfalls und lassen sich über den Drohnen-Button oben rechts ausblenden
 - **Undo/Redo-Verlauf** für Bearbeitungsschritte
 - **Lokale Speicherung** von Tracks im Browser über `localStorage`
 - **Track-Galerie** zum Laden, Duplizieren und Löschen gespeicherter Strecken
 - **Offizielle Strecken** aus dem Repository-Ordner `tracks/`, beim Build gebündelt und per Klick in den Editor ladbar
 - **JSON-Import und -Export** für den Austausch von Strecken
 - **Teilen per Link**: Langlink, Kurzlink und QR-Code als PNG oder SVG
-- **Read-only Share-Viewer** auf eigener URL inklusive JSON-Download und FPV-Flug
+- **Read-only Share-Viewer** auf eigener URL inklusive JSON-Download, FPV-Flug und Drohnen-Rennen
 - **Design-Panel** mit den Themes Minimal Standard, Realistisch und Nacht
 - **Sprachumschaltung** zwischen Deutsch und Englisch
 - **Feldvorlagen** für bekannte Hallen (z. B. „Last OG3“) samt Säulen als Hindernisse in der Szene
@@ -188,7 +188,7 @@ Die Daten für Lang- und Kurzlink kommen ausschließlich aus der Strecke im Edit
 
 Der Share-Viewer ist eine eigene, read-only Ansicht der geteilten Strecke. Er wird über eine eigene URL mit Hash-Payload aufgerufen und liest die Daten beim Laden direkt aus dem Fragment nach `#`. Fehlt die Payload oder ist sie beschädigt, erscheint statt der Szene eine Fehlermeldung mit dem Titel „Track kann nicht geladen werden“ und einer passenden Meldung.
 
-Im Viewer lässt sich die Strecke frei betrachten, aber nicht verändern. Eine mit Leitpunkten geformte Ideallinie wird angezeigt; die Leitpunkte selbst sind dort nicht sichtbar. Oben rechts gibt es Buttons für den FPV-Flug (ab zwei Gates), den JSON-Download der Strecke und eine Hilfe mit den Steuerungsgesten; die Hilfe öffnet sich beim ersten Besuch einmalig von selbst und danach nur noch per Klick. Der Download benennt die Datei nach dem Streckennamen. Unten rechts führt ein Link zu fpvooe.com. Auch im Viewer beendet `Escape` den FPV-Flug.
+Im Viewer lässt sich die Strecke frei betrachten, aber nicht verändern. Eine mit Leitpunkten geformte Ideallinie wird angezeigt; die Leitpunkte selbst sind dort nicht sichtbar. Oben rechts gibt es Buttons für die Drohnen (standardmäßig fliegen sie mit, der Button blendet sie aus), den FPV-Flug (ab zwei Gates), den JSON-Download der Strecke und eine Hilfe mit den Steuerungsgesten; die Hilfe öffnet sich beim ersten Besuch einmalig von selbst und danach nur noch per Klick. Der Download benennt die Datei nach dem Streckennamen. Unten rechts führt ein Link zu fpvooe.com. Auch im Viewer beendet `Escape` den FPV-Flug.
 
 Der Viewer wird als einzelne HTML-Datei gebaut und über einen eigenen Einstiegspunkt (`viewer.html`) geladen:
 

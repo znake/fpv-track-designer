@@ -6,7 +6,7 @@
 ## STRUCTURE
 ```
 components/viewer/
-├── ViewerApp.tsx          # Read-only scene shell, FPV/export/help buttons, error state
+├── ViewerApp.tsx          # Read-only scene shell, drone/FPV/export/help buttons, error state
 ├── ViewerHelpDialog.tsx   # Viewer controls reference dialog
 └── ViewerApp.test.tsx     # RTL coverage for error/read-only/export/help flows
 ```
@@ -35,6 +35,7 @@ Related files outside this folder:
 
 ## NOTES
 - A second click on the FPV button, Escape, or the scene's `onFpvComplete` stops the flight.
+- The drones fly in the viewer by default; a drone button at the top right of the control row toggles them via local state passed as `Scene`'s `showDrones` prop (it never touches the editor store). The viewer help lists the button.
 - The download file name comes from the track name: whitespace becomes `-`, the result is lowercased, and `.json` is appended.
 - A `fpvooe.com` pill sits bottom-right and opens https://fpvooe.com in a new tab with `rel="noreferrer"`.
 
@@ -45,7 +46,7 @@ Related files outside this folder:
 - Do not bypass `deserializeTrack()` when accepting shared payload data.
 
 ## TESTING
-- `ViewerApp.test.tsx` mocks `Scene` and asserts `readOnly=true`, the error state, export, help, and FPV start/stop/completion flows; the `noTrackLoaded` state has no test.
+- `ViewerApp.test.tsx` mocks `Scene` and asserts `readOnly=true`, the error state, export, help, drones visibility toggle, and FPV start/stop/completion flows; the `noTrackLoaded` state has no test.
 - `src/viewer-main.test.ts` covers missing, invalid, and valid hash bootstrapping into the viewer store.
 - `viewer-store.test.ts` asserts no editor mutation actions are exposed.
 - `shareTrack.test.ts` covers compressed round-trip, legacy payloads, and invalid payloads.

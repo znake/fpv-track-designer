@@ -274,6 +274,7 @@ Der Link öffnet eine **reine Ansichtsseite** (Read-only), ohne Bearbeitungsfunk
 Im Viewer kann der Empfänger:
 
 - die Strecke frei betrachten (Drehen, Bewegen, Zoom, wie im Editor),
+- die **Drohnen** fliegen sehen – vier Tinywhoops über die Ideallinie, standardmäßig eingeschaltet – und sie über den **Drohnen-Button** oben rechts ausblenden bzw. wieder einblenden,
 - eine mit Leitpunkten geformte Ideallinie sehen (die Leitpunkte selbst bleiben unsichtbar),
 - den **FPV-Flug** starten/stoppen (wie im Editor erst ab zwei Gates),
 - den Track als **JSON herunterladen** (der Dateiname wird aus dem Streckennamen abgeleitet und wieder importierbar in den Editor),
