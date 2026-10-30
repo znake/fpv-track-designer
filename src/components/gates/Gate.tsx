@@ -3,7 +3,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { Gate as GateType } from '../../types'
 import { useGateSelection } from '../../hooks/useGateSelection'
-import { useGateMoveDrag } from '../../hooks/useGateMoveDrag'
+import { useGateMoveDrag, getGatePressDragOptions } from '../../hooks/useGateMoveDrag'
 import { useAppStore } from '../../store'
 import { StandardGate } from './StandardGate'
 import { HGate } from './HGate'
@@ -70,7 +70,7 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly =
     if (e.button !== 0 || e.nativeEvent.pointerType === 'touch') return
 
     e.stopPropagation()
-    startPressDrag(e.clientX, e.clientY, { rotate: e.ctrlKey, vertical: e.shiftKey })
+    startPressDrag(e.clientX, e.clientY, getGatePressDragOptions(e))
   }
 
   const commonProps = {

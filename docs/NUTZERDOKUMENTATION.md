@@ -141,8 +141,8 @@ So bearbeitest du einzelne Gates direkt in der 3D-Szene:
 1. **Gate anklicken.** Es wird markiert und zeigt die Werkzeuge.
 2. **Mehrere Gates wählen:** Halte beim Klicken **`Shift`**, **`Cmd`** oder **`Ctrl`** gedrückt, um weitere Gates zur Auswahl hinzuzufügen oder bereits gewählte wieder abzuwählen. Ein Klick auf die **Bodenfläche** hebt die gesamte Auswahl auf.
 3. **Verschieben:** Halte das Verschieben-Symbol am Gate und ziehe es frei über das Feld. Alternativ hältst du das Gate direkt gedrückt und ziehst es. Mit aktivem Grid-Snap rastet es in der gewählten Snap-Genauigkeit ein.
-4. **Höhe verstellen:** Nutze das Höhen-Werkzeug am Gate, um es anzuheben oder abzusenken. Schneller geht es direkt am Gate: **`Shift` gedrückt halten und das Gate ziehen** – die Höhe ändert sich dabei um 0,03 m pro Pixel, genau wie beim Höhen-Werkzeug.
-5. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Direkt am Gate funktioniert das ebenso mit **`Strg`/`Control` gedrückt halten und dem Gate seitlich ziehen**. Die Drehung läuft stufenlos mit. Nur bei aktivem Grid-Snap rastet sie auf **15°-Schritte** ein. Drehungen landen nicht im Rückgängig-Verlauf und markieren die Strecke nicht als geändert (siehe [6.3](#63-rückgängig--wiederholen)).
+4. **Höhe verstellen:** Nutze das Höhen-Werkzeug am Gate, um es anzuheben oder abzusenken. Schneller geht es direkt am Gate: **`Strg`/`Control` gedrückt halten und das Gate ziehen** – die Höhe ändert sich dabei um 0,03 m pro Pixel, genau wie beim Höhen-Werkzeug.
+5. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Direkt am Gate funktioniert das ebenso mit **`Shift` gedrückt halten und dem Gate seitlich ziehen**. Die Drehung läuft stufenlos mit. Nur bei aktivem Grid-Snap rastet sie auf **15°-Schritte** ein. Drehungen landen nicht im Rückgängig-Verlauf und markieren die Strecke nicht als geändert (siehe [6.3](#63-rückgängig--wiederholen)).
 6. **Einfügen:** Klicke ein Gate an und nutze am Gate das **„vorher“**- oder **„nachher“**-Symbol. Der Dialog **„Gate einfügen“** fragt dann nur noch den **Gate-Typ** ab. Das neue Gate wird passend in die Durchflugreihenfolge eingefügt.
 7. **Löschen:** Wähle das Gate und drücke **`Backspace`** (öffnet den Bestätigungsdialog) oder nutze das Löschen-Symbol. Bestätigen mit **`Enter`** oder **„Gate löschen"**.
 
@@ -158,7 +158,7 @@ Mit aktivem **„Durchflüge"** zeigt jede Öffnung ihre **Durchflugnummer**. Kl
 
 Bearbeitungsschritte lassen sich mit **`Cmd/Ctrl + Z`** rückgängig machen und mit **`Cmd/Ctrl + Y`** (oder `Cmd/Ctrl + Shift + Z`) wiederherstellen. Fährst du mit der Maus über den Rückgängig- oder Wiederholen-Knopf in der TopBar, zeigt der Tooltip in Klammern an, wie viele Schritte gerade verfügbar sind. Ohne Verlauf sind die Knöpfe deaktiviert.
 
-**Ausnahme Drehen:** Drehbewegungen – über das Dreh-Symbol und über `Strg`/`Control` + Ziehen – legen keinen Rückgängig-Schritt an und setzen die Strecke nicht auf „geändert“. Die neue Ausrichtung bleibt in der Szene und wird beim nächsten Speichern mitgeschrieben, beim Verlassen oder Laden fragt die App aber nicht nach ungespeicherten Änderungen.
+**Ausnahme Drehen:** Drehbewegungen – über das Dreh-Symbol und über `Shift` + Ziehen – legen keinen Rückgängig-Schritt an und setzen die Strecke nicht auf „geändert“. Die neue Ausrichtung bleibt in der Szene und wird beim nächsten Speichern mitgeschrieben, beim Verlassen oder Laden fragt die App aber nicht nach ungespeicherten Änderungen.
 
 ---
 
@@ -178,7 +178,7 @@ Aktiviere **„Flugbahn“**. Solange kein Gate ausgewählt ist, kannst du die I
 2. **Gate einfügen:** Das Gate-Symbol öffnet den Dialog „Gate einfügen“. Das neue Gate landet auf der Linie, ist entlang der Linie gedreht und wird in der Durchflugreihenfolge zwischen den beiden Gate-Ankern des Abschnitts eingefügt.
 3. **Leitpunkt setzen:** Das gelbe Punkt-Symbol setzt und selektiert einen Leitpunkt an dieser Stelle.
 4. **Im Feld verschieben:** Klicke den gelben Leitpunkt an. Das Verschieben-Werkzeug bewegt ihn in X/Z-Richtung wie ein Gate. Feldgrenzen und aktives Grid-Snap gelten ebenfalls. Der kleine Papierkorb oben rechts löscht den Leitpunkt. Wie bei Gates funktioniert auch das direkte Ziehen: **Leitpunkt gedrückt halten und ziehen**. Ein kurzer Klick ohne Ziehen wählt den Leitpunkt nur aus.
-5. **Höhe ändern:** Das Höhen-Werkzeug hebt oder senkt den Leitpunkt um 0,03 m pro Pixel und mindestens bis zum Boden. Genauso wie bei Gates geht das direkt mit **`Shift` + Leitpunkt gedrückt halten und ziehen**.
+5. **Höhe ändern:** Das Höhen-Werkzeug hebt oder senkt den Leitpunkt um 0,03 m pro Pixel und mindestens bis zum Boden. Genauso wie bei Gates geht das direkt mit **`Strg`/`Control` + Leitpunkt gedrückt halten und ziehen**.
 6. **Kurve formen:** Füge weitere Leitpunkte ein. Die Linie verläuft glatt durch sie, während die Gate-Anker unverändert bleiben.
 7. **Rückgängig und abwählen:** Einfügen, Löschen und jede Ziehbewegung sind jeweils ein Rückgängig-Schritt. Boden- oder Gate-Klick beendet die Auswahl.
 
@@ -319,10 +319,10 @@ Während eines **FPV-Flugs** sind die Kamera-Bedienelemente deaktiviert, bis du 
 | Galerie öffnen | `G` |
 | Ansicht verschieben | `Space` + linke Maustaste ziehen |
 | Gate direkt verschieben | Gate gedrückt halten und ziehen |
-| Gate anheben oder absenken | `Shift` gedrückt halten und Gate ziehen |
-| Gate direkt drehen | `Strg`/`Control` gedrückt halten und Gate seitlich ziehen |
+| Gate anheben oder absenken | `Strg`/`Control` gedrückt halten und Gate ziehen |
+| Gate direkt drehen | `Shift` gedrückt halten und Gate seitlich ziehen |
 | Leitpunkt direkt verschieben | Leitpunkt gedrückt halten und ziehen |
-| Leitpunkt anheben oder absenken | `Shift` gedrückt halten und Leitpunkt ziehen |
+| Leitpunkt anheben oder absenken | `Strg`/`Control` gedrückt halten und Leitpunkt ziehen |
 | Rückgängig | `Cmd/Ctrl + Z` |
 | Wiederholen | `Cmd/Ctrl + Y` oder `Cmd/Ctrl + Shift + Z` |
 | Ausgewähltes Gate löschen (Dialog) | `Backspace` |

@@ -78,7 +78,7 @@ function DragProbe() {
       />
       <button
         type="button"
-        data-testid="point-marker-shift"
+        data-testid="point-marker-vertical"
         onPointerDown={(event) => startPressDrag(point, event.pointerId, event.clientX, event.clientY, { vertical: true })}
       />
       <button
@@ -155,10 +155,10 @@ describe('useFlightPathPointDrag', () => {
     expect(controls.enabled).toBe(true)
   })
 
-  it('raises the point vertically when Shift is held during a marker drag', () => {
+  it('raises the point vertically in elevation mode during a marker drag', () => {
     const { getByTestId } = render(<DragProbe />)
 
-    dispatch(getByTestId('point-marker-shift'), pointer('pointerdown', 400, 300))
+    dispatch(getByTestId('point-marker-vertical'), pointer('pointerdown', 400, 300))
     dispatch(window, pointer('pointermove', 400, 290))
     dispatch(window, pointer('pointermove', 400, 200))
 
@@ -178,7 +178,7 @@ describe('useFlightPathPointDrag', () => {
   it('stops the vertically dragged point at ground level', () => {
     const { getByTestId } = render(<DragProbe />)
 
-    dispatch(getByTestId('point-marker-shift'), pointer('pointerdown', 400, 300))
+    dispatch(getByTestId('point-marker-vertical'), pointer('pointerdown', 400, 300))
     dispatch(window, pointer('pointermove', 400, 310))
     dispatch(window, pointer('pointermove', 400, 2000))
 

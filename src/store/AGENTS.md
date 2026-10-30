@@ -50,7 +50,7 @@ const action = (payload) => set((state) => {
 ## DIRTY-STATE / UNSAVED-CHANGES FLOW
 `isTrackModified` is the single source of truth for unsaved editor changes.
 
-- Set `true` by undoable mutations such as `updateGate`, `moveGate`, `moveSelectedGates`, `rotateGate`, `insertGateAtIndex`, `deleteSelectedGates`, `toggleGateDirection`, `moveGateSequenceEntry`, `snapAllGatesToGrid`, and move/elevate drag commits. Rotation drags (Ctrl press-drag, rotate handle) add no past entry and leave it `false`.
+- Set `true` by undoable mutations such as `updateGate`, `moveGate`, `moveSelectedGates`, `rotateGate`, `insertGateAtIndex`, `deleteSelectedGates`, `toggleGateDirection`, `moveGateSequenceEntry`, `snapAllGatesToGrid`, and move/elevate drag commits. Rotation drags (Shift press-drag, rotate handle) add no past entry and leave it `false`.
 - Reset to `false` by `setTrack`, `replaceTrack`, and `markTrackSaved` after successful localStorage save.
 - Stored in `TrackHistoryEntry` so undo/redo restores the dirty flag of each snapshot.
 
@@ -64,7 +64,7 @@ The global save dialog is store-driven via `isSaveDialogOpen`, `openSaveDialog()
 
 ## NOTES
 - `trackSlice.ts` reimplements the `moveGate`/`rotateGate` helpers from `utils/gateOperations.ts` inline; keep the two in sync only if that test-only helper is ever wired up.
-- The `moveGate`/`rotateGate` actions and `DirectionalPad` (`src/components/ui/directional-pad.tsx`) currently have no callers in the editor UI; rotation runs through the `GateHandles` rotate handle or a Ctrl press-drag on the gate body. Keep them in sync if you wire them up.
+- The `moveGate`/`rotateGate` actions and `DirectionalPad` (`src/components/ui/directional-pad.tsx`) currently have no callers in the editor UI; rotation runs through the `GateHandles` rotate handle or a Shift press-drag on the gate body. Keep them in sync if you wire them up.
 - `MAX_HISTORY = 50`; `pushHistory` snapshots `{ track, selectedGateId, selectedGateIds, isTrackModified }`, caps `past` at 50 entries and always clears `future` — with `currentTrack` null only `past` survives.
 - Every committed mutation normalizes through `normalizeTrack` (`enforceSingletonGates` + `normalizeGates` + `normalizeGateSequence`). The live setters `setGatePosition`, `setGateRotation`, and `setFlightPathPointPosition` write raw state and touch neither `updatedAt` nor history. Transient `isDraggingGate` / `setDraggingGate` makes gate selection ignore the click that ends a drag.
 - `commitGateDrag()` pushes the drag-start snapshot once, avoiding undo stack pollution during pointer moves.

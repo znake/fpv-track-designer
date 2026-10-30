@@ -58,7 +58,7 @@ export function FlightPathPointControls({ data, hover, pointer, menuOpen, contro
   ) => {
     stopHtmlInteraction(event)
     if (!event.isPrimary || event.button !== 0 || event.nativeEvent.pointerType === 'touch') return
-    startPressDrag(point, event.pointerId, event.clientX, event.clientY, { vertical: event.shiftKey })
+    startPressDrag(point, event.pointerId, event.clientX, event.clientY, { vertical: event.ctrlKey })
   }, [startPressDrag, stopHtmlInteraction])
 
   const selectedHandlePosition = useMemo(() => selectedPoint

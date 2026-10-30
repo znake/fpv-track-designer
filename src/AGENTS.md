@@ -28,7 +28,7 @@ src/
 | Import/export boundary | `schemas/`, `schemas/AGENTS.md` | Unknown JSON must pass through schema helpers |
 | Core calculations | `utils/`, `utils/AGENTS.md` | Generator, flight path, storage, share links |
 | Keyboard/selection/theme hooks | `hooks/`, `hooks/AGENTS.md` | Shortcut map, R3F gate selection, active theme hook |
-| Mouse drag gestures | `components/gates/Gate.tsx`, `hooks/useGateMoveDrag.ts`, `hooks/useFlightPathPointDrag.ts` | Gate body press-drag moves (Shift = height, Ctrl = rotate), ideal-line dots drag the same way |
+| Mouse drag gestures | `components/gates/Gate.tsx`, `hooks/useGateMoveDrag.ts`, `hooks/useFlightPathPointDrag.ts` | Gate body press-drag moves (Ctrl = height, Shift = rotate), ideal-line dots drag the same way |
 | Domain contracts / theme presets | `types/`, `types/AGENTS.md` | Gate/config/track contracts + `THEME_PRESETS` |
 
 ## CONVENTIONS

@@ -4,7 +4,7 @@ import { PerspectiveCamera } from 'three'
 import { useAppStore } from '../store'
 import type { Track } from '../types'
 import { createDefaultGateOpenings } from '../utils/gateOpenings'
-import { useGateMoveDrag } from './useGateMoveDrag'
+import { getGatePressDragOptions, useGateMoveDrag } from './useGateMoveDrag'
 
 const CANVAS_RECT = { left: 0, top: 0, width: 800, height: 600 }
 const camera = new PerspectiveCamera(50, CANVAS_RECT.width / CANVAS_RECT.height, 0.1, 1000)
@@ -66,13 +66,13 @@ function DragProbe() {
       />
       <button
         type="button"
-        data-testid="gate-body-shift"
+        data-testid="gate-body-vertical"
         data-moving={String(isMoving)}
         onPointerDown={(event) => startPressDrag(event.clientX, event.clientY, { vertical: true })}
       />
       <button
         type="button"
-        data-testid="gate-body-ctrl"
+        data-testid="gate-body-rotate"
         data-moving={String(isMoving)}
         onPointerDown={(event) => startPressDrag(event.clientX, event.clientY, { rotate: true })}
       />
@@ -136,12 +136,12 @@ describe('useGateMoveDrag', () => {
     expect(useAppStore.getState().selectedGateId).toBe('gate-1')
   })
 
-  it('rotates and selects the gate when Ctrl is held during a gate-body drag', () => {
+  it('rotates and selects the gate in rotation mode during a gate-body drag', () => {
     // Given
     const { getByTestId } = render(<DragProbe />)
 
     // When
-    dispatch(getByTestId('gate-body-ctrl'), pointer('pointerdown', 400, 300))
+    dispatch(getByTestId('gate-body-rotate'), pointer('pointerdown', 400, 300))
     dispatch(window, pointer('pointermove', 410, 300))
     dispatch(window, pointer('pointermove', 460, 300))
 
@@ -151,7 +151,7 @@ describe('useGateMoveDrag', () => {
     expect(useAppStore.getState().selectedGateId).toBe('gate-1')
   })
 
-  it('snaps Ctrl-drag rotation to 15 degrees when grid snapping is enabled', () => {
+  it('snaps rotation-mode drags to 15 degrees when grid snapping is enabled', () => {
     // Given
     useAppStore.setState((state) => ({
       config: { ...state.config, snapGatesToGrid: true },
@@ -159,7 +159,7 @@ describe('useGateMoveDrag', () => {
     const { getByTestId } = render(<DragProbe />)
 
     // When
-    dispatch(getByTestId('gate-body-ctrl'), pointer('pointerdown', 400, 300))
+    dispatch(getByTestId('gate-body-rotate'), pointer('pointerdown', 400, 300))
     dispatch(window, pointer('pointermove', 410, 300))
     dispatch(window, pointer('pointermove', 417, 300))
 
@@ -229,10 +229,10 @@ describe('useGateMoveDrag', () => {
     expect(useAppStore.getState().past).toHaveLength(0)
   })
 
-  it('raises the gate vertically when Shift is held during a gate-body drag', () => {
+  it('raises the gate vertically in elevation mode during a gate-body drag', () => {
     const { getByTestId } = render(<DragProbe />)
 
-    dispatch(getByTestId('gate-body-shift'), pointer('pointerdown', 400, 300))
+    dispatch(getByTestId('gate-body-vertical'), pointer('pointerdown', 400, 300))
     dispatch(window, pointer('pointermove', 400, 290))
     dispatch(window, pointer('pointermove', 400, 200))
 
@@ -255,7 +255,7 @@ describe('useGateMoveDrag', () => {
   it('stops the vertically dragged gate at ground level', () => {
     const { getByTestId } = render(<DragProbe />)
 
-    dispatch(getByTestId('gate-body-shift'), pointer('pointerdown', 400, 300))
+    dispatch(getByTestId('gate-body-vertical'), pointer('pointerdown', 400, 300))
     dispatch(window, pointer('pointermove', 400, 310))
     dispatch(window, pointer('pointermove', 400, 2000))
 
@@ -270,5 +270,13 @@ describe('useGateMoveDrag', () => {
 
     expect(gatePosition()?.x).toBeGreaterThan(0)
     expect(useAppStore.getState().selectedGateId).toBeNull()
+  })
+})
+
+describe('getGatePressDragOptions', () => {
+  it('maps Shift to rotation and Ctrl to elevation', () => {
+    expect(getGatePressDragOptions({ shiftKey: true, ctrlKey: false })).toEqual({ rotate: true, vertical: false })
+    expect(getGatePressDragOptions({ shiftKey: false, ctrlKey: true })).toEqual({ rotate: false, vertical: true })
+    expect(getGatePressDragOptions({ shiftKey: false, ctrlKey: false })).toEqual({ rotate: false, vertical: false })
   })
 })

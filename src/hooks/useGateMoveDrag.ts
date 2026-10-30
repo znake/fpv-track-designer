@@ -13,10 +13,20 @@ interface UseGateMoveDragOptions {
 }
 
 interface StartPressDragOptions {
-  /** Shift + press on the gate body raises/lowers it instead of ground dragging. */
+  /** Ctrl + press on the gate body raises/lowers it instead of ground dragging. */
   vertical?: boolean
-  /** Ctrl + press on the gate body rotates it horizontally. */
+  /** Shift + press on the gate body rotates it horizontally. */
   rotate?: boolean
+}
+
+interface PressDragModifiers {
+  shiftKey: boolean
+  ctrlKey: boolean
+}
+
+/** Gate-body press modifiers: Shift rotates the gate, Ctrl raises/lowers it. */
+export function getGatePressDragOptions({ shiftKey, ctrlKey }: PressDragModifiers) {
+  return { rotate: shiftKey, vertical: ctrlKey }
 }
 
 const RAYCASTER = new Raycaster()
@@ -36,7 +46,7 @@ function getControlsEnabled(controls: unknown): boolean | undefined {
     : undefined
 }
 
-/** Ground dragging for the move handle (immediate), gate-body press + travel, vertical dragging with Shift, and rotation with Ctrl. */
+/** Ground dragging for the move handle (immediate), gate-body press + travel, vertical dragging with Ctrl, and rotation with Shift. */
 export function useGateMoveDrag({ gateId, position, rotation }: UseGateMoveDragOptions) {
   const { camera, gl, controls } = useThree()
   const [isMoving, setIsMoving] = useState(false)

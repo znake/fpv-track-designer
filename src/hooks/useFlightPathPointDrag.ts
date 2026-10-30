@@ -14,7 +14,7 @@ interface UseFlightPathPointDragOptions {
 }
 
 interface StartPressDragOptions {
-  /** Shift + press on the point marker raises/lowers it instead of ground dragging. */
+  /** Ctrl + press on the point marker raises/lowers it instead of ground dragging. */
   vertical?: boolean
 }
 
@@ -32,7 +32,7 @@ const RAYCASTER = new Raycaster()
 const PRESS_DRAG_THRESHOLD_PX = 3
 const METERS_PER_ELEVATION_PIXEL = 0.03
 
-/** Ground dragging for ideal-line points: marker press + travel (Shift raises instead), and the immediate move/elevate handles. */
+/** Ground dragging for ideal-line points: marker press + travel (Ctrl raises instead), and the immediate move/elevate handles. */
 export function useFlightPathPointDrag({ controlsRef, fpvModeActive }: UseFlightPathPointDragOptions) {
   const camera = useThree((state) => state.camera)
   const gl = useThree((state) => state.gl)

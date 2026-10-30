@@ -68,7 +68,7 @@ const createTrack = (): Track => ({
   }],
 })
 
-const pointer = (type: string, clientX: number, clientY: number, shiftKey = false) =>
+const pointer = (type: string, clientX: number, clientY: number, ctrlKey = false) =>
   new PointerEvent(type, {
     bubbles: true,
     cancelable: true,
@@ -77,7 +77,7 @@ const pointer = (type: string, clientX: number, clientY: number, shiftKey = fals
     button: 0,
     pointerType: 'mouse',
     isPrimary: true,
-    shiftKey,
+    ctrlKey,
   })
 
 const dispatch = (target: EventTarget, event: Event) => {
@@ -141,7 +141,7 @@ describe('FlightPathPointControls point dragging', () => {
     expect(useAppStore.getState().selectedFlightPathPointId).toBe('point-1')
   })
 
-  it('changes only the height when Shift is held while pressing the dot', () => {
+  it('changes only the height when Ctrl is held while pressing the dot', () => {
     const { container } = renderControls()
     const dot = container.querySelector('[data-ideal-line-point="point-1"]')
     if (!dot) throw new Error('Missing point marker')

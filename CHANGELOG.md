@@ -10,6 +10,7 @@ Der Changelog beginnt mit den Commits der letzten Woche (ab 2026-10-23). Früher
 
 **Geändert**
 
+- Die Drag-Modifier am Gate sind getauscht: `Shift` + Ziehen dreht jetzt das Gate, `Strg`/`Control` + Ziehen hebt und senkt die Höhe – man dreht häufiger, als man die Höhe nachjustiert. Leitpunkte auf der Ideallinie folgen derselben Regel und heben bzw. senken sich ebenfalls mit `Strg`/`Control`. Hilfe-Dialog, README und Nutzerdokumentation sind angepasst.
 - Die Liste der offiziellen Tracks zeigt schlichte, einzeilige Einträge mit Trennlinien statt Karten. Name, Gate-Anzahl und Feldmaß stehen nebeneinander, damit deutlich mehr Strecken gleichzeitig sichtbar sind.
 - Die Liste der offiziellen Tracks ist chronologisch sortiert: die neueste Strecke steht oben, ältere darunter. Maßgeblich ist das Datum im Dateinamen – `Last 21.08.26` und `2026.08.21` werden beide verstanden; Dateien ohne Datum stehen alphabetisch am Ende.
 

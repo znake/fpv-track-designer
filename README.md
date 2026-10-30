@@ -99,14 +99,14 @@ Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in d
 ### Gates bearbeiten
 
 1. Gate in der 3D-Szene anklicken. Shift-, Cmd- oder Ctrl-Klick erweitert die Auswahl.
-2. Verschieben-, Anheben- oder Drehen-Werkzeug direkt am Gate verwenden. Ohne Werkzeug geht es genauso direkt am Gate: **Gate gedrückt halten und ziehen** verschiebt es in der Feldebene, **`Shift` + Ziehen** hebt und senkt die Höhe, **`Strg`/`Control` + seitliches Ziehen** dreht. Das Drehen läuft kontinuierlich mit 1° pro Pixel und rastet nur bei aktivem Grid-Snap auf 15°-Schritte ein.
+2. Verschieben-, Anheben- oder Drehen-Werkzeug direkt am Gate verwenden. Ohne Werkzeug geht es genauso direkt am Gate: **Gate gedrückt halten und ziehen** verschiebt es in der Feldebene, **`Shift` + seitliches Ziehen** dreht, **`Strg`/`Control` + Ziehen** hebt und senkt die Höhe. Das Drehen läuft kontinuierlich mit 1° pro Pixel und rastet nur bei aktivem Grid-Snap auf 15°-Schritte ein.
 3. **Einflug- und Ausflugseite:** Bei aktivem Schalter „Durchflüge“ zeigt jede Öffnung eine grüne Einflug- und eine rote Ausflugsfläche; das ⇄-Symbol an der Öffnung dreht die Durchflugrichtung um. Je nach Kameraposition ist nur die zugewandte Seite beschriftet.
 4. **Durchflugreihenfolge:** Ein Klick auf die Durchflugnummer einer Öffnung öffnet den Dialog „Durchflugnummer ändern“. Die Nummer muss zwischen 1 und der Gesamtzahl der Durchflüge liegen.
 5. Neue Gates können relativ zu einem ausgewählten Gate davor oder danach eingefügt werden. Beim Einfügen wird der Gate-Typ gewählt; ein bereits vorhandenes Start/Ziel-Gate ist ausgegraut.
 6. Ausgewählte Gates lassen sich per Dialog oder Shortcut löschen.
 7. Ein Klick auf den Boden hebt die Auswahl wieder auf.
 
-> **Hinweis:** Drehbewegungen – über das Dreh-Werkzeug und über `Strg`-Ziehen – landen nicht im Rückgängig-Verlauf und markieren die Strecke nicht als geändert. Die Drehung steckt danach in den Daten; beim Verlassen, Neuladen oder einer destruktiven Aktion fragt die App aber nicht nach ungespeicherten Änderungen.
+> **Hinweis:** Drehbewegungen – über das Dreh-Werkzeug und über `Shift`-Ziehen – landen nicht im Rückgängig-Verlauf und markieren die Strecke nicht als geändert. Die Drehung steckt danach in den Daten; beim Verlassen, Neuladen oder einer destruktiven Aktion fragt die App aber nicht nach ungespeicherten Änderungen.
 
 ### Ideallinie mit Leitpunkten formen
 
@@ -116,7 +116,7 @@ Aktiviere in der TopBar **„Flugbahn“**. Solange kein Gate ausgewählt ist, k
 2. Das **Gate-Symbol** öffnet den bekannten Dialog „Gate einfügen“. Das neue Gate landet genau auf der Linie, ist entlang der Linie ausgerichtet und wird in der Durchflugreihenfolge zwischen den beiden Gate-Ankern dieses Abschnitts eingefügt.
 3. Das **gelbe Punkt-Symbol** setzt genau einen Leitpunkt an dieser Stelle.
 4. Klicke den neuen gelben Leitpunkt an. Über ihm erscheinen zwei Werkzeuge wie bei Gates: **Verschieben** bewegt den Leitpunkt in der Feldebene (X/Z), **Höhe** hebt oder senkt ihn um 0,03 m pro Pixel (Y). Feldgrenzen und Grid-Snap wirken wie bei Gates. Der kleine Papierkorb oben rechts am Leitpunkt löscht ihn.
-   Genau wie bei Gates geht es auch direkt am Leitpunkt: **Leitpunkt gedrückt halten und ziehen** verschiebt ihn in der Feldebene, **`Shift` + Leitpunkt gedrückt halten und ziehen** nur in der Höhe. Ein kurzer Klick ohne Ziehen wählt den Leitpunkt weiterhin nur aus.
+   Genau wie bei Gates geht es auch direkt am Leitpunkt: **Leitpunkt gedrückt halten und ziehen** verschiebt ihn in der Feldebene, **`Strg`/`Control` + Leitpunkt gedrückt halten und ziehen** nur in der Höhe. Ein kurzer Klick ohne Ziehen wählt den Leitpunkt weiterhin nur aus.
 5. Füge bei Bedarf weitere Leitpunkte ein. Die Linie verläuft glatt durch alle Leitpunkte eines Gate-Abschnitts; die Gate-Anker bleiben unverändert.
 6. Einfügen, Löschen und jede komplette Ziehbewegung sind jeweils ein Rückgängig-Schritt.
 
@@ -160,10 +160,10 @@ Auf Touch-Geräten verschiebt ein Zwei-Finger-Ziehen die Ansicht, ein Auf- und Z
 | Galerie öffnen | `G` |
 | Ansicht verschieben | `Space + linke Maustaste ziehen` |
 | Gate verschieben (direkt) | Gate gedrückt halten und ziehen |
-| Gate anheben oder absenken | `Shift` gedrückt halten und Gate ziehen |
-| Gate drehen (direkt) | `Strg`/`Control` gedrückt halten und Gate seitlich ziehen |
+| Gate anheben oder absenken | `Strg`/`Control` gedrückt halten und Gate ziehen |
+| Gate drehen (direkt) | `Shift` gedrückt halten und Gate seitlich ziehen |
 | Leitpunkt verschieben (direkt) | Leitpunkt gedrückt halten und ziehen |
-| Leitpunkt anheben oder absenken | `Shift` gedrückt halten und Leitpunkt ziehen |
+| Leitpunkt anheben oder absenken | `Strg`/`Control` gedrückt halten und Leitpunkt ziehen |
 | Gate abwählen / Dialoge schließen | `Escape` |
 | FPV-Flug beenden | `Escape` |
 | Ausgewähltes Gate löschen | `Backspace` |
