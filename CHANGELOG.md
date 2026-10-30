@@ -16,6 +16,7 @@ Der Changelog beginnt mit den Commits der letzten Woche (ab 2026-10-23). Früher
 
 **Neu**
 
+- Offizielle Strecke „Last 30.10.26“ ergänzt.
 - Offizielle FPVOOE-Strecken liegen jetzt als JSON im Ordner `tracks/` und werden beim Build mit ausgeliefert. Der neue Button „Offizielle Tracks“ in der linken Werkzeugleiste öffnet eine Liste mit Gate-Anzahl und Feldmaß; der angezeigte Streckenname ist der Dateiname ohne `.json`. Ein Klick auf „Laden“ holt die Strecke unter diesem Namen in den Editor. Jede Datei ist ein eigener Eintrag – auch wenn mehrere Exporte dieselbe interne Track-ID und denselben Namen tragen. Dateien, die nicht gelesen werden können, werden mit ihrem Dateinamen genannt.
 
 ## 2026-10-28
