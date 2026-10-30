@@ -5,6 +5,9 @@ import { readStoredVenueId, writeStoredVenueId } from '../utils/venuePreference'
 
 export interface ConfigSlice {
   config: Config
+  /** Editor-only view toggle for the tinywhoop race; never serialized with the track. */
+  showDrones: boolean
+  setShowDrones: (value: boolean) => void
   setConfig: (config: Config) => void
   setGateQuantity: (type: GateType, quantity: number) => void
   setFieldSize: (width: number, height: number) => void
@@ -56,6 +59,8 @@ export function createInitialConfig(): Config {
 
 export const createConfigSlice: StateCreator<ConfigSlice, [], [], ConfigSlice> = (set) => ({
   config: createInitialConfig(),
+  showDrones: true,
+  setShowDrones: (value) => set({ showDrones: value }),
   setConfig: (config) => set({ config }),
   setGateQuantity: (type, quantity) => set((state) => ({
     config: {

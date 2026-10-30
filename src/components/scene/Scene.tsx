@@ -16,6 +16,7 @@ import { SmoothZoom } from '../scene/SmoothZoom'
 import { SkyDome } from '../scene/SkyDome'
 import { FpvFlyThrough } from '../scene/FpvFlyThrough'
 import { FlightPathEditor } from '../scene/FlightPathEditor'
+import { DroneRace } from '../scene/DroneRace'
 import type { Config, Track } from '../../types'
 import { calculateFlightPathWithControlPoints } from '../../utils/flightPath'
 import { getVenuePreset } from '../../utils/venuePresets'
@@ -34,6 +35,8 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
   const storeConfig = useAppStore((state) => state.config)
   const selectedGateId = useAppStore((state) => state.selectedGateId)
   const selectedGateIds = useAppStore((state) => state.selectedGateIds)
+  const showDrones = useAppStore((state) => state.showDrones)
+  const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const currentTrack = track !== undefined ? track : storeTrack
   const config = configOverride ?? storeConfig
   const theme = useMemo(() => getThemeConfig(config.theme), [config.theme])
@@ -131,6 +134,8 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
     && selectedGateId === null
     && selectedGateIds.length === 0
 
+  const showDroneRace = !readOnly && showDrones && !fpvModeActive
+
   const trackContent = currentTrack ? (
     <>
       {currentTrack.gates.map((gate) => (
@@ -146,6 +151,9 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
         showEditorLineTools
           ? <FlightPathEditor data={flightPathData} controlsRef={controlsRef} fpvModeActive={fpvModeActive} />
           : <FlightPath path={flightPathData.path} />
+      )}
+      {showDroneRace && flightPath && (
+        <DroneRace path={flightPath} paused={isDraggingGate} />
       )}
     </>
   ) : null

@@ -47,6 +47,8 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
   const setShowFlightPath = useAppStore((state) => state.setShowFlightPath)
   const setShowOpeningLabels = useAppStore((state) => state.setShowOpeningLabels)
   const setShowGrid = useAppStore((state) => state.setShowGrid)
+  const showDrones = useAppStore((state) => state.showDrones)
+  const setShowDrones = useAppStore((state) => state.setShowDrones)
 
   const handleSnapGatesToGridChange = (enabled: boolean) => {
     setSnapGatesToGrid(enabled)
@@ -310,6 +312,22 @@ export const TopBar: FC<TopBarProps> = ({ onShortcutsClick, fpvModeActive, fpvDi
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
             {t('passThroughsDescription')}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                className="size-3 accent-primary"
+                checked={showDrones}
+                onChange={(e) => setShowDrones(e.target.checked)}
+              />
+              <span>{t('drones')}</span>
+            </label>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            {t('dronesDescription')}
           </TooltipContent>
         </Tooltip>
       </div>
