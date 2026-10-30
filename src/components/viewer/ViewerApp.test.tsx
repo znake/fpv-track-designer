@@ -15,15 +15,18 @@ vi.mock('@/components/scene/Scene', () => ({
     readOnly,
     fpvModeActive,
     onFpvComplete,
+    showDrones,
   }: {
     readOnly?: boolean
     fpvModeActive?: boolean
     onFpvComplete?: () => void
+    showDrones?: boolean
   }) => (
     <div
       data-testid="viewer-scene"
       data-readonly={String(readOnly)}
       data-fpv-active={String(fpvModeActive)}
+      data-show-drones={String(showDrones)}
     >
       <button type="button" onClick={onFpvComplete}>Complete FPV</button>
     </div>
@@ -82,6 +85,18 @@ describe('ViewerApp', () => {
     expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull()
     expect(screen.getByRole('button', { name: 'FPV-Flug starten' })).not.toBeNull()
     expect(screen.getByRole('button', { name: 'Track als JSON herunterladen' })).not.toBeNull()
+  })
+
+  it('shows the drones by default and lets the viewer hide them', () => {
+    useViewerStore.getState().setTrackData(createTestTrack(), defaultConfig)
+
+    render(<ViewerApp />)
+
+    expect(screen.getByTestId('viewer-scene').getAttribute('data-show-drones')).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: 'Drohnen ausblenden' }))
+    expect(screen.getByTestId('viewer-scene').getAttribute('data-show-drones')).toBe('false')
+    fireEvent.click(screen.getByRole('button', { name: 'Drohnen einblenden' }))
+    expect(screen.getByTestId('viewer-scene').getAttribute('data-show-drones')).toBe('true')
   })
 
   it('starts and stops the FPV flight from the viewer controls', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CircleHelp, Download, Play, Square } from 'lucide-react'
+import { CircleHelp, Download, Drone, Play, Square } from 'lucide-react'
 import { Scene } from '@/components/scene/Scene'
 import { Button } from '@/components/ui/button'
 import { serializeTrack } from '@/schemas/track.schema'
@@ -35,6 +35,7 @@ export function ViewerApp() {
   const error = useViewerStore((state) => state.error)
   const [helpOpen, setHelpOpen] = useState(false)
   const [fpvModeActive, setFpvModeActive] = useState(false)
+  const [dronesVisible, setDronesVisible] = useState(true)
 
   useEffect(() => {
     if (!track || !config || hasViewerHelpCookie()) return
@@ -99,8 +100,20 @@ export function ViewerApp() {
         readOnly
         fpvModeActive={fpvModeActive}
         onFpvComplete={() => setFpvModeActive(false)}
+        showDrones={dronesVisible}
       />
       <div className="absolute top-3 right-3 flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className={`rounded-full border-white/15 backdrop-blur hover:bg-white/10 hover:text-white ${dronesVisible ? 'bg-white/15 text-white' : 'bg-black/25 text-white/50'}`}
+          onClick={() => setDronesVisible((visible) => !visible)}
+          aria-pressed={dronesVisible}
+          aria-label={dronesVisible ? t('dronesHide') : t('dronesShow')}
+        >
+          <Drone className="size-4" />
+        </Button>
         <Button
           type="button"
           variant="outline"

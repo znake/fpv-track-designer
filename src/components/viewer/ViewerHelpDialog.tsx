@@ -14,6 +14,7 @@ export function ViewerHelpDialog({ open, onOpenChange }: ViewerHelpDialogProps) 
     { description: t('moveOverTrack'), keys: t('viewerMoveOverTrackKey') },
     { description: t('zoom'), keys: t('viewerZoomKey') },
     { description: t('fpvStop'), keys: t('viewerStopFpvKey') },
+    { description: t('drones'), keys: t('viewerDronesKey') },
   ]
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

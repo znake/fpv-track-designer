@@ -27,15 +27,16 @@ interface SceneProps {
   readOnly?: boolean
   fpvModeActive?: boolean
   onFpvComplete?: () => void
+  showDrones?: boolean
 }
 
-export function Scene({ track, configOverride, readOnly = false, fpvModeActive = false, onFpvComplete }: SceneProps = {}) {
+export function Scene({ track, configOverride, readOnly = false, fpvModeActive = false, onFpvComplete, showDrones }: SceneProps = {}) {
   const controlsRef = useRef<OrbitControlsImpl>(null)
   const storeTrack = useAppStore((state) => state.currentTrack)
   const storeConfig = useAppStore((state) => state.config)
   const selectedGateId = useAppStore((state) => state.selectedGateId)
   const selectedGateIds = useAppStore((state) => state.selectedGateIds)
-  const showDrones = useAppStore((state) => state.showDrones)
+  const storeShowDrones = useAppStore((state) => state.showDrones)
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const currentTrack = track !== undefined ? track : storeTrack
   const config = configOverride ?? storeConfig
@@ -134,7 +135,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
     && selectedGateId === null
     && selectedGateIds.length === 0
 
-  const showDroneRace = !readOnly && showDrones && !fpvModeActive
+  const showDroneRace = (showDrones ?? storeShowDrones) && !fpvModeActive
 
   const trackContent = currentTrack ? (
     <>
