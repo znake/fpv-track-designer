@@ -34,12 +34,12 @@ describe('OfficialTracksDialog', () => {
 
     render(<OfficialTracksDialog open onOpenChange={vi.fn()} />)
 
-    // Scope to the track's own card: every export keeps its own embedded name,
-    // so the card is found through the file-derived name it is listed under.
-    const card = screen.getByText(entry.name).closest('[data-slot="card"]')
-    expect(card?.textContent).toContain(`${entry.gateCount} Gates`)
+    // Scope to the track's own row: every export keeps its own embedded name,
+    // so the row is found through the file-derived name it is listed under.
+    const row = screen.getByText(entry.name).closest('li')
+    expect(row?.textContent).toContain(`${entry.gateCount} Gates`)
 
-    const loadButton = card?.querySelector('button')
+    const loadButton = row?.querySelector('button')
     expect(loadButton).not.toBeNull()
     fireEvent.click(loadButton!)
 
