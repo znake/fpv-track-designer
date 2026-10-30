@@ -43,7 +43,7 @@ Alles Weitere in dieser Anleitung baut darauf auf.
 
 Die Oberfläche besteht aus drei Bereichen:
 
-- **TopBar (oben):** Links stehen der App-Titel **FPV-Track-Designer** und daneben das Badge **"Beta Version".** In der Mitte folgen Rückgängig/Wiederholen, FPV-Flug, der Stangenzähler und die Anzeige-Optionen (Grid anzeigen, Grid-Snap, Snap-Genauigkeit, Flugbahn, Durchflüge); die Snap-Genauigkeit erscheint nur, solange Grid-Snap aktiv ist. Rechts findest du in der Desktop-Ansicht das Badge **"#fpvooe"** (verlinkt auf `https://fpvooe.com`, öffnet in einem neuen Tab), den Namen der geladenen Strecke als Badge (abgeschnittene Namen erscheinen vollständig als Tooltip), JSON Import/Export, Sprache und Hilfe.
+- **TopBar (oben):** Links stehen der App-Titel **FPV-Track-Designer** und daneben das Badge **"Beta Version".** In der Mitte folgen Rückgängig/Wiederholen, FPV-Flug, der Stangenzähler und die Anzeige-Optionen (Grid anzeigen, Grid-Snap, Snap-Genauigkeit, Flugbahn, Durchflüge, Drohnen); die Snap-Genauigkeit erscheint nur, solange Grid-Snap aktiv ist. Rechts findest du in der Desktop-Ansicht das Badge **"#fpvooe"** (verlinkt auf `https://fpvooe.com`, öffnet in einem neuen Tab), den Namen der geladenen Strecke als Badge (abgeschnittene Namen erscheinen vollständig als Tooltip), JSON Import/Export, Sprache und Hilfe.
 - **Linke Werkzeugleiste:** Shuffle (neu generieren), Speichern, Track Teilen, Galerie, Einstellungen, Design.
 - **3D-Szene (Mitte):** die Strecke selbst. Angeklickt erscheinen direkt am Gate die Bearbeitungswerkzeuge. In der Feldmitte liegt ein dezentes Wasserzeichen **„#FPVOOE"**.
 
@@ -107,6 +107,7 @@ Diese Optionen ändern nur die Darstellung, nicht die Strecke:
 | **Snap-Genauigkeit** | wie grob eingerastet wird – für X, Z und Höhe: **Fein · 0,3 m**, **1/2 Feld · 0,5 m** oder **1 Feld · 1,0 m**. Der Schalter erscheint nur, solange Grid-Snap aktiv ist. |
 | **Flugbahn** | zeigt die Ideallinie durch alle Gates inkl. Richtungspfeilen. |
 | **Durchflüge** | markiert an jedem Gate die Reihenfolge der Durchflüge und die Ein-/Ausflugseite. |
+| **Drohnen** | zeigt vier Tinywhoop-Drohnen (rosa, blau, rot, grün), die dauerhaft ein Rennen entlang der Ideallinie fliegen. Jede Drohne fliegt eine eigene, leicht versetzte Spur in der Breite und in der Höhe, dadurch schneiden manche Kurven enger und andere weiter. Auf langen Geraden werden sie schneller, vor engen Passagen bremsen sie ab, legen sich in die Kurve und werfen einen Lichtschein auf den Boden. Sobald du ein Gate verschiebst, drehst oder anhebst, pausieren die Drohnen; danach fliegen sie an derselben Stelle weiter. Standardmäßig an. |
 
 Der Feldrand ist unabhängig vom Gitter immer sichtbar und dient als Orientierung.
 
@@ -185,6 +186,10 @@ Aktiviere **„Flugbahn“**. Solange kein Gate ausgewählt ist, kannst du die I
 Leitpunkte speichern ihre Weltposition und die Zuordnung zum Gate-Abschnitt. Gate-Bearbeitungen erhalten diese Daten; wenn ein Abschnitt nicht mehr existiert, bleibt sein Leitpunkt gespeichert, aber wirkungslos. Speichern, JSON-Export/Import, Galerie und Teilen übernehmen die Leitpunkte. Der Share-Viewer zeigt die geformte Linie ohne Leitpunkte.
 
 Die Flugbahn ist auch die Grundlage für den FPV-Flug.
+
+### 7.2 Drohnen-Rennen
+
+Mit dem Schalter **„Drohnen“** in der TopBar fliegt ein kleines Feld aus vier Tinywhoops dauerhaft die Ideallinie ab: rosa, blau, rot und grün, jede mit eigenem Tempo und einer eigenen, leicht nach außen oder innen versetzten Spur. Dadurch schneiden manche Kurven enger und andere fliegen weiter aus. Auf langen Geraden werden sie schneller, vor engen Passagen bremsen sie ab, und in der Kurve legen sie sich zum Kurveninneren. Sie gleiten weich über die Ideallinie, auch an den Übergängen zwischen den Gate-Abschnitten. Am Heck sitzt eine Neonleiste, dahinter zieht eine kurze, verblassende Leuchtspur, und unter jeder Drohne liegt ein Lichtschein auf dem Feld. Während du ein Gate verschiebst, drehst oder anhebst, stehen die Drohnen still und setzen danach an derselben Stelle fort; im FPV-Flug und im Share-Viewer sind sie ausgeblendet.
 
 ---
 

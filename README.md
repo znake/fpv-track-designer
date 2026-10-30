@@ -15,6 +15,7 @@ Das Projekt kombiniert eine interaktive React-Oberfläche mit einer Three.js/R3F
 - **Flugpfad-Visualisierung** mit Gate-Reihenfolge, Richtungspfeilen und automatischen Ausweichkurven
 - **Freie Ideallinien-Bearbeitung**: Per Hover das Plus auf der Flugbahn anklicken und zwischen zwei Aktionen wählen: ein neues Gate an dieser Stelle einfügen oder einen frei verschiebbaren Leitpunkt setzen, um die Linie zu formen
 - **FPV-Flug** entlang der Ideallinie (ab zwei Gates)
+- **Drohnen-Rennen** in der Szene: vier Tinywhoops in Rosa, Blau, Rot und Grün fliegen dauerhaft mit eigenem Tempo und eigener, leicht versetzter Spur entlang der Ideallinie, mit Neonstreifen am Heck und verblassender Leuchtspur; auf Geraden werden sie schneller, in engen Passagen langsamer, sie legen sich in die Kurve und werfen einen Lichtschein auf den Boden. Der Schalter „Drohnen“ in der TopBar blendet sie aus
 - **Undo/Redo-Verlauf** für Bearbeitungsschritte
 - **Lokale Speicherung** von Tracks im Browser über `localStorage`
 - **Track-Galerie** zum Laden, Duplizieren und Löschen gespeicherter Strecken
@@ -80,7 +81,7 @@ npm run test          # Vitest starten
 
 ### Oberfläche im Überblick
 
-- **TopBar (oben):** links der App-Titel mit dem Badge „Beta Version“; in der Mitte Rückgängig/Wiederholen, der FPV-Flug, der Stangenzähler und die Anzeige-Schalter (Grid anzeigen, Grid-Snap, Flugbahn, Durchflüge – die Snap-Genauigkeit erscheint zusätzlich, solange Grid-Snap aktiv ist); rechts das „#fpvooe“-Badge (Link auf fpvooe.com), der Name der geladenen Strecke, JSON-Import und -Export, die Sprachumschaltung und der Hilfe-Button.
+- **TopBar (oben):** links der App-Titel mit dem Badge „Beta Version“; in der Mitte Rückgängig/Wiederholen, der FPV-Flug, der Stangenzähler und die Anzeige-Schalter (Grid anzeigen, Grid-Snap, Flugbahn, Durchflüge, Drohnen – die Snap-Genauigkeit erscheint zusätzlich, solange Grid-Snap aktiv ist); rechts das „#fpvooe“-Badge (Link auf fpvooe.com), der Name der geladenen Strecke, JSON-Import und -Export, die Sprachumschaltung und der Hilfe-Button.
 - **Linke Werkzeugleiste:** Shuffle, Speichern, Track teilen, Galerie, Einstellungen und Design.
 - **3D-Szene (Mitte):** die Strecke selbst. Angeklickt erscheinen direkt am Gate die Bearbeitungswerkzeuge. In der Feldmitte liegt ein dezentes Wasserzeichen „#FPVOOE“.
 
@@ -94,7 +95,7 @@ Läuft beim Rendern etwas schief, zeigt die App statt der Szene einen Fehlerbild
 
 Änderungen an der Konfiguration erzeugen die Strecke nicht von selbst neu. Sobald die aktuelle Strecke aus einer Generierung stammt und die Konfiguration davon abweicht, erscheint im Einstellungs-Panel der Button „Neue Kurskonfiguration anwenden“, der einen neuen Track erzeugt. Nach Galerie-Laden oder JSON-Import gibt es keinen Generierungsstand: Dann bleibt der Button aus, und die geänderten Werte greifen erst beim nächsten Shuffle.
 
-Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in der TopBar: Grid anzeigen, Grid-Snap (samt Snap-Genauigkeit), Flugbahn und Durchflüge lassen sich dort einzeln ein- und ausblenden.
+Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in der TopBar: Grid anzeigen, Grid-Snap (samt Snap-Genauigkeit), Flugbahn, Durchflüge und Drohnen lassen sich dort einzeln ein- und ausblenden. Diese Schalter ändern nur die Darstellung und wandern nicht in Export oder Share-Link.
 
 ### Gates bearbeiten
 
