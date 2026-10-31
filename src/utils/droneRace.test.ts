@@ -3,18 +3,26 @@ import type { Point3 } from '../types'
 import {
   DRONE_FLOOR_HEIGHT,
   DRONE_MAX_BANK_RADIANS,
+  DRONE_MAX_PITCH_RADIANS,
   DRONE_MIN_SPEED_FACTOR,
+  DRONE_MIN_SPEED_METERS_PER_SECOND,
+  DRONE_OVERSPEED_FACTOR,
   DRONE_RACERS,
   DRONE_SPLIT_S_WINDOW_METERS,
+  advanceDroneFlight,
   bankRadians,
   buildDroneRoute,
+  createDroneFlightState,
+  curvatureMagnitudeAt,
+  sampleDroneFlightPose,
   sampleDronePose,
   sampleDroneTrailRibbon,
   speedFactorAt,
+  targetSpeedAt,
   turnRateRadiansPerMeter,
   wrapRouteDistance,
 } from './droneRace'
-import type { Vec3 } from './droneRace'
+import type { DroneFlightState, DroneRacerSpec, DroneRoute, Vec3 } from './droneRace'
 
 const STRAIGHT_ROUTE: Point3[] = [
   { x: 0, y: 1, z: 0 },
@@ -48,6 +56,28 @@ function circleRoute(radius: number, samples = 96) {
 
 function tiltRadians(up: Vec3): number {
   return Math.acos(Math.min(1, Math.max(-1, up.y)))
+}
+
+function flightAlong(route: DroneRoute, spec: DroneRacerSpec, seconds: number, state?: DroneFlightState) {
+  const flight = state ?? createDroneFlightState(route, spec, 0)
+  const step = 1 / 60
+  const steps = Math.round(seconds / step)
+
+  for (let index = 0; index < steps; index++) advanceDroneFlight(route, spec, flight, step)
+  return flight
+}
+
+/** Oval with a wide middle and two tight ends, so the pace really has to vary. */
+function ovalRoute(): DroneRoute {
+  const samples = 480
+
+  return buildDroneRoute(
+    Array.from({ length: samples }, (_, index) => {
+      const angle = (index / samples) * Math.PI * 2
+      return { x: 8 * Math.cos(angle), y: 1, z: 2.5 * Math.sin(angle) }
+    }),
+    { closeLoop: true },
+  )
 }
 
 function angleBetween(a: Vec3, b: Vec3): number {
@@ -299,6 +329,15 @@ describe('vertical loops and the split-S', () => {
     expect(worst).toBeLessThan(0.15)
   })
 
+  it('slows the pack over the top of a vertical loop and lets the grippier racer hold more speed', () => {
+    const apex = LOOP_ROUTE.totalLength * 0.5
+    const lowGrip = racer({ lateralAccelMetersPerSecondSquared: 20 })
+    const highGrip = racer({ lateralAccelMetersPerSecondSquared: 55 })
+
+    expect(targetSpeedAt(LOOP_ROUTE, levelSpec, apex)).toBeLessThan(targetSpeedAt(route, levelSpec, 7))
+    expect(targetSpeedAt(LOOP_ROUTE, highGrip, apex)).toBeGreaterThan(targetSpeedAt(LOOP_ROUTE, lowGrip, apex))
+  })
+
   const CORNER_ROUTE = buildDroneRoute([
     ...Array.from({ length: 61 }, (_, index) => ({ x: index * 0.1, y: 1, z: 0 })),
     ...Array.from({ length: 60 }, (_, index) => ({ x: 6, y: 1, z: (index + 1) * 0.1 })),
@@ -321,10 +360,11 @@ describe('vertical loops and the split-S', () => {
 
   it('rejoins the line without a jump at the maneuver edges', () => {
     const half = DRONE_SPLIT_S_WINDOW_METERS / 2
-    const before = sampleDronePose(CORNER_ROUTE, CORNER_ROUTE.maneuverDistance - half - 0.01, levelSpec)
-    const afterStart = sampleDronePose(CORNER_ROUTE, CORNER_ROUTE.maneuverDistance - half + 0.02, levelSpec)
-    const beforeEnd = sampleDronePose(CORNER_ROUTE, CORNER_ROUTE.maneuverDistance + half - 0.02, levelSpec)
-    const after = sampleDronePose(CORNER_ROUTE, CORNER_ROUTE.maneuverDistance + half + 0.01, levelSpec)
+    const probe = 0.005
+    const before = sampleDronePose(CORNER_ROUTE, CORNER_ROUTE.maneuverDistance - half - probe, levelSpec)
+    const afterStart = sampleDronePose(CORNER_ROUTE, CORNER_ROUTE.maneuverDistance - half + probe, levelSpec)
+    const beforeEnd = sampleDronePose(CORNER_ROUTE, CORNER_ROUTE.maneuverDistance + half - probe, levelSpec)
+    const after = sampleDronePose(CORNER_ROUTE, CORNER_ROUTE.maneuverDistance + half + probe, levelSpec)
 
     expect(angleBetween(before.forward, afterStart.forward)).toBeLessThan(0.03)
     expect(angleBetween(beforeEnd.forward, after.forward)).toBeLessThan(0.03)
@@ -384,6 +424,141 @@ describe('the pack races against itself', () => {  it('lets a faster drone overt
     }
 
     expect(overtakes).toBeGreaterThan(0)
+  })
+})
+
+describe('curvatureMagnitudeAt', () => {
+  it('reads one over the radius on a circle', () => {
+    expect(curvatureMagnitudeAt(CIRCLE_ROUTE, CIRCLE_ROUTE.totalLength * 0.3)).toBeCloseTo(1 / CIRCLE_RADIUS, 1)
+  })
+
+  it('is flat along a straight', () => {
+    expect(curvatureMagnitudeAt(route, 7)).toBeCloseTo(0, 2)
+  })
+})
+
+describe('targetSpeedAt', () => {
+  it('allows the full top speed on a straight', () => {
+    expect(targetSpeedAt(route, baseRacer, 7)).toBeCloseTo(baseRacer.speedMetersPerSecond, 5)
+  })
+
+  it('settles well below top speed in a tight circle', () => {
+    const tight = circleRoute(0.5)
+
+    expect(targetSpeedAt(tight, baseRacer, tight.totalLength * 0.3)).toBeLessThan(baseRacer.speedMetersPerSecond * 0.8)
+  })
+
+  it('never asks for less than the minimum flight speed', () => {
+    const hairpin = circleRoute(0.32)
+
+    expect(targetSpeedAt(hairpin, baseRacer, hairpin.totalLength * 0.5)).toBeGreaterThanOrEqual(
+      DRONE_MIN_SPEED_METERS_PER_SECOND,
+    )
+  })
+})
+
+describe('advanceDroneFlight', () => {
+  it('spools up with inertia instead of jumping to the top speed', () => {
+    const flight: DroneFlightState = { distance: 0, speed: 0, controlAccelMetersPerSecondSquared: 0 }
+    advanceDroneFlight(route, baseRacer, flight, 1 / 60)
+
+    expect(flight.speed).toBeGreaterThan(0)
+    expect(flight.speed).toBeLessThan(baseRacer.speedMetersPerSecond)
+    expect(flightAlong(route, baseRacer, 3, flight).speed).toBeCloseTo(baseRacer.speedMetersPerSecond, 1)
+  })
+
+  it('integrates the same way at any frame rate', () => {
+    const coarse: DroneFlightState = { distance: 0, speed: 2, controlAccelMetersPerSecondSquared: 0 }
+    const fine: DroneFlightState = { distance: 0, speed: 2, controlAccelMetersPerSecondSquared: 0 }
+
+    for (let index = 0; index < 60; index++) advanceDroneFlight(route, baseRacer, coarse, 1 / 60)
+    for (let index = 0; index < 240; index++) advanceDroneFlight(route, baseRacer, fine, 1 / 240)
+
+    expect(fine.speed).toBeCloseTo(coarse.speed, 3)
+    expect(Math.abs(fine.distance - coarse.distance)).toBeLessThan(0.02)
+  })
+
+  it('spools the control acceleration up instead of snapping the body', () => {
+    const flight: DroneFlightState = { distance: 0, speed: 8, controlAccelMetersPerSecondSquared: 0 }
+    advanceDroneFlight(route, baseRacer, flight, 1 / 120)
+
+    expect(flight.controlAccelMetersPerSecondSquared).toBeLessThan(0)
+    expect(flight.controlAccelMetersPerSecondSquared).toBeGreaterThan(-baseRacer.brakeAccelMetersPerSecondSquared + 1)
+  })
+
+  it('bleeds speed climbing and gains it diving', () => {
+    const climb = buildDroneRoute([
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 10, z: 0 },
+    ])
+    const dive = buildDroneRoute([
+      { x: 0, y: 10, z: 0 },
+      { x: 10, y: 0, z: 0 },
+    ])
+    const level = flightAlong(route, baseRacer, 1.5)
+    const up = flightAlong(climb, baseRacer, 1.5)
+    const down = flightAlong(dive, baseRacer, 1.5)
+
+    expect(up.speed).toBeLessThan(level.speed - 0.2)
+    expect(down.speed).toBeGreaterThan(level.speed + 0.2)
+  })
+
+  it('accelerates out of the wide sections and brakes into the tight ends', () => {
+    const oval = ovalRoute()
+    const flight = createDroneFlightState(oval, baseRacer, 0)
+    const step = 1 / 60
+    let fastest = 0
+    let slowest = Number.POSITIVE_INFINITY
+
+    for (let index = 0; index < Math.round(20 / step); index++) {
+      advanceDroneFlight(oval, baseRacer, flight, step)
+      fastest = Math.max(fastest, flight.speed)
+      slowest = Math.min(slowest, flight.speed)
+    }
+
+    expect(fastest).toBeGreaterThan(baseRacer.speedMetersPerSecond * 0.85)
+    expect(slowest).toBeLessThan(baseRacer.speedMetersPerSecond * 0.7)
+    expect(slowest).toBeGreaterThanOrEqual(DRONE_MIN_SPEED_METERS_PER_SECOND)
+    expect(fastest).toBeLessThanOrEqual(baseRacer.speedMetersPerSecond * DRONE_OVERSPEED_FACTOR)
+  })
+
+  it('keeps the drone on the line while the speed changes', () => {
+    const oval = ovalRoute()
+    const flight = flightAlong(oval, baseRacer, 6)
+    const pose = sampleDroneFlightPose(oval, baseRacer, flight)
+
+    expect(flight.distance).toBeGreaterThanOrEqual(0)
+    expect(flight.distance).toBeLessThan(oval.totalLength)
+    expect(pose.position.y).toBeGreaterThan(0.7)
+    expect(pose.position.y).toBeLessThan(1.5)
+  })
+})
+
+describe('acceleration-driven pitch', () => {
+  it('drops the nose under power and raises it under braking', () => {
+    const power = sampleDroneFlightPose(route, baseRacer, {
+      distance: 5,
+      speed: 5,
+      controlAccelMetersPerSecondSquared: 15,
+    })
+    const brake = sampleDroneFlightPose(route, baseRacer, {
+      distance: 5,
+      speed: 5,
+      controlAccelMetersPerSecondSquared: -15,
+    })
+
+    expect(power.forward.y).toBeLessThan(-0.05)
+    expect(brake.forward.y).toBeGreaterThan(0.05)
+  })
+
+  it('never pitches past the attitude limit', () => {
+    const extreme = sampleDroneFlightPose(route, baseRacer, {
+      distance: 5,
+      speed: 5,
+      controlAccelMetersPerSecondSquared: 500,
+    })
+
+    expect(Math.asin(-extreme.forward.y)).toBeLessThanOrEqual(DRONE_MAX_PITCH_RADIANS + 1e-6)
   })
 })
 
@@ -452,5 +627,17 @@ describe('pose frame', () => {
     expect(Math.hypot(pose.forward.x, pose.forward.y, pose.forward.z)).toBeCloseTo(1, 6)
     expect(Math.hypot(pose.up.x, pose.up.y, pose.up.z)).toBeCloseTo(1, 6)
     expect(dot).toBeCloseTo(0, 6)
+  })
+
+  it('keeps the frame orthonormal while the body pitches under power', () => {
+    const pose = sampleDroneFlightPose(route, baseRacer, {
+      distance: 5,
+      speed: 5,
+      controlAccelMetersPerSecondSquared: 18,
+    })
+    const dot = pose.forward.x * pose.up.x + pose.forward.y * pose.up.y + pose.forward.z * pose.up.z
+
+    expect(dot).toBeCloseTo(0, 6)
+    expect(Math.hypot(pose.up.x, pose.up.y, pose.up.z)).toBeCloseTo(1, 6)
   })
 })

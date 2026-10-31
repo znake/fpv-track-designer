@@ -4,10 +4,12 @@ import * as THREE from 'three'
 import type { FlightPath } from '../../utils/flightPath'
 import {
   DRONE_RACERS,
+  advanceDroneFlight,
   buildDroneRoute,
+  createDroneFlightState,
+  sampleDroneFlightPose,
   sampleDronePose,
   sampleDroneTrailRibbon,
-  speedFactorAt,
 } from '../../utils/droneRace'
 import type { DroneRacerSpec, DroneRoute, Vec3 } from '../../utils/droneRace'
 
@@ -17,12 +19,11 @@ const TRAIL_HALF_WIDTH_METERS = 0.022
 const TRAIL_BRIGHTNESS = 1.05
 const PROP_RADIUS = 0.075
 const PROP_ARM = 0.075
-const DRONE_SCALE = 1.3
-const GROUND_POOL_SIZE_METERS = 1.0
+const DRONE_SCALE = 0.87
+const GROUND_POOL_SIZE_METERS = 0.93
 const GROUND_POOL_OPACITY = 0.28
 const MAX_FRAME_DELTA_SECONDS = 0.1
-const ATTITUDE_RESPONSE_PER_SECOND = 14
-const SPEED_RESPONSE_PER_SECOND = 4
+const ATTITUDE_RESPONSE_PER_SECOND = 16
 const VERTICES_PER_TRAIL_STEP = 2
 
 const frameMatrix = new THREE.Matrix4()
@@ -116,8 +117,8 @@ interface RaceDroneProps {
 function RaceDrone({ route, spec, startDistance, paused, glowTexture }: RaceDroneProps) {
   const groupRef = useRef<THREE.Group>(null)
   const groundPoolRef = useRef<THREE.Mesh>(null)
-  const distanceRef = useRef(startDistance)
-  const speedFactorRef = useRef(1)
+  const startFlight = useMemo(() => createDroneFlightState(route, spec, startDistance), [route, spec, startDistance])
+  const flightRef = useRef(startFlight)
   const targetQuaternion = useMemo(() => new THREE.Quaternion(), [])
 
   const trailPositions = useMemo(() => new Float32Array(TRAIL_SEGMENTS * VERTICES_PER_TRAIL_STEP * 3), [])
@@ -134,13 +135,10 @@ function RaceDrone({ route, spec, startDistance, paused, glowTexture }: RaceDron
   )
 
   useEffect(() => {
-    speedFactorRef.current = speedFactorAt(route, startDistance)
-  }, [route, startDistance])
-
-  useEffect(() => {
+    flightRef.current = createDroneFlightState(route, spec, startDistance)
     sampleDroneTrailRibbon(
       route,
-      distanceRef.current,
+      flightRef.current.distance,
       spec,
       TRAIL_SEGMENTS,
       TRAIL_SPACING_METERS,
@@ -149,7 +147,7 @@ function RaceDrone({ route, spec, startDistance, paused, glowTexture }: RaceDron
     )
     const attribute = trailMesh.geometry.getAttribute('position')
     attribute.needsUpdate = true
-  }, [route, spec, trailMesh, trailPositions])
+  }, [route, spec, trailMesh, trailPositions, startDistance])
 
   useEffect(() => {
     return () => {
@@ -167,11 +165,10 @@ function RaceDrone({ route, spec, startDistance, paused, glowTexture }: RaceDron
     if (!group || paused || route.totalLength <= 0) return
 
     const step = Math.min(delta, MAX_FRAME_DELTA_SECONDS)
-    const targetSpeedFactor = speedFactorAt(route, distanceRef.current)
-    speedFactorRef.current += (targetSpeedFactor - speedFactorRef.current) * (1 - Math.exp(-SPEED_RESPONSE_PER_SECOND * step))
-    distanceRef.current = (distanceRef.current + step * spec.speedMetersPerSecond * speedFactorRef.current) % route.totalLength
+    const flight = flightRef.current
+    advanceDroneFlight(route, spec, flight, step)
 
-    const pose = sampleDronePose(route, distanceRef.current, spec)
+    const pose = sampleDroneFlightPose(route, spec, flight)
     poseQuaternion(pose.forward, pose.up, targetQuaternion)
 
     group.position.set(pose.position.x, pose.position.y, pose.position.z)
@@ -182,7 +179,7 @@ function RaceDrone({ route, spec, startDistance, paused, glowTexture }: RaceDron
 
     sampleDroneTrailRibbon(
       route,
-      distanceRef.current,
+      flight.distance,
       spec,
       TRAIL_SEGMENTS,
       TRAIL_SPACING_METERS,

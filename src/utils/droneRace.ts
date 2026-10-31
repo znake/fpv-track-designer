@@ -6,12 +6,17 @@ import type { Point3 } from '../types'
  * corners tighter or wider. Pure math only — the scene component drives it from `useFrame`.
  *
  * The ideal line joins gate-to-gate curves with direction breaks, so the route is closed
- * into a lap and its points are smoothed. Attitude comes from a rotation-minimizing frame
- * that is walked once along the route and stored per point: it follows every climb, dive
- * and vertical loop without a twist, so a loop over an h-gate is flown inverted at the top
- * like a real quad. The corner bank is rolled on top of that frame as a coordinated turn
- * (`atan(v^2 * curvature / g)`), and once per lap the whole pack flies an explicit split-S
- * at the sharpest corner: a full pitch loop, inverted halfway, with a short dip.
+ * into a lap and its points are smoothed. Flight is integrated like a real quad instead of
+ * being played back: `advanceDroneFlight()` pulls the speed toward the speed the line allows
+ * (cornering grip, braking into tight sections) with a limited thrust and brake authority,
+ * and gravity acts along the flown tangent, so a climb costs speed while a dive gains it.
+ * Attitude comes from a rotation-minimizing frame that is walked once along the route and
+ * stored per point: it follows every climb, dive and vertical loop without a twist, so a
+ * loop over an h-gate is flown inverted at the top like a real quad. On top of that frame
+ * the body pitches with the longitudinal acceleration (nose down under power, nose up under
+ * braking) and rolls with the lateral acceleration as a coordinated turn
+ * (`atan(v^2 * curvature / g)`). Once per lap the whole pack flies an explicit split-S at
+ * the sharpest corner: a full pitch loop, inverted halfway, with a short dip.
  */
 
 /** World-space vector for the pose frame; kept THREE-free so the math stays testable. */
@@ -30,6 +35,8 @@ export interface DroneRoute {
   ups: Vec3[]
   /** Signed horizontal curvature per route point, positive for a left turn. */
   horizontalCurvatures: number[]
+  /** Full 3D curvature vector (dT/ds) per route point; its magnitude caps the cornering speed. */
+  curvatures: Vec3[]
   /** Lap distance of the corner where the pack flies its split-S; negative when there is none. */
   maneuverDistance: number
 }
@@ -37,7 +44,14 @@ export interface DroneRoute {
 export interface DroneRacerSpec {
   id: string
   color: string
+  /** Top speed the quad reaches on a long straight. */
   speedMetersPerSecond: number
+  /** Forward authority it can pull, in m/s^2 (thrust left over after carrying itself). */
+  thrustAccelMetersPerSecondSquared: number
+  /** How hard it can brake by pitching back, in m/s^2. */
+  brakeAccelMetersPerSecondSquared: number
+  /** Lateral acceleration its grip can hold in a corner, in m/s^2. */
+  lateralAccelMetersPerSecondSquared: number
   lateralAmplitudeMeters: number
   lateralWavelengthMeters: number
   verticalAmplitudeMeters: number
@@ -57,9 +71,24 @@ export interface DroneRouteOptions {
   closeLoop?: boolean
 }
 
-export const DRONE_FLOOR_HEIGHT = 0.12
+/**
+ * Live flight state of one racer. The component owns one per drone and hands it to
+ * `advanceDroneFlight()` every frame, so speed and position carry inertia across frames
+ * instead of being recomputed from the lap distance alone.
+ */
+export interface DroneFlightState {
+  distance: number
+  speed: number
+  /** Control acceleration of the last step, in m/s^2; the body pitches with it. */
+  controlAccelMetersPerSecondSquared: number
+}
+
+export const DRONE_FLOOR_HEIGHT = 0.11
 export const DRONE_MAX_BANK_RADIANS = (62 * Math.PI) / 180
+export const DRONE_MAX_PITCH_RADIANS = (32 * Math.PI) / 180
 export const DRONE_MIN_SPEED_FACTOR = 0.5
+export const DRONE_MIN_SPEED_METERS_PER_SECOND = 1.2
+export const DRONE_OVERSPEED_FACTOR = 1.25
 export const DRONE_SPLIT_S_WINDOW_METERS = 3.6
 export const DRONE_SPLIT_S_DIP_METERS = 0.45
 
@@ -67,6 +96,11 @@ const TWO_PI = Math.PI * 2
 const GRAVITY = 9.81
 const POSE_SAMPLE_METERS = 0.35
 const TANGENT_SAMPLE_METERS = 0.2
+const SPEED_SAMPLE_METERS = 1
+const SPEED_CONTROLLER_GAIN = 8
+const CONTROL_RESPONSE_PER_SECOND = 10
+const PHYSICS_STEP_SECONDS = 1 / 120
+const MAX_PHYSICS_STEP_SECONDS = 0.1
 const FLOOR_SOFTNESS_METERS = 0.06
 const MIN_MANEUVER_TURN_RATE = 0.1
 const MIN_MANEUVER_CONTRAST = 0.06
@@ -85,6 +119,9 @@ export const DRONE_RACERS: readonly DroneRacerSpec[] = [
     id: 'pink',
     color: '#ff3d9e',
     speedMetersPerSecond: 5.2,
+    thrustAccelMetersPerSecondSquared: 24,
+    brakeAccelMetersPerSecondSquared: 26,
+    lateralAccelMetersPerSecondSquared: 34,
     lateralAmplitudeMeters: 0.62,
     lateralWavelengthMeters: 9,
     verticalAmplitudeMeters: 0.16,
@@ -95,6 +132,9 @@ export const DRONE_RACERS: readonly DroneRacerSpec[] = [
     id: 'blue',
     color: '#2e9bff',
     speedMetersPerSecond: 4.6,
+    thrustAccelMetersPerSecondSquared: 20,
+    brakeAccelMetersPerSecondSquared: 22,
+    lateralAccelMetersPerSecondSquared: 30,
     lateralAmplitudeMeters: 0.28,
     lateralWavelengthMeters: 13,
     verticalAmplitudeMeters: 0.09,
@@ -105,6 +145,9 @@ export const DRONE_RACERS: readonly DroneRacerSpec[] = [
     id: 'red',
     color: '#ff2d55',
     speedMetersPerSecond: 4.2,
+    thrustAccelMetersPerSecondSquared: 22,
+    brakeAccelMetersPerSecondSquared: 24,
+    lateralAccelMetersPerSecondSquared: 28,
     lateralAmplitudeMeters: 0.48,
     lateralWavelengthMeters: 7,
     verticalAmplitudeMeters: 0.2,
@@ -115,6 +158,9 @@ export const DRONE_RACERS: readonly DroneRacerSpec[] = [
     id: 'green',
     color: '#3bff8c',
     speedMetersPerSecond: 3.7,
+    thrustAccelMetersPerSecondSquared: 18,
+    brakeAccelMetersPerSecondSquared: 18,
+    lateralAccelMetersPerSecondSquared: 26,
     lateralAmplitudeMeters: 0.18,
     lateralWavelengthMeters: 16,
     verticalAmplitudeMeters: 0.06,
@@ -395,7 +441,7 @@ function normalizeVec3(vector: Vec3): Vec3 {
   return { x: vector.x / length, y: vector.y / length, z: vector.z / length }
 }
 
-function computeHorizontalCurvatures(points: Point3[], distances: number[]): number[] {
+function computeHorizontalCurvatures(points: Point3[], distances: number[], closed: boolean): number[] {
   const raw = points.map((point, index) => {
     const previousIndex = index === 0 ? Math.min(1, points.length - 1) : index - 1
     const nextIndex = index === points.length - 1 ? Math.max(0, points.length - 2) : index + 1
@@ -412,7 +458,40 @@ function computeHorizontalCurvatures(points: Point3[], distances: number[]): num
     return (tangentZ * curvatureX - tangentX * curvatureZ) / tangentLength
   })
 
-  return smoothValues(raw, false, CURVATURE_SMOOTHING_RADIUS)
+  return smoothValues(raw, closed, CURVATURE_SMOOTHING_RADIUS)
+}
+
+/**
+ * Full 3D curvature vector `dT/ds` per route point, smoothed like the horizontal part.
+ * Its magnitude is what a real quad has to pull: on a vertical loop it points straight down
+ * at the apex, so the same grip limit that slows a hairpin also slows the loop.
+ */
+function computeCurvatures(
+  points: Point3[],
+  distances: number[],
+  totalLength: number,
+  closed: boolean,
+): Vec3[] {
+  const tangents = routeTangents(points, closed)
+  const raw = points.map((_, index) => {
+    const previousIndex = closed ? ringIndex(index - 1, points.length - 1) : Math.max(0, index - 1)
+    const nextIndex = closed ? ringIndex(index + 1, points.length - 1) : Math.min(points.length - 1, index + 1)
+    const span = closed
+      ? Math.max(1e-4, arcSpan(distances, previousIndex, nextIndex, totalLength))
+      : Math.max(1e-4, distances[nextIndex] - distances[previousIndex])
+    const from = tangents[previousIndex]
+    const to = tangents[nextIndex]
+
+    return { x: (to.x - from.x) / span, y: (to.y - from.y) / span, z: (to.z - from.z) / span }
+  })
+
+  const x = smoothValues(raw.map((curvature) => curvature.x), closed, CURVATURE_SMOOTHING_RADIUS)
+  const y = smoothValues(raw.map((curvature) => curvature.y), closed, CURVATURE_SMOOTHING_RADIUS)
+  const z = smoothValues(raw.map((curvature) => curvature.z), closed, CURVATURE_SMOOTHING_RADIUS)
+  const curvatures = points.map((_, index) => ({ x: x[index], y: y[index], z: z[index] }))
+
+  if (closed && curvatures.length > 0) curvatures[curvatures.length - 1] = { ...curvatures[0] }
+  return curvatures
 }
 
 /** Sharpest real corner for the split-S; the synthetic return leg never qualifies. */
@@ -449,6 +528,7 @@ export function buildDroneRoute(rawPoints: readonly Point3[], options: DroneRout
       turnRates: rawPoints.map(() => 0),
       ups: rawPoints.map(() => ({ x: 0, y: 1, z: 0 })),
       horizontalCurvatures: rawPoints.map(() => 0),
+      curvatures: rawPoints.map(() => ({ x: 0, y: 0, z: 0 })),
       maneuverDistance: -1,
     }
   }
@@ -466,10 +546,11 @@ export function buildDroneRoute(rawPoints: readonly Point3[], options: DroneRout
   const { distances, totalLength } = buildDistances(points)
   const turnRates = computeTurnRates(points, distances, totalLength, closed)
   const ups = computeRouteUps(points, closed)
-  const horizontalCurvatures = computeHorizontalCurvatures(points, distances)
+  const horizontalCurvatures = computeHorizontalCurvatures(points, distances, closed)
+  const curvatures = computeCurvatures(points, distances, totalLength, closed)
   const maneuverDistance = findManeuverDistance(turnRates, distances, totalLength, sourceLength - 1)
 
-  return { points, distances, totalLength, turnRates, ups, horizontalCurvatures, maneuverDistance }
+  return { points, distances, totalLength, turnRates, ups, horizontalCurvatures, curvatures, maneuverDistance }
 }
 
 export function wrapRouteDistance(route: DroneRoute, distance: number): number {
@@ -687,8 +768,128 @@ function sampleRouteUp(route: DroneRoute, distance: number, out: Vec3): Vec3 {
   return normalizeVec3(out)
 }
 
-/** Reads the nose off the flown line, the attitude off the route frame, the lean off the corner. */
-function samplePathFrame(route: DroneRoute, distance: number, spec: DroneRacerSpec, forward: Vec3, up: Vec3): void {
+/** Lateral acceleration the sine weave itself demands, as a turn-rate equivalent. */
+function weaveTurnRateRadiansPerMeter(spec: DroneRacerSpec, distance: number, totalLength: number): number {
+  if (totalLength <= 0 || spec.lateralAmplitudeMeters === 0) return 0
+
+  const waves = Math.max(1, Math.round(totalLength / spec.lateralWavelengthMeters))
+  const waveNumber = (TWO_PI * waves) / totalLength
+
+  return spec.lateralAmplitudeMeters * waveNumber * waveNumber * Math.sin(waveNumber * distance + spec.phaseRadians)
+}
+
+/** Magnitude of the 3D curvature at a lap distance; drives the grip-limited cornering speed. */
+export function curvatureMagnitudeAt(route: DroneRoute, distance: number): number {
+  const { curvatures, distances, totalLength } = route
+  if (totalLength <= 0 || curvatures.length === 0) return 0
+
+  const wrapped = wrapRouteDistance(route, distance)
+  const index = findSegmentIndex(distances, wrapped)
+  const nextIndex = Math.min(index + 1, curvatures.length - 1)
+  const t = routeFraction(route, wrapped, index)
+  const from = curvatures[index]
+  const to = curvatures[nextIndex]
+
+  return Math.hypot(
+    from.x + (to.x - from.x) * t,
+    from.y + (to.y - from.y) * t,
+    from.z + (to.z - from.z) * t,
+  )
+}
+
+/**
+ * Speed the line allows right now: the pilot brakes into tight sections and never asks for
+ * more lateral acceleration than the quad can hold. The 3D curvature counts vertical loops
+ * too, so the pack also slows over the top of one.
+ */
+export function targetSpeedAt(route: DroneRoute, spec: DroneRacerSpec, distance: number): number {
+  const wrapped = wrapRouteDistance(route, distance)
+  const curvature = curvatureMagnitudeAt(route, wrapped)
+  const gripSpeed = Math.sqrt(spec.lateralAccelMetersPerSecondSquared / Math.max(curvature, 1e-4))
+  const pilotSpeed = spec.speedMetersPerSecond * speedFactorAt(route, wrapped)
+
+  return Math.max(
+    DRONE_MIN_SPEED_METERS_PER_SECOND,
+    Math.min(spec.speedMetersPerSecond, gripSpeed, pilotSpeed),
+  )
+}
+
+/** Climb rate of the line: +1 straight up, -1 straight down, 0 level. */
+function slopeAlongRoute(route: DroneRoute, distance: number): number {
+  return sampleBaseTangent(route, wrapRouteDistance(route, distance), scratchTangent).y
+}
+
+/**
+ * One physics step: the speed is pulled toward the speed the line allows with the racer's own
+ * thrust and brake authority, gravity acts along the tangent (a climb costs speed, a dive gains
+ * it) and the control acceleration is kept for the body pitch. Fixed substeps keep the
+ * integration stable at any frame rate.
+ */
+export function advanceDroneFlight(
+  route: DroneRoute,
+  spec: DroneRacerSpec,
+  state: DroneFlightState,
+  deltaSeconds: number,
+): void {
+  if (route.totalLength <= 0 || !Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return
+
+  const step = Math.min(deltaSeconds, MAX_PHYSICS_STEP_SECONDS)
+  const substeps = Math.max(1, Math.ceil(step / PHYSICS_STEP_SECONDS))
+  const dt = step / substeps
+  const ceiling = spec.speedMetersPerSecond * DRONE_OVERSPEED_FACTOR
+
+  for (let substep = 0; substep < substeps; substep++) {
+    const target = targetSpeedAt(route, spec, state.distance)
+    const control = Math.max(
+      -spec.brakeAccelMetersPerSecondSquared,
+      Math.min(spec.thrustAccelMetersPerSecondSquared, SPEED_CONTROLLER_GAIN * (target - state.speed)),
+    )
+    const gravity = -GRAVITY * slopeAlongRoute(route, state.distance)
+
+    state.controlAccelMetersPerSecondSquared +=
+      (control - state.controlAccelMetersPerSecondSquared) * (1 - Math.exp(-CONTROL_RESPONSE_PER_SECOND * dt))
+    state.speed = Math.min(
+      ceiling,
+      Math.max(DRONE_MIN_SPEED_METERS_PER_SECOND, state.speed + (control + gravity) * dt),
+    )
+    state.distance = wrapRouteDistance(route, state.distance + state.speed * dt)
+  }
+}
+
+/** Puts a racer on the line at speed; the component then advances it frame by frame. */
+export function createDroneFlightState(
+  route: DroneRoute,
+  spec: DroneRacerSpec,
+  startDistance: number,
+): DroneFlightState {
+  const distance = wrapRouteDistance(route, startDistance)
+
+  return { distance, speed: targetSpeedAt(route, spec, distance), controlAccelMetersPerSecondSquared: 0 }
+}
+
+/** Longitudinal acceleration the changing speed target demands, from `v * dv/ds`. */
+function longitudinalAccelAt(route: DroneRoute, spec: DroneRacerSpec, distance: number): number {
+  const ahead = targetSpeedAt(route, spec, distance + SPEED_SAMPLE_METERS)
+  const behind = targetSpeedAt(route, spec, distance - SPEED_SAMPLE_METERS)
+  const speed = targetSpeedAt(route, spec, distance)
+  const demanded = (speed * (ahead - behind)) / (2 * SPEED_SAMPLE_METERS)
+
+  return Math.max(
+    -spec.brakeAccelMetersPerSecondSquared,
+    Math.min(spec.thrustAccelMetersPerSecondSquared, demanded),
+  )
+}
+
+/** Reads the nose off the flown line, the attitude off the route frame, pitch and lean off the acceleration. */
+function samplePathFrame(
+  route: DroneRoute,
+  distance: number,
+  spec: DroneRacerSpec,
+  speed: number,
+  controlAccel: number,
+  forward: Vec3,
+  up: Vec3,
+): void {
   const step = POSE_SAMPLE_METERS
   rawOffsetPoint(route, distance + step, spec, scratchAhead)
   rawOffsetPoint(route, distance - step, spec, scratchBehind)
@@ -735,8 +936,28 @@ function samplePathFrame(route: DroneRoute, distance: number, spec: DroneRacerSp
   up.y = upY / upLength
   up.z = upZ / upLength
 
-  const speed = spec.speedMetersPerSecond * speedFactorAt(route, distance)
-  const bank = bankRadians(horizontalCurvatureAt(route, distance), speed)
+  const pitch = Math.max(
+    -DRONE_MAX_PITCH_RADIANS,
+    Math.min(DRONE_MAX_PITCH_RADIANS, Math.atan(controlAccel / GRAVITY)),
+  )
+  if (pitch !== 0) {
+    const right = {
+      x: up.y * forward.z - up.z * forward.y,
+      y: up.z * forward.x - up.x * forward.z,
+      z: up.x * forward.y - up.y * forward.x,
+    }
+    const rightLength = Math.hypot(right.x, right.y, right.z) || 1
+    right.x /= rightLength
+    right.y /= rightLength
+    right.z /= rightLength
+
+    rotateAboutAxis(forward, right, pitch)
+    rotateAboutAxis(up, right, pitch)
+  }
+
+  const turnRate =
+    horizontalCurvatureAt(route, distance) + weaveTurnRateRadiansPerMeter(spec, distance, route.totalLength)
+  const bank = bankRadians(turnRate, speed)
   if (bank !== 0) rotateAboutAxis(up, forward, bank)
 }
 
@@ -762,13 +983,31 @@ function applySplitSRotation(route: DroneRoute, distance: number, forward: Vec3,
 
 export function sampleDronePose(route: DroneRoute, distance: number, spec: DroneRacerSpec): DronePose {
   const wrapped = wrapRouteDistance(route, distance)
+
+  return buildPose(route, wrapped, spec, targetSpeedAt(route, spec, wrapped), longitudinalAccelAt(route, spec, wrapped))
+}
+
+/** Pose of a racer that is being integrated by `advanceDroneFlight()`. */
+export function sampleDroneFlightPose(route: DroneRoute, spec: DroneRacerSpec, state: DroneFlightState): DronePose {
+  const wrapped = wrapRouteDistance(route, state.distance)
+
+  return buildPose(route, wrapped, spec, state.speed, state.controlAccelMetersPerSecondSquared)
+}
+
+function buildPose(
+  route: DroneRoute,
+  distance: number,
+  spec: DroneRacerSpec,
+  speed: number,
+  controlAccel: number,
+): DronePose {
   const forward: Vec3 = { x: 0, y: 0, z: 1 }
   const up: Vec3 = { x: 0, y: 1, z: 0 }
 
-  samplePathFrame(route, wrapped, spec, forward, up)
-  applySplitSRotation(route, wrapped, forward, up)
+  samplePathFrame(route, distance, spec, speed, controlAccel, forward, up)
+  applySplitSRotation(route, distance, forward, up)
 
-  return { position: offsetPoint(route, wrapped, spec, { x: 0, y: 0, z: 0 }), forward, up }
+  return { position: offsetPoint(route, distance, spec, { x: 0, y: 0, z: 0 }), forward, up }
 }
 
 /**
