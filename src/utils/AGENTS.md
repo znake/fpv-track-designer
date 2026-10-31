@@ -19,6 +19,7 @@ utils/
 ├── qrCode.ts             # Share QR PNG/SVG generation via `qrcode`
 ├── fieldWatermark.ts     # Font size for the field-relative #FPVOOE watermark
 ├── venuePresets.ts       # Venue presets (field size + hall pillars) and VenueId guard
+├── droneRace.ts          # Drone race route, pace, 3D pose frame (bank/inversion) and split-S
 ├── generationConfig.ts   # Detect settings that require regeneration
 ├── poleCount.ts          # Gate/pole totals for buildability reporting
 ├── poleLimit.ts          # localStorage-backed max pole limit (default 60) + `useMaxPoles()` hook
@@ -55,6 +56,7 @@ utils/
 | Official track list and load | `officialTracks.ts` | `parseOfficialTrackFiles()`, `dateTimeOf()` (newest-first order), `listOfficialTracks()`, `loadOfficialTrack()` |
 | Change venue presets | `venuePresets.ts`, `src/types/venue.ts` | `VENUE_PRESETS`, `getVenuePreset()`, `isVenueId()` |
 | Change the ground watermark size | `fieldWatermark.ts`, `src/components/scene/Grid.tsx` | `calculateFieldWatermarkMetrics()`, `FIELD_WATERMARK_TEXT` |
+| Change the drone race | `droneRace.ts`, `src/components/scene/DroneRace.tsx` | `buildDroneRoute()`, `sampleDronePose()` (position + `forward`/`up` frame), `speedFactorAt()`, `bankRadians()`, `sampleDroneTrailRibbon()` |
 
 ## KEY CONSTRAINTS
 - Min gate distance: 3m (`MIN_DISTANCE`).
@@ -69,6 +71,7 @@ utils/
 - `calculateFieldWatermarkMetrics()` runs the text along the longer field axis (`height > width` -> `height`), caps it at 0.85 of that axis and 0.3 of the shorter one, and assumes 0.72 em advance per character for troika's Roboto. `Grid` renders the text via drei's `<Text>`.
 - `VENUE_PRESETS` currently holds one entry (`last-og3`: 10.5 x 22.7 m, four 0.3 x 0.5 x 3 m pillars on x = 0 at z = -7.05, -1.95, 3.15, 8.25). `getVenuePreset()` returns `null` for an unknown/absent id, `isVenueId()` is the schema-side guard.
 - Storage key prefix: `fpv-track-`; `storage.autoSave` exists but only tests call it.
+- `droneRace.ts` stays THREE-free and returns a pose frame (`position`, `forward`, `up`) instead of Euler angles. The up vector comes from a rotation-minimizing frame that `buildDroneRoute()` walks once along the route and stores per point (`ups`), so climbs, dives and vertical loops are followed through inverted flight without a twist or a flip; the corner bank is rolled on top of that frame as a coordinated turn (`bankRadians()` = `-atan(v^2 * horizontalCurvature / g)`, capped at `DRONE_MAX_BANK_RADIANS` = 62 degrees, sign matching the model roll axis). `horizontalCurvatures` is the signed y-cross of tangent and curvature, so a vertical loop banks zero. Height uses a soft floor instead of a hard clamp, and the weave normal is the route's 3D tangent (its horizontal part fades out on a vertical climb). `maneuverDistance` marks the sharpest real corner for the split-S, which is one full pitch loop plus a 0.45 m dip, and stays `-1` when no corner stands out.
 - The remembered venue (`fpv-track-designer-venue`, `venuePreference.ts`) seeds `createInitialConfig()`, is written only by an explicit `setVenue` pick, and is cleared by `resetToDefault`; `Config.venueId` still travels in exports and share links.
 
 ## TESTING
@@ -77,5 +80,6 @@ utils/
 - `generator.test.ts`, `gateOpenings.test.ts`, `gateSequence.test.ts`, `gateOperations.test.ts`, and `storage.test.ts` cover core invariants.
 - `shareTrack.test.ts`, `generationConfig.test.ts`, `poleCount.test.ts`, `poleLimit.test.ts`, `venuePreference.test.ts`, `venuePresets.test.ts`, and `fieldWatermark.test.ts` cover the newer helpers.
 - `qrCode.test.ts` covers PNG/SVG download helpers; mock `URL.createObjectURL`/`revokeObjectURL` locally.
+- `droneRace.test.ts` covers the route (distances, wrapping, smoothing, lap seam), pace, banking tilt and its cap, the inverted apex of a vertical loop, the split-S window (corner detection, mid-maneuver inversion and dip, continuity at the edges) and attitude smoothness across a whole lap.
 - Browser API mocks, such as `localStorage`, `Blob`, URL, or hash payloads, stay local to each test file.
 - No co-located tests currently cover `themeColors.ts` or `gateTypeOptions.ts`; add tests if behavior grows beyond lookup/order constants.

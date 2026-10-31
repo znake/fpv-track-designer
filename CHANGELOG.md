@@ -14,6 +14,7 @@ Der Changelog beginnt mit den Commits der letzten Woche (ab 2026-10-23). Früher
 - Die Drag-Modifier am Gate sind getauscht: `Shift` + Ziehen dreht jetzt das Gate, `Strg`/`Control` + Ziehen hebt und senkt die Höhe – man dreht häufiger, als man die Höhe nachjustiert. Leitpunkte auf der Ideallinie folgen derselben Regel und heben bzw. senken sich ebenfalls mit `Strg`/`Control`. Hilfe-Dialog, README und Nutzerdokumentation sind angepasst.
 - Die Liste der offiziellen Tracks zeigt schlichte, einzeilige Einträge mit Trennlinien statt Karten. Name, Gate-Anzahl und Feldmaß stehen nebeneinander, damit deutlich mehr Strecken gleichzeitig sichtbar sind.
 - Die Liste der offiziellen Tracks ist chronologisch sortiert: die neueste Strecke steht oben, ältere darunter. Maßgeblich ist das Datum im Dateinamen – `Last 21.08.26` und `2026.08.21` werden beide verstanden; Dateien ohne Datum stehen alphabetisch am Ende.
+- Die Drohnen fliegen wie echte Quads: Sie legen sich nicht mehr pauschal, sondern nach ihrer tatsächlichen Querbeschleunigung in die Kurve (deutlich steiler als bisher, bis knapp 62°), neigen die Nase im Steig- und Sinkflug mit und werden in einer senkrechten Schleife der Ideallinie kopfüber durchgezogen. Ihre Bewegung wirkt ruhiger, weil die Lage aus der geflogenen 3D-Linie statt aus geglätteten Richtungswerten kommt. An der engsten Ecke jeder Runde fliegt jede Drohne außerdem einen Split-S: Nase nach unten, kopfüber durch den Bogen und unten wieder auf die Linie ziehen.
 
 **Neu**
 

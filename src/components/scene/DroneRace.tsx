@@ -4,13 +4,12 @@ import * as THREE from 'three'
 import type { FlightPath } from '../../utils/flightPath'
 import {
   DRONE_RACERS,
-  approachAngle,
   buildDroneRoute,
   sampleDronePose,
   sampleDroneTrailRibbon,
   speedFactorAt,
 } from '../../utils/droneRace'
-import type { DroneRacerSpec, DroneRoute } from '../../utils/droneRace'
+import type { DroneRacerSpec, DroneRoute, Vec3 } from '../../utils/droneRace'
 
 const TRAIL_SEGMENTS = 30
 const TRAIL_SPACING_METERS = 0.2
@@ -22,10 +21,23 @@ const DRONE_SCALE = 1.3
 const GROUND_POOL_SIZE_METERS = 1.0
 const GROUND_POOL_OPACITY = 0.28
 const MAX_FRAME_DELTA_SECONDS = 0.1
-const HEADING_RESPONSE_PER_SECOND = 9
-const ROLL_RESPONSE_PER_SECOND = 7
+const ATTITUDE_RESPONSE_PER_SECOND = 14
 const SPEED_RESPONSE_PER_SECOND = 4
 const VERTICES_PER_TRAIL_STEP = 2
+
+const frameMatrix = new THREE.Matrix4()
+const frameRight = new THREE.Vector3()
+const frameUp = new THREE.Vector3()
+const frameForward = new THREE.Vector3()
+
+function poseQuaternion(forward: Vec3, up: Vec3, out: THREE.Quaternion): THREE.Quaternion {
+  frameForward.set(forward.x, forward.y, forward.z).normalize()
+  frameUp.set(up.x, up.y, up.z).normalize()
+  frameRight.set(up.y * forward.z - up.z * forward.y, up.z * forward.x - up.x * forward.z, up.x * forward.y - up.y * forward.x).normalize()
+  frameUp.crossVectors(frameForward, frameRight).normalize()
+  frameMatrix.makeBasis(frameRight, frameUp, frameForward)
+  return out.setFromRotationMatrix(frameMatrix)
+}
 
 const PROP_OFFSETS: [number, number][] = [
   [-1, -1],
@@ -105,9 +117,8 @@ function RaceDrone({ route, spec, startDistance, paused, glowTexture }: RaceDron
   const groupRef = useRef<THREE.Group>(null)
   const groundPoolRef = useRef<THREE.Mesh>(null)
   const distanceRef = useRef(startDistance)
-  const headingRef = useRef(0)
-  const rollRef = useRef(0)
   const speedFactorRef = useRef(1)
+  const targetQuaternion = useMemo(() => new THREE.Quaternion(), [])
 
   const trailPositions = useMemo(() => new Float32Array(TRAIL_SEGMENTS * VERTICES_PER_TRAIL_STEP * 3), [])
   const trailMesh = useMemo(() => createTrailRibbon(spec, trailPositions), [spec, trailPositions])
@@ -117,12 +128,14 @@ function RaceDrone({ route, spec, startDistance, paused, glowTexture }: RaceDron
   const stripGeometry = useMemo(() => new THREE.BoxGeometry(0.13, 0.012, 0.012), [])
 
   const startPose = useMemo(() => sampleDronePose(route, startDistance, spec), [route, startDistance, spec])
+  const startQuaternion = useMemo(
+    () => poseQuaternion(startPose.forward, startPose.up, new THREE.Quaternion()),
+    [startPose],
+  )
 
   useEffect(() => {
-    headingRef.current = startPose.heading
-    rollRef.current = startPose.roll
     speedFactorRef.current = speedFactorAt(route, startDistance)
-  }, [route, startDistance, startPose])
+  }, [route, startDistance])
 
   useEffect(() => {
     sampleDroneTrailRibbon(
@@ -159,11 +172,10 @@ function RaceDrone({ route, spec, startDistance, paused, glowTexture }: RaceDron
     distanceRef.current = (distanceRef.current + step * spec.speedMetersPerSecond * speedFactorRef.current) % route.totalLength
 
     const pose = sampleDronePose(route, distanceRef.current, spec)
-    headingRef.current = approachAngle(headingRef.current, pose.heading, HEADING_RESPONSE_PER_SECOND, step)
-    rollRef.current = approachAngle(rollRef.current, pose.roll, ROLL_RESPONSE_PER_SECOND, step)
+    poseQuaternion(pose.forward, pose.up, targetQuaternion)
 
     group.position.set(pose.position.x, pose.position.y, pose.position.z)
-    group.rotation.set(0, headingRef.current, rollRef.current)
+    group.quaternion.slerp(targetQuaternion, 1 - Math.exp(-ATTITUDE_RESPONSE_PER_SECOND * step))
 
     const groundPool = groundPoolRef.current
     if (groundPool) groundPool.position.set(pose.position.x, 0.02, pose.position.z)
@@ -188,7 +200,7 @@ function RaceDrone({ route, spec, startDistance, paused, glowTexture }: RaceDron
         visible={!paused}
         scale={DRONE_SCALE}
         position={[startPose.position.x, startPose.position.y, startPose.position.z]}
-        rotation={[0, startPose.heading, startPose.roll]}
+        quaternion={startQuaternion}
       >
         {PROP_OFFSETS.map(([signX, signZ]) => (
           <mesh

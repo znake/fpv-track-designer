@@ -6,12 +6,18 @@ import type { Point3 } from '../types'
  * corners tighter or wider. Pure math only — the scene component drives it from `useFrame`.
  *
  * The ideal line joins gate-to-gate curves with direction breaks, so the route is closed
- * into a lap, its points and its unit directions are smoothed, and heading, bank and pace
- * are eased over time. Raw sampling makes a racer twitch at every gate.
+ * into a lap and its points are smoothed. Attitude comes from a rotation-minimizing frame
+ * that is walked once along the route and stored per point: it follows every climb, dive
+ * and vertical loop without a twist, so a loop over an h-gate is flown inverted at the top
+ * like a real quad. The corner bank is rolled on top of that frame as a coordinated turn
+ * (`atan(v^2 * curvature / g)`), and once per lap the whole pack flies an explicit split-S
+ * at the sharpest corner: a full pitch loop, inverted halfway, with a short dip.
  */
 
-export interface DroneDirection {
+/** World-space vector for the pose frame; kept THREE-free so the math stays testable. */
+export interface Vec3 {
   x: number
+  y: number
   z: number
 }
 
@@ -20,7 +26,12 @@ export interface DroneRoute {
   distances: number[]
   totalLength: number
   turnRates: number[]
-  directions: DroneDirection[]
+  /** Body-up per route point from the rotation-minimizing frame; the last one repeats the first on a closed lap. */
+  ups: Vec3[]
+  /** Signed horizontal curvature per route point, positive for a left turn. */
+  horizontalCurvatures: number[]
+  /** Lap distance of the corner where the pack flies its split-S; negative when there is none. */
+  maneuverDistance: number
 }
 
 export interface DroneRacerSpec {
@@ -36,10 +47,10 @@ export interface DroneRacerSpec {
 
 export interface DronePose {
   position: Point3
-  /** Radians around Y; the drone model's local +Z points along the flight direction. */
-  heading: number
-  /** Radians around the local Z axis; negative banks left, positive banks right. */
-  roll: number
+  /** Unit tangent of the flown line; the drone model's local +Z points along it. */
+  forward: Vec3
+  /** Unit body-up; it leans into the corner and points below the horizon while inverted. */
+  up: Vec3
 }
 
 export interface DroneRouteOptions {
@@ -47,16 +58,24 @@ export interface DroneRouteOptions {
 }
 
 export const DRONE_FLOOR_HEIGHT = 0.12
-export const DRONE_MAX_BANK_RADIANS = 0.48
+export const DRONE_MAX_BANK_RADIANS = (62 * Math.PI) / 180
 export const DRONE_MIN_SPEED_FACTOR = 0.5
+export const DRONE_SPLIT_S_WINDOW_METERS = 3.6
+export const DRONE_SPLIT_S_DIP_METERS = 0.45
 
 const TWO_PI = Math.PI * 2
+const GRAVITY = 9.81
+const POSE_SAMPLE_METERS = 0.35
+const TANGENT_SAMPLE_METERS = 0.2
+const FLOOR_SOFTNESS_METERS = 0.06
+const MIN_MANEUVER_TURN_RATE = 0.1
+const MIN_MANEUVER_CONTRAST = 0.06
+const MANEUVER_LEAD_IN_METERS = DRONE_SPLIT_S_WINDOW_METERS * 0.6
 const ROUTE_SMOOTHING_METERS = 0.35
-const DIRECTION_SMOOTHING_METERS = 0.4
 const TURN_WINDOW_METERS = 0.7
 const TURN_SMOOTHING_RADIUS = 10
+const CURVATURE_SMOOTHING_RADIUS = 6
 const CURVATURE_SLOWDOWN = 0.85
-const BANK_GAIN = 0.016
 const LOOP_CLOSE_TOLERANCE = 0.01
 const RETURN_LEG_MIN_GAP = 0.02
 const MAX_SMOOTHING_RADIUS = 60
@@ -191,7 +210,7 @@ function buildDistances(points: Point3[]): { distances: number[]; totalLength: n
   return { distances, totalLength }
 }
 
-function vertexDirection(points: Point3[], index: number, closed: boolean): DroneDirection {
+function vertexDirection(points: Point3[], index: number, closed: boolean): { x: number; z: number } {
   const ring = closed ? points.length - 1 : points.length
   const previousIndex = closed ? ringIndex(index - 1, ring) : Math.max(0, index - 1)
   const nextIndex = closed ? ringIndex(index + 1, ring) : Math.min(points.length - 1, index + 1)
@@ -253,20 +272,172 @@ function computeTurnRates(points: Point3[], distances: number[], totalLength: nu
   return smoothValues(raw, closed, TURN_SMOOTHING_RADIUS)
 }
 
-function computeDirections(points: Point3[], closed: boolean): DroneDirection[] {
-  const raw = points.map((_, index) => vertexDirection(points, index, closed))
-  const radius = smoothingRadius(points, DIRECTION_SMOOTHING_METERS)
-  if (radius < 2 || radius > MAX_SMOOTHING_RADIUS) return raw
+function routeTangents(points: Point3[], closed: boolean): Vec3[] {
+  const ring = closed ? points.length - 1 : points.length
 
-  const smoothedX = smoothValues(raw.map((direction) => direction.x), closed, radius)
-  const smoothedZ = smoothValues(raw.map((direction) => direction.z), closed, radius)
+  return points.map((_, index) => {
+    const previousIndex = closed ? ringIndex(index - 1, ring) : Math.max(0, index - 1)
+    const nextIndex = closed ? ringIndex(index + 1, ring) : Math.min(points.length - 1, index + 1)
+    const x = points[nextIndex].x - points[previousIndex].x
+    const y = points[nextIndex].y - points[previousIndex].y
+    const z = points[nextIndex].z - points[previousIndex].z
+    const length = Math.hypot(x, y, z) || 1
 
-  return raw.map((direction, index) => {
-    const length = Math.hypot(smoothedX[index], smoothedZ[index])
-    return length > 1e-6
-      ? { x: smoothedX[index] / length, z: smoothedZ[index] / length }
-      : direction
+    return { x: x / length, y: y / length, z: z / length }
   })
+}
+
+function perpendicularUp(tangent: Vec3, out: Vec3): Vec3 {
+  let x = -tangent.x * tangent.y
+  let y = 1 - tangent.y * tangent.y
+  let z = -tangent.z * tangent.y
+  let length = Math.hypot(x, y, z)
+
+  if (length < 1e-6) {
+    x = 1
+    y = 0
+    z = 0
+    length = 1
+  }
+
+  out.x = x / length
+  out.y = y / length
+  out.z = z / length
+  return out
+}
+
+function signedAngleAround(a: Vec3, b: Vec3, axis: Vec3): number {
+  const crossX = a.y * b.z - a.z * b.y
+  const crossY = a.z * b.x - a.x * b.z
+  const crossZ = a.x * b.y - a.y * b.x
+  const crossDot = crossX * axis.x + crossY * axis.y + crossZ * axis.z
+
+  return Math.atan2(crossDot, a.x * b.x + a.y * b.y + a.z * b.z)
+}
+
+function rotateAboutAxis(vector: Vec3, axis: Vec3, angle: number): void {
+  const cosine = Math.cos(angle)
+  const sine = Math.sin(angle)
+  const crossX = axis.y * vector.z - axis.z * vector.y
+  const crossY = axis.z * vector.x - axis.x * vector.z
+  const crossZ = axis.x * vector.y - axis.y * vector.x
+  const dot = axis.x * vector.x + axis.y * vector.y + axis.z * vector.z
+
+  const x = vector.x * cosine + crossX * sine + axis.x * dot * (1 - cosine)
+  const y = vector.y * cosine + crossY * sine + axis.y * dot * (1 - cosine)
+  const z = vector.z * cosine + crossZ * sine + axis.z * dot * (1 - cosine)
+
+  vector.x = x
+  vector.y = y
+  vector.z = z
+}
+
+function transportUp(from: Vec3, to: Vec3, up: Vec3): void {
+  const axisX = from.y * to.z - from.z * to.y
+  const axisY = from.z * to.x - from.x * to.z
+  const axisZ = from.x * to.y - from.y * to.x
+  const sine = Math.hypot(axisX, axisY, axisZ)
+  if (sine < 1e-9) return
+
+  const cosine = from.x * to.x + from.y * to.y + from.z * to.z
+  const axis: Vec3 = { x: axisX / sine, y: axisY / sine, z: axisZ / sine }
+  rotateAboutAxis(up, axis, Math.atan2(sine, cosine))
+}
+
+/**
+ * Rotation-minimizing frame along the route: the up vector is rolled from point to point
+ * without twisting, so it follows a vertical loop through inverted flight instead of
+ * flipping when the horizon reference runs out.
+ */
+function computeRouteUps(points: Point3[], closed: boolean): Vec3[] {
+  const tangents = routeTangents(points, closed)
+  const count = points.length
+  if (count === 0) return []
+
+  const ring = closed ? count - 1 : count
+  const ups: Vec3[] = new Array(count)
+
+  ups[0] = perpendicularUp(tangents[0], { x: 0, y: 1, z: 0 })
+  for (let index = 1; index < ring; index++) {
+    const up = { ...ups[index - 1] }
+    transportUp(tangents[index - 1], tangents[index], up)
+    ups[index] = up
+  }
+
+  if (!closed) {
+    for (let index = 0; index < ring; index++) {
+      const along = tangents[index].x * ups[index].x + tangents[index].y * ups[index].y + tangents[index].z * ups[index].z
+      ups[index] = {
+        x: ups[index].x - tangents[index].x * along,
+        y: ups[index].y - tangents[index].y * along,
+        z: ups[index].z - tangents[index].z * along,
+      }
+    }
+    return ups.map((up) => normalizeVec3(up))
+  }
+
+  const closingUp = { ...ups[ring - 1] }
+  transportUp(tangents[ring - 1], tangents[0], closingUp)
+  const twist = signedAngleAround(ups[0], closingUp, tangents[0])
+
+  for (let index = 0; index < ring; index++) {
+    if (twist !== 0) rotateAboutAxis(ups[index], tangents[index], (-twist * index) / ring)
+  }
+
+  const normalized = ups.map((up) => normalizeVec3(up))
+  normalized[count - 1] = { ...normalized[0] }
+  return normalized
+}
+
+function normalizeVec3(vector: Vec3): Vec3 {
+  const length = Math.hypot(vector.x, vector.y, vector.z) || 1
+
+  return { x: vector.x / length, y: vector.y / length, z: vector.z / length }
+}
+
+function computeHorizontalCurvatures(points: Point3[], distances: number[]): number[] {
+  const raw = points.map((point, index) => {
+    const previousIndex = index === 0 ? Math.min(1, points.length - 1) : index - 1
+    const nextIndex = index === points.length - 1 ? Math.max(0, points.length - 2) : index + 1
+    const previous = points[previousIndex]
+    const next = points[nextIndex]
+    const span = Math.max(1e-4, (distances[nextIndex] - distances[previousIndex]) / 2)
+    const curvatureX = (next.x - 2 * point.x + previous.x) / (span * span)
+    const curvatureZ = (next.z - 2 * point.z + previous.z) / (span * span)
+    const tangentX = next.x - previous.x
+    const tangentY = next.y - previous.y
+    const tangentZ = next.z - previous.z
+    const tangentLength = Math.hypot(tangentX, tangentY, tangentZ) || 1
+
+    return (tangentZ * curvatureX - tangentX * curvatureZ) / tangentLength
+  })
+
+  return smoothValues(raw, false, CURVATURE_SMOOTHING_RADIUS)
+}
+
+/** Sharpest real corner for the split-S; the synthetic return leg never qualifies. */
+function findManeuverDistance(turnRates: number[], distances: number[], totalLength: number, searchLimit: number): number {
+  const limit = Math.min(turnRates.length, Math.max(0, searchLimit))
+  if (limit < 5 || totalLength <= DRONE_SPLIT_S_WINDOW_METERS * 2) return -1
+
+  const rates: number[] = []
+  for (let index = 0; index < limit; index++) rates.push(Math.abs(turnRates[index]))
+
+  const sorted = [...rates].sort((a, b) => a - b)
+  const median = sorted[sorted.length >> 1]
+
+  let bestIndex = -1
+  let bestRate = 0
+  for (const [index, rate] of rates.entries()) {
+    if (rate > bestRate) {
+      bestRate = rate
+      bestIndex = index
+    }
+  }
+
+  if (bestIndex < 0 || bestRate < MIN_MANEUVER_TURN_RATE || bestRate - median < MIN_MANEUVER_CONTRAST) return -1
+
+  return distances[bestIndex] - MANEUVER_LEAD_IN_METERS
 }
 
 export function buildDroneRoute(rawPoints: readonly Point3[], options: DroneRouteOptions = {}): DroneRoute {
@@ -276,13 +447,16 @@ export function buildDroneRoute(rawPoints: readonly Point3[], options: DroneRout
       distances: rawPoints.map(() => 0),
       totalLength: 0,
       turnRates: rawPoints.map(() => 0),
-      directions: rawPoints.map(() => ({ x: 0, z: 1 })),
+      ups: rawPoints.map(() => ({ x: 0, y: 1, z: 0 })),
+      horizontalCurvatures: rawPoints.map(() => 0),
+      maneuverDistance: -1,
     }
   }
 
   let points = clonePoints(rawPoints)
   const sourceClosed = distanceBetween(points[0], points[points.length - 1]) <= LOOP_CLOSE_TOLERANCE
   const closed = sourceClosed || options.closeLoop === true
+  const sourceLength = points.length
 
   if (!sourceClosed && options.closeLoop === true) {
     points = appendReturnLeg(points, averageSpacing(points))
@@ -291,9 +465,11 @@ export function buildDroneRoute(rawPoints: readonly Point3[], options: DroneRout
   points = smoothPolyline(points, closed)
   const { distances, totalLength } = buildDistances(points)
   const turnRates = computeTurnRates(points, distances, totalLength, closed)
-  const directions = computeDirections(points, closed)
+  const ups = computeRouteUps(points, closed)
+  const horizontalCurvatures = computeHorizontalCurvatures(points, distances)
+  const maneuverDistance = findManeuverDistance(turnRates, distances, totalLength, sourceLength - 1)
 
-  return { points, distances, totalLength, turnRates, directions }
+  return { points, distances, totalLength, turnRates, ups, horizontalCurvatures, maneuverDistance }
 }
 
 export function wrapRouteDistance(route: DroneRoute, distance: number): number {
@@ -345,32 +521,31 @@ function sampleRoutePoint(route: DroneRoute, distance: number, out: Point3): Poi
 }
 
 const scratchBase: Point3 = { x: 0, y: 0, z: 0 }
-const scratchDirection: DroneDirection = { x: 0, z: 1 }
+const scratchTangentAhead: Point3 = { x: 0, y: 0, z: 0 }
+const scratchTangentBehind: Point3 = { x: 0, y: 0, z: 0 }
+const scratchTangent: Vec3 = { x: 0, y: 0, z: 1 }
 
-function sampleDirection(route: DroneRoute, distance: number, out: DroneDirection): DroneDirection {
-  const { directions, totalLength } = route
-  if (totalLength <= 0 || directions.length === 0) {
-    out.x = 0
-    out.z = 1
-    return out
-  }
+/**
+ * 3D tangent of the base route. Its horizontal components double as the weave normal,
+ * which fades out on a vertical climb instead of flipping through the undefined
+ * horizontal direction at the top of a loop.
+ */
+function sampleBaseTangent(route: DroneRoute, distance: number, out: Vec3): Vec3 {
+  sampleRoutePoint(route, distance + TANGENT_SAMPLE_METERS, scratchTangentAhead)
+  sampleRoutePoint(route, distance - TANGENT_SAMPLE_METERS, scratchTangentBehind)
+  const x = scratchTangentAhead.x - scratchTangentBehind.x
+  const y = scratchTangentAhead.y - scratchTangentBehind.y
+  const z = scratchTangentAhead.z - scratchTangentBehind.z
+  const length = Math.hypot(x, y, z)
 
-  const wrapped = wrapRouteDistance(route, distance)
-  const index = findSegmentIndex(route.distances, wrapped)
-  const nextIndex = Math.min(index + 1, directions.length - 1)
-  const t = routeFraction(route, wrapped, index)
-  const from = directions[index]
-  const to = directions[nextIndex]
-  const x = from.x + (to.x - from.x) * t
-  const z = from.z + (to.z - from.z) * t
-  const length = Math.hypot(x, z)
-
-  if (length > 1e-6) {
+  if (length > 1e-9) {
     out.x = x / length
+    out.y = y / length
     out.z = z / length
   } else {
-    out.x = from.x
-    out.z = from.z
+    out.x = 0
+    out.y = 0
+    out.z = 1
   }
 
   return out
@@ -388,15 +563,59 @@ function verticalOffsetMeters(spec: DroneRacerSpec, distance: number, totalLengt
   return spec.verticalAmplitudeMeters * Math.sin((TWO_PI * waves * distance) / totalLength + spec.phaseRadians * 1.7)
 }
 
-function offsetPoint(route: DroneRoute, distance: number, spec: DroneRacerSpec, out: Point3): Point3 {
+/** Smooth maximum: a dive settles onto the floor without a velocity kink. */
+function softFloorHeight(height: number): number {
+  const above = height - DRONE_FLOOR_HEIGHT
+  if (above > FLOOR_SOFTNESS_METERS * 12) return height
+
+  return DRONE_FLOOR_HEIGHT + FLOOR_SOFTNESS_METERS * Math.log1p(Math.exp(above / FLOOR_SOFTNESS_METERS))
+}
+
+function smootherStep(value: number): number {
+  const t = Math.min(1, Math.max(0, value))
+
+  return t * t * t * (t * (t * 6 - 15) + 10)
+}
+
+/** Split-S progress 0..1 inside the maneuver window, otherwise -1. */
+function splitSProgress(route: DroneRoute, distance: number): number {
+  if (route.maneuverDistance < 0 || route.totalLength <= 0) return -1
+
+  const wrapped = wrapRouteDistance(route, distance)
+  let delta = wrapped - route.maneuverDistance
+  if (delta > route.totalLength / 2) delta -= route.totalLength
+  if (delta < -route.totalLength / 2) delta += route.totalLength
+
+  const half = DRONE_SPLIT_S_WINDOW_METERS / 2
+  if (Math.abs(delta) > half) return -1
+
+  return (delta + half) / DRONE_SPLIT_S_WINDOW_METERS
+}
+
+function splitSDipMeters(route: DroneRoute, distance: number): number {
+  const progress = splitSProgress(route, distance)
+  if (progress < 0) return 0
+
+  const dip = Math.sin(Math.PI * progress)
+
+  return -DRONE_SPLIT_S_DIP_METERS * dip * dip
+}
+
+function rawOffsetPoint(route: DroneRoute, distance: number, spec: DroneRacerSpec, out: Point3): Point3 {
   const wrapped = wrapRouteDistance(route, distance)
   const base = sampleRoutePoint(route, wrapped, scratchBase)
-  const direction = sampleDirection(route, wrapped, scratchDirection)
+  const tangent = sampleBaseTangent(route, wrapped, scratchTangent)
   const lateral = lateralOffsetMeters(spec, wrapped, route.totalLength)
 
-  out.x = base.x - direction.z * lateral
-  out.y = Math.max(DRONE_FLOOR_HEIGHT, base.y + verticalOffsetMeters(spec, wrapped, route.totalLength))
-  out.z = base.z + direction.x * lateral
+  out.x = base.x - tangent.z * lateral
+  out.y = base.y + verticalOffsetMeters(spec, wrapped, route.totalLength)
+  out.z = base.z + tangent.x * lateral
+  return out
+}
+
+function offsetPoint(route: DroneRoute, distance: number, spec: DroneRacerSpec, out: Point3): Point3 {
+  rawOffsetPoint(route, distance, spec, out)
+  out.y = softFloorHeight(out.y + splitSDipMeters(route, distance))
   return out
 }
 
@@ -405,12 +624,24 @@ export function turnRateRadiansPerMeter(route: DroneRoute, distance: number): nu
   const { turnRates, totalLength } = route
   if (totalLength <= 0 || turnRates.length === 0) return 0
 
+  return interpolateValues(route, turnRates, distance)
+}
+
+/** Signed horizontal curvature, positive for a left turn. */
+export function horizontalCurvatureAt(route: DroneRoute, distance: number): number {
+  const { horizontalCurvatures, totalLength } = route
+  if (totalLength <= 0 || horizontalCurvatures.length === 0) return 0
+
+  return interpolateValues(route, horizontalCurvatures, distance)
+}
+
+function interpolateValues(route: DroneRoute, values: number[], distance: number): number {
   const wrapped = wrapRouteDistance(route, distance)
   const index = findSegmentIndex(route.distances, wrapped)
-  const nextIndex = Math.min(index + 1, turnRates.length - 1)
+  const nextIndex = Math.min(index + 1, values.length - 1)
   const t = routeFraction(route, wrapped, index)
 
-  return turnRates[index] + (turnRates[nextIndex] - turnRates[index]) * t
+  return values[index] + (values[nextIndex] - values[index]) * t
 }
 
 /** Pilots brake into tight sections and carry full speed down a straight. */
@@ -420,35 +651,124 @@ export function speedFactorAt(route: DroneRoute, distance: number): number {
   return Math.max(DRONE_MIN_SPEED_FACTOR, 1 / (1 + CURVATURE_SLOWDOWN * turnRate))
 }
 
-/** Banks the drone into the corner it is flying. */
+/**
+ * Coordinated-turn lean for a corner: `atan(v^2 * curvature / g)`, capped at the maximum
+ * bank. Negative leans into a positive (left-hand) turn, matching the model's roll axis.
+ */
 export function bankRadians(turnRate: number, speedMetersPerSecond: number): number {
-  const raw = -turnRate * speedMetersPerSecond * speedMetersPerSecond * BANK_GAIN
+  const raw = Math.atan((turnRate * speedMetersPerSecond * speedMetersPerSecond) / GRAVITY)
 
-  return Math.max(-DRONE_MAX_BANK_RADIANS, Math.min(DRONE_MAX_BANK_RADIANS, raw))
+  return Math.max(-DRONE_MAX_BANK_RADIANS, Math.min(DRONE_MAX_BANK_RADIANS, -raw))
 }
 
-/** Eases an angle towards a target along the shorter arc, so a quad never snaps round. */
-export function approachAngle(
-  current: number,
-  target: number,
-  responsePerSecond: number,
-  deltaSeconds: number,
-): number {
-  const shortest = Math.atan2(Math.sin(target - current), Math.cos(target - current))
+const scratchAhead: Point3 = { x: 0, y: 0, z: 0 }
+const scratchBehind: Point3 = { x: 0, y: 0, z: 0 }
+const scratchFrameUp: Vec3 = { x: 0, y: 1, z: 0 }
 
-  return current + shortest * (1 - Math.exp(-responsePerSecond * deltaSeconds))
+function sampleRouteUp(route: DroneRoute, distance: number, out: Vec3): Vec3 {
+  const { ups, totalLength } = route
+  if (totalLength <= 0 || ups.length === 0) {
+    out.x = 0
+    out.y = 1
+    out.z = 0
+    return out
+  }
+
+  const wrapped = wrapRouteDistance(route, distance)
+  const index = findSegmentIndex(route.distances, wrapped)
+  const nextIndex = Math.min(index + 1, ups.length - 1)
+  const t = routeFraction(route, wrapped, index)
+  const from = ups[index]
+  const to = ups[nextIndex]
+
+  out.x = from.x + (to.x - from.x) * t
+  out.y = from.y + (to.y - from.y) * t
+  out.z = from.z + (to.z - from.z) * t
+  return normalizeVec3(out)
+}
+
+/** Reads the nose off the flown line, the attitude off the route frame, the lean off the corner. */
+function samplePathFrame(route: DroneRoute, distance: number, spec: DroneRacerSpec, forward: Vec3, up: Vec3): void {
+  const step = POSE_SAMPLE_METERS
+  rawOffsetPoint(route, distance + step, spec, scratchAhead)
+  rawOffsetPoint(route, distance - step, spec, scratchBehind)
+
+  let forwardX = scratchAhead.x - scratchBehind.x
+  let forwardY = scratchAhead.y - scratchBehind.y
+  let forwardZ = scratchAhead.z - scratchBehind.z
+  const forwardLength = Math.hypot(forwardX, forwardY, forwardZ)
+
+  if (forwardLength > 1e-6) {
+    forwardX /= forwardLength
+    forwardY /= forwardLength
+    forwardZ /= forwardLength
+  } else {
+    forwardX = 0
+    forwardY = 0
+    forwardZ = 1
+  }
+
+  forward.x = forwardX
+  forward.y = forwardY
+  forward.z = forwardZ
+
+  const frameUp = sampleRouteUp(route, distance, scratchFrameUp)
+  let upX = frameUp.x
+  let upY = frameUp.y
+  let upZ = frameUp.z
+
+  const along = upX * forwardX + upY * forwardY + upZ * forwardZ
+  upX -= forwardX * along
+  upY -= forwardY * along
+  upZ -= forwardZ * along
+
+  let upLength = Math.hypot(upX, upY, upZ)
+  if (upLength < 1e-4) {
+    const fallback = perpendicularUp(forward, { x: 0, y: 1, z: 0 })
+    upX = fallback.x
+    upY = fallback.y
+    upZ = fallback.z
+    upLength = 1
+  }
+
+  up.x = upX / upLength
+  up.y = upY / upLength
+  up.z = upZ / upLength
+
+  const speed = spec.speedMetersPerSecond * speedFactorAt(route, distance)
+  const bank = bankRadians(horizontalCurvatureAt(route, distance), speed)
+  if (bank !== 0) rotateAboutAxis(up, forward, bank)
+}
+
+/** Split-S: dive through a full pitch loop, inverted halfway, then pull back out level. */
+function applySplitSRotation(route: DroneRoute, distance: number, forward: Vec3, up: Vec3): void {
+  const progress = splitSProgress(route, distance)
+  if (progress < 0) return
+
+  const pitch = TWO_PI * smootherStep(progress)
+  const right: Vec3 = {
+    x: up.y * forward.z - up.z * forward.y,
+    y: up.z * forward.x - up.x * forward.z,
+    z: up.x * forward.y - up.y * forward.x,
+  }
+  const rightLength = Math.hypot(right.x, right.y, right.z) || 1
+  right.x /= rightLength
+  right.y /= rightLength
+  right.z /= rightLength
+
+  rotateAboutAxis(forward, right, pitch)
+  rotateAboutAxis(up, right, pitch)
 }
 
 export function sampleDronePose(route: DroneRoute, distance: number, spec: DroneRacerSpec): DronePose {
   const wrapped = wrapRouteDistance(route, distance)
-  const position = offsetPoint(route, wrapped, spec, { x: 0, y: 0, z: 0 })
-  const direction = sampleDirection(route, wrapped, scratchDirection)
+  const forward: Vec3 = { x: 0, y: 0, z: 1 }
+  const up: Vec3 = { x: 0, y: 1, z: 0 }
 
-  return {
-    position,
-    heading: Math.atan2(direction.x, direction.z),
-    roll: bankRadians(turnRateRadiansPerMeter(route, wrapped), spec.speedMetersPerSecond),
-  }
+  samplePathFrame(route, wrapped, spec, forward, up)
+  applySplitSRotation(route, wrapped, forward, up)
+
+  return { position: offsetPoint(route, wrapped, spec, { x: 0, y: 0, z: 0 }), forward, up }
 }
 
 /**
@@ -471,9 +791,9 @@ export function sampleDroneTrailRibbon(
   for (let index = 0; index < count; index++) {
     const along = distance - index * spacingMeters
     offsetPoint(route, along, spec, point)
-    const direction = sampleDirection(route, wrapRouteDistance(route, along), scratchDirection)
-    const offsetX = -direction.z * halfWidthMeters
-    const offsetZ = direction.x * halfWidthMeters
+    const tangent = sampleBaseTangent(route, wrapRouteDistance(route, along), scratchTangent)
+    const offsetX = -tangent.z * halfWidthMeters
+    const offsetZ = tangent.x * halfWidthMeters
 
     target[index * 6] = point.x + offsetX
     target[index * 6 + 1] = point.y
