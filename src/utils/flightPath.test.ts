@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { Vector3 } from 'three'
-import { calculateFlightPath, calculateFlightPathWithControlPoints, DIVE_TOP_APPROACH_CLEARANCE, GATE_BASE_HEIGHT, GATE_STRUCTURE_CLEARANCE } from './flightPath'
+import { calculateFlightPath, calculateFlightPathWithControlPoints, DIVE_TOP_APPROACH_CLEARANCE, GATE_BASE_HEIGHT, GATE_STRUCTURE_CLEARANCE, SAME_GATE_FRAME_CLEARANCE } from './flightPath'
 import type { Gate, GateSequenceItem, IdealLinePoint } from '../types'
 import { createDefaultGateOpenings, getHGateBackrestSide } from './gateOpenings'
 
@@ -30,6 +30,15 @@ const createHurdleGate = (id: string, x: number, z: number): Gate => ({
   rotation: 0,
   openings: createDefaultGateOpenings('hurdle'),
 })
+
+
+type TestPoint3 = { x: number; y: number; z: number }
+
+function transitionSegmentsOfLeg(data: ReturnType<typeof calculateFlightPathWithControlPoints>, legIndex: number): TestPoint3[][] {
+  return data.path.sampledSegments
+    .filter((_, index) => data.sampledLegIndexes[index] === legIndex)
+    .slice(1)
+}
 
 describe('calculateFlightPath', () => {
   it('returns empty path for less than 2 gates', () => {
@@ -409,7 +418,6 @@ describe('calculateFlightPath', () => {
 
     const path = calculateFlightPath([gate, nextGate], sequence)
     const transitionBetweenOppositePasses = path.sampledSegments[1]
-    const maxLateralOffset = Math.max(...transitionBetweenOppositePasses.map((point) => Math.abs(point.x)))
     const pointsInsideOpening = transitionBetweenOppositePasses.filter((point) => (
       Math.abs(point.x) < 0.6
       && Math.abs(point.z) < 0.3
@@ -417,8 +425,8 @@ describe('calculateFlightPath', () => {
       && point.y <= GATE_BASE_HEIGHT
     ))
 
-    expect(maxLateralOffset).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
     expect(pointsInsideOpening).toHaveLength(0)
+    expect(minimumRadius(transitionBetweenOppositePasses)).toBeGreaterThanOrEqual(0.3)
   })
 
   it('routes around a gate instead of approaching from the red side', () => {
@@ -436,7 +444,7 @@ describe('calculateFlightPath', () => {
     const transitionSegmentsToSecondGate = path.sampledSegments.slice(1, entrySegmentIndex + 1)
     const lastTransitionSegment = transitionSegmentsToSecondGate[transitionSegmentsToSecondGate.length - 1]
 
-    expect(entrySegmentIndex).toBeGreaterThan(1)
+    expect(entrySegmentIndex).toBeGreaterThanOrEqual(1)
     expect(lastTransitionSegment[lastTransitionSegment.length - 1].x).toBeCloseTo(0, 5)
     expect(lastTransitionSegment[lastTransitionSegment.length - 1].z).toBeCloseTo(entryAnchor.z, 5)
 
@@ -532,14 +540,14 @@ describe('calculateFlightPath', () => {
       { gateId: nextGate.id, openingId: 'main', reverse: false },
     ]
 
-    const path = calculateFlightPath([gate, nextGate], sequence)
-    const transitionFromLowerToUpper = path.sampledSegments[1]
+    const indexed = calculateFlightPathWithControlPoints([gate, nextGate], sequence)
+    const transitionFromLowerToUpper = transitionSegmentsOfLeg(indexed, 0).flat()
     const maxOutsideOffset = Math.max(...transitionFromLowerToUpper.map((point) => Math.abs(point.x)))
 
-    expect(maxOutsideOffset).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
+    expect(maxOutsideOffset).toBeGreaterThanOrEqual(0.6 + SAME_GATE_FRAME_CLEARANCE - 0.01)
   })
 
-  it('routes h-gate lower-to-backrest transitions on the backrest side', () => {
+  it('flies an h-gate split-S back through the lower opening instead of looping around it', () => {
     const gate: Gate = {
       id: 'h-gate-left',
       type: 'h-gate',
@@ -549,33 +557,28 @@ describe('calculateFlightPath', () => {
     }
     const nextGate = createGate('g2', 8, 0, 0)
     const sequence: GateSequenceItem[] = [
-      { gateId: gate.id, openingId: 'lower', reverse: false },
       { gateId: gate.id, openingId: 'backrest-pass', reverse: false },
+      { gateId: gate.id, openingId: 'lower', reverse: true },
       { gateId: nextGate.id, openingId: 'main', reverse: false },
     ]
 
-    const path = calculateFlightPath([gate, nextGate], sequence)
-    const transitionFromLowerToBackrest = path.sampledSegments[1]
-    const fullTransition = path.sampledSegments.slice(1, 4).flat()
-    const expectedSide = getHGateBackrestSide(gate.id)
-    const lowerOpening = gate.openings.find((opening) => opening.id === 'lower')
-    const furthestSidePoint = transitionFromLowerToBackrest.reduce((furthest, point) => (
-      Math.abs(point.x) > Math.abs(furthest.x) ? point : furthest
-    ))
-    const pointsReturningThroughLowerEntry = fullTransition.filter((point) => (
-      lowerOpening
-      && Math.abs(point.x) < lowerOpening.width / 2
-      && point.z < -0.01
-      && point.y >= lowerOpening.position.y - lowerOpening.height / 2
-      && point.y <= lowerOpening.position.y + lowerOpening.height / 2
-    ))
+    const indexed = calculateFlightPathWithControlPoints([gate, nextGate], sequence)
+    const transition = transitionSegmentsOfLeg(indexed, 0).flat()
+    const landing = transition[transition.length - 1]
+    const metrics = measureLeg(indexed.path.sampledLegs[0])
 
-    expect(Math.sign(furthestSidePoint.x)).toBe(expectedSide)
-    expect(Math.abs(furthestSidePoint.x)).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
-    expect(pointsReturningThroughLowerEntry).toHaveLength(0)
+    expect(landing.x).toBeCloseTo(0, 2)
+    expect(landing.y).toBeCloseTo(GATE_BASE_HEIGHT / 2, 2)
+    expect(landing.z).toBeCloseTo(0.45, 2)
+    expect(Math.max(...transition.map((point) => point.y))).toBeLessThanOrEqual(GATE_BASE_HEIGHT + 0.6 + 0.02)
+    expect(Math.max(...transition.map((point) => Math.abs(point.x)))).toBeLessThanOrEqual(0.1)
+    expect(Math.min(...transition.map((point) => point.z))).toBeGreaterThan(0.3)
+    expect(metrics.length).toBeGreaterThan(2.6)
+    expect(metrics.length).toBeLessThan(2.9)
+    expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(10)
   })
 
-  it('routes rotated h-gate transitions on the rotated backrest side', () => {
+  it('mirrors the split-S when the upper h-gate opening is flown backwards', () => {
     const gate: Gate = {
       id: 'h-gate-right',
       type: 'h-gate',
@@ -586,22 +589,62 @@ describe('calculateFlightPath', () => {
     const nextGate = createGate('g2', 8, 0, 0)
     const sequence: GateSequenceItem[] = [
       { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'backrest-pass', reverse: true },
+      { gateId: nextGate.id, openingId: 'main', reverse: false },
+    ]
+
+    const indexed = calculateFlightPathWithControlPoints([gate, nextGate], sequence)
+    const transition = transitionSegmentsOfLeg(indexed, 0).flat()
+    const landing = transition[transition.length - 1]
+    const metrics = measureLeg(indexed.path.sampledLegs[0])
+
+    expect(landing.x).toBeCloseTo(0.405, 2)
+    expect(landing.y).toBeCloseTo(GATE_BASE_HEIGHT + 0.6, 2)
+    expect(landing.z).toBeCloseTo(0, 2)
+    expect(Math.min(...transition.map((point) => point.y))).toBeGreaterThanOrEqual(GATE_BASE_HEIGHT / 2 - 0.02)
+    expect(Math.max(...transition.map((point) => Math.abs(point.z)))).toBeLessThanOrEqual(0.1)
+    expect(metrics.length).toBeGreaterThan(2.6)
+    expect(metrics.length).toBeLessThan(2.9)
+    expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(10)
+  })
+
+  it('keeps a rounded side loop when both h-gate openings are flown forwards', () => {
+    const gate: Gate = {
+      id: 'h-gate-forward',
+      type: 'h-gate',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 0,
+      openings: createDefaultGateOpenings('h-gate'),
+    }
+    const nextGate = createGate('g2', 8, 0, 0)
+    const sequence: GateSequenceItem[] = [
+      { gateId: gate.id, openingId: 'lower', reverse: false },
       { gateId: gate.id, openingId: 'backrest-pass', reverse: false },
       { gateId: nextGate.id, openingId: 'main', reverse: false },
     ]
 
-    const path = calculateFlightPath([gate, nextGate], sequence)
-    const transitionFromLowerToBackrest = path.sampledSegments[1]
+    const indexed = calculateFlightPathWithControlPoints([gate, nextGate], sequence)
+    const transition = transitionSegmentsOfLeg(indexed, 0).flat()
+    const metrics = measureLeg(indexed.path.sampledLegs[0])
+    const pointsInsideFrame = transition.filter((point) => (
+      Math.abs(point.z) < 0.1
+      && Math.abs(point.x) < 0.6
+      && point.y > 0.7
+      && point.y < 2.3
+    ))
     const expectedSide = getHGateBackrestSide(gate.id)
-    const furthestSidePoint = transitionFromLowerToBackrest.reduce((furthest, point) => (
-      Math.abs(point.z) > Math.abs(furthest.z) ? point : furthest
+    const furthestSide = transition.reduce((furthest, point) => (
+      Math.abs(point.x) > Math.abs(furthest.x) ? point : furthest
     ))
 
-    expect(Math.sign(furthestSidePoint.z)).toBe(-expectedSide)
-    expect(Math.abs(furthestSidePoint.z)).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
+    expect(Math.sign(furthestSide.x)).toBe(expectedSide)
+    expect(Math.abs(furthestSide.x)).toBeGreaterThanOrEqual(0.6 + SAME_GATE_FRAME_CLEARANCE - 0.01)
+    expect(Math.max(...transition.map((point) => point.y))).toBeLessThan(2.3)
+    expect(pointsInsideFrame).toHaveLength(0)
+    expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(12)
   })
 
-  it('routes double-h lower-to-middle and middle-to-upper transitions on the extension side', () => {
+  it('flies both double-h stacked passes as split-S loops when the next opening is flown backwards', () => {
     const gate: Gate = {
       id: 'double-h-extension-side',
       type: 'double-h',
@@ -611,27 +654,51 @@ describe('calculateFlightPath', () => {
     }
     const nextGate = createGate('g2', 8, 0, 0)
     const sequence: GateSequenceItem[] = [
-      { gateId: gate.id, openingId: 'lower', reverse: false },
-      { gateId: gate.id, openingId: 'middle', reverse: false },
       { gateId: gate.id, openingId: 'upper', reverse: false },
+      { gateId: gate.id, openingId: 'middle', reverse: true },
+      { gateId: gate.id, openingId: 'lower', reverse: false },
       { gateId: nextGate.id, openingId: 'main', reverse: false },
     ]
 
-    const path = calculateFlightPath([gate, nextGate], sequence)
-    const lowerToMiddleTransition = path.sampledSegments[1]
-    const middleToUpperTransition = path.sampledSegments[5]
-    const expectedSide = getHGateBackrestSide(gate.id)
-    const lowerToMiddleSidePoint = lowerToMiddleTransition.reduce((furthest, point) => (
-      Math.abs(point.x) > Math.abs(furthest.x) ? point : furthest
-    ))
-    const middleToUpperSidePoint = middleToUpperTransition.reduce((furthest, point) => (
-      Math.abs(point.x) > Math.abs(furthest.x) ? point : furthest
-    ))
+    const indexed = calculateFlightPathWithControlPoints([gate, nextGate], sequence)
+    const splitSTransition = transitionSegmentsOfLeg(indexed, 0).flat()
+    const secondTransition = transitionSegmentsOfLeg(indexed, 1).flat()
+    const splitSLanding = splitSTransition[splitSTransition.length - 1]
+    const secondLanding = secondTransition[secondTransition.length - 1]
 
-    expect(Math.sign(lowerToMiddleSidePoint.x)).toBe(expectedSide)
-    expect(Math.abs(lowerToMiddleSidePoint.x)).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
-    expect(Math.sign(middleToUpperSidePoint.x)).toBe(expectedSide)
-    expect(Math.abs(middleToUpperSidePoint.x)).toBeGreaterThanOrEqual(0.6 + GATE_STRUCTURE_CLEARANCE - 0.01)
+    expect(splitSLanding.y).toBeCloseTo(1.8, 2)
+    expect(secondLanding.y).toBeCloseTo(0.6, 2)
+    expect(Math.max(...splitSTransition.map((point) => Math.abs(point.x)))).toBeLessThanOrEqual(0.1)
+    expect(Math.max(...secondTransition.map((point) => Math.abs(point.x)))).toBeLessThanOrEqual(0.1)
+    expect(measureLeg(indexed.path.sampledLegs[0]).length).toBeLessThan(3.1)
+    expect(measureLeg(indexed.path.sampledLegs[1]).length).toBeLessThan(3.1)
+  })
+
+  it('flies the split-S on a rotated ladder stack as well', () => {
+    const gate: Gate = {
+      id: 'ladder-split-s',
+      type: 'ladder',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 45,
+      openings: createDefaultGateOpenings('ladder'),
+    }
+    const nextGate = createGate('g2', 9, 0, 0)
+    const sequence: GateSequenceItem[] = [
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+      { gateId: gate.id, openingId: 'middle', reverse: true },
+      { gateId: nextGate.id, openingId: 'main', reverse: false },
+    ]
+
+    const indexed = calculateFlightPathWithControlPoints([gate, nextGate], sequence)
+    const transition = transitionSegmentsOfLeg(indexed, 0).flat()
+    const landing = transition[transition.length - 1]
+    const metrics = measureLeg(indexed.path.sampledLegs[0])
+
+    expect(landing.x).toBeCloseTo(0.32, 2)
+    expect(landing.y).toBeCloseTo(1.8, 2)
+    expect(landing.z).toBeCloseTo(0.32, 2)
+    expect(metrics.length).toBeLessThan(3.0)
+    expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(10)
   })
 
   it('approaches dive gates from at least 0.5m above the top before diving through the center', () => {
@@ -921,5 +988,139 @@ describe('calculateFlightPathWithControlPoints', () => {
     const sub = calculateFlightPathWithControlPoints(subGates, undefined, [subPoint])
     expect(sub.idealLinePoints).toHaveLength(1)
     expect(sub.path.sampledPoints.every((point) => Number.isFinite(point.x + point.y + point.z))).toBe(true)
+  })
+})
+
+interface LegMetrics {
+  length: number
+  swingDegrees: number
+  maxKinkDegrees: number
+  minRadius: number
+}
+
+function minimumRadius(samples: readonly { x: number; y: number; z: number }[]): number {
+  let tightest = Number.POSITIVE_INFINITY
+
+  for (let index = 2; index < samples.length; index++) {
+    const first = new Vector3(
+      samples[index - 1].x - samples[index - 2].x,
+      samples[index - 1].y - samples[index - 2].y,
+      samples[index - 1].z - samples[index - 2].z,
+    )
+    const second = new Vector3(
+      samples[index].x - samples[index - 1].x,
+      samples[index].y - samples[index - 1].y,
+      samples[index].z - samples[index - 1].z,
+    )
+    const firstLength = first.length()
+    const secondLength = second.length()
+    if (firstLength < 1e-6 || secondLength < 1e-6) continue
+
+    const turn = first.angleTo(second)
+    if (turn < 1e-6) continue
+    tightest = Math.min(tightest, (firstLength + secondLength) / 2 / turn)
+  }
+
+  return tightest
+}
+
+function measureLeg(samples: readonly { x: number; y: number; z: number }[]): LegMetrics {
+  let length = 0
+  let swingDegrees = 0
+  let maxKinkDegrees = 0
+  let previous: { x: number; y: number; z: number } | null = null
+
+  for (let index = 1; index < samples.length; index++) {
+    const dx = samples[index].x - samples[index - 1].x
+    const dy = samples[index].y - samples[index - 1].y
+    const dz = samples[index].z - samples[index - 1].z
+    const span = Math.sqrt(dx * dx + dy * dy + dz * dz)
+    length += span
+    if (span < 1e-6) continue
+
+    const direction = { x: dx / span, y: dy / span, z: dz / span }
+    if (previous) {
+      const dot = Math.min(1, Math.max(-1, previous.x * direction.x + previous.y * direction.y + previous.z * direction.z))
+      const degrees = (Math.acos(dot) * 180) / Math.PI
+      swingDegrees += degrees
+      maxKinkDegrees = Math.max(maxKinkDegrees, degrees)
+    }
+    previous = direction
+  }
+
+  return { length, swingDegrees, maxKinkDegrees, minRadius: minimumRadius(samples) }
+}
+
+const createTypedGate = (id: string, type: Gate['type'], x: number, y: number, z: number, rotation: number): Gate => ({
+  id,
+  type,
+  position: { x, y, z },
+  rotation,
+  openings: createDefaultGateOpenings(type, id),
+})
+
+const SAME_GATE_MAX_PATH_METERS = 6.0
+const MAX_HAIRPIN_PATH_METERS = 5.2
+const MAX_SAME_GATE_SWING_DEGREES = 370
+const MAX_LEG_KINK_DEGREES = 25
+const MIN_LEG_RADIUS_METERS = 0.3
+
+describe('ideal line directness', () => {
+  it('keeps the h-gate lower-to-backrest transition a compact rounded loop', () => {
+    const gate = createTypedGate('h-gate-directness', 'h-gate', 0, 0, 0, 0)
+    const nextGate = createGate('g2', 8, 0, 0)
+    const sequence: GateSequenceItem[] = [
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'backrest-pass', reverse: false },
+      { gateId: nextGate.id, openingId: 'main', reverse: false },
+    ]
+
+    const path = calculateFlightPath([gate, nextGate], sequence)
+    const metrics = measureLeg(path.sampledLegs[0])
+
+    expect(metrics.length).toBeLessThanOrEqual(SAME_GATE_MAX_PATH_METERS)
+    expect(metrics.swingDegrees).toBeLessThanOrEqual(MAX_SAME_GATE_SWING_DEGREES)
+    expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(MAX_LEG_KINK_DEGREES)
+  })
+
+  it('turns a stacked double gate upper-to-lower pass without reversing in one step', () => {
+    const gate = createTypedGate('double-directness', 'double', 0, 0, 0, 0)
+    const nextGate = createGate('g2', 8, 0, 0)
+    const sequence: GateSequenceItem[] = [
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: nextGate.id, openingId: 'main', reverse: false },
+    ]
+
+    const path = calculateFlightPath([gate, nextGate], sequence)
+    const metrics = measureLeg(path.sampledLegs[0])
+
+    expect(metrics.length).toBeLessThanOrEqual(SAME_GATE_MAX_PATH_METERS)
+    expect(metrics.swingDegrees).toBeLessThanOrEqual(MAX_SAME_GATE_SWING_DEGREES)
+    expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(MAX_LEG_KINK_DEGREES)
+  })
+
+  it('leaves a standard gate to a flag 0.6 m aside without looping back', () => {
+    const standardGate = createTypedGate('standard-directness', 'standard', 3.9, 0, 5.4, 180)
+    const flagGate = createTypedGate('flag-directness-a', 'flag-small', 4.5, 1.2, 5.4, 60)
+
+    const path = calculateFlightPath([standardGate, flagGate])
+    const metrics = measureLeg(path.sampledLegs[0])
+
+    expect(metrics.length).toBeLessThanOrEqual(MAX_HAIRPIN_PATH_METERS)
+    expect(metrics.minRadius).toBeGreaterThanOrEqual(MIN_LEG_RADIUS_METERS)
+    expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(MAX_LEG_KINK_DEGREES)
+  })
+
+  it('closes a flag-to-standard pass 0.6 m aside without looping back', () => {
+    const flagGate = createTypedGate('flag-directness-b', 'flag-small', 2.1, 1.2, 5.4, 240)
+    const standardGate = createTypedGate('standard-directness-b', 'standard', 2.7, 0, 5.4, 180)
+
+    const path = calculateFlightPath([flagGate, standardGate])
+    const metrics = measureLeg(path.sampledLegs[0])
+
+    expect(metrics.length).toBeLessThanOrEqual(MAX_HAIRPIN_PATH_METERS)
+    expect(metrics.minRadius).toBeGreaterThanOrEqual(MIN_LEG_RADIUS_METERS)
+    expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(MAX_LEG_KINK_DEGREES)
   })
 })

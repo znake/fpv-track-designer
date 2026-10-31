@@ -22,6 +22,11 @@ Der Changelog beginnt mit den Commits der letzten Woche (ab 2026-10-23). Früher
 - Vier Tinywhoop-Drohnen fliegen dauerhaft ein Rennen entlang der Ideallinie: rosa, blau, rot und grün, jede mit eigenem Tempo und einer eigenen, leicht versetzten Spur, sodass manche Kurven enger und andere weiter ausgeflogen werden. Auf langen Geraden beschleunigen sie, vor engen Passagen bremsen sie ab, legen sich in die Kurve und werfen einen Lichtschein auf den Boden. Sie gleiten flüssig über die Ideallinie, auch an den Übergängen zwischen den Gate-Abschnitten. Der Schalter „Drohnen“ in der TopBar ist standardmäßig an; während du ein Gate ziehst, drehst oder anhebst, stehen die Drohnen still, und im FPV-Flug sind sie ausgeblendet.
 - Die Drohnen fliegen jetzt auch im Share-Viewer. Oben rechts gibt es dafür einen Drohnen-Button, der sie aus- und wieder einblendet; standardmäßig fliegen sie mit. Die Viewer-Hilfe nennt den Button.
 
+**Behoben**
+
+- Die Ideallinie zwischen zwei Gates besteht nur noch aus Geraden und Kreisbögen mit mindestens 0,3 m Radius. Ecken und Haken sind damit nicht mehr darstellbar: Wo Platz ist, wird der Bogen bewusst weit gewählt (bis 2 m) und die Linie schwingt weich aus; in engen Passagen bleibt sie bei rund 0,3 m. Gemessen über alle sieben offiziellen Strecken (168 Gate-Abschnitte): engster Radius 0,32 m statt bisher 0,08 m, größter Knick 5,6° statt 22,8°, keine Selbstüberschneidung.
+- Die Ideallinie ist runder und deutlich kürzer: Werden zwei Öffnungen desselben Gates nacheinander geflogen und die zweite dabei rückwärts durchquert (h-Gate, Doppel-h-Gate, Doppel), zieht sie jetzt einen Split-S – hinaus aus der ersten Öffnung, in einer halben Schleife hinter dem Gate nach unten (bzw. nach oben) und mittig zurück durch die zweite Öffnung. Das sind rund 2,7 m statt 5,7 m, ohne seitliches Ausholen und ohne Spitze über der Rückenlehne. Werden beide Öffnungen vorwärts geflogen, bleibt die seitliche Schleife, ist aber enger (rund 4,6 m statt 5,7 m) und steigt weich an, ohne Ecke am Austritt. Eng neben einem Gate stehende Flaggen werden weiterhin rund umflogen, ohne dass die Linie sich selbst überholt.
+
 ## 2026-10-28
 
 **Neu**

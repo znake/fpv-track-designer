@@ -168,7 +168,7 @@ Bearbeitungsschritte lassen sich mit **`Cmd/Ctrl + Z`** rückgängig machen und 
 Aktiviere oben **„Flugbahn"**. Die App berechnet dann die **Ideallinie** durch die Gates in der von dir festgelegten Durchflugreihenfolge:
 
 - Kurven von Einflug zu Ausflug durch jedes Gate,
-- Übergänge zwischen den Gates (inkl. Sonderfällen wie U-Turns, H-Gate-Rückenlehne, Doppel-h-Stapel und Tunnelportale),
+- Übergänge zwischen den Gates als weiche Bögen: jeder Übergang besteht nur aus Geraden und Kreisbögen mit mindestens 0,3 m Radius, wo Platz ist deutlich weiter (bis 2 m). Ecken oder Haken gibt es nicht mehr; in engen Passagen wird die Linie entsprechend eng und bleibt trotzdem fliegbar.
 - **Richtungspfeile** entlang der Linie zeigen, in welche Richtung und Reihenfolge geflogen wird.
 
 ### 7.1 Ideallinie mit Leitpunkten formen

@@ -8,6 +8,7 @@
 utils/
 ├── generator.ts          # Random track generation with collision detection
 ├── flightPath.ts         # Base route plus per-leg custom-point displacement, samples, arrows
+├── routeCurves.ts        # Circle-straight-circle transition planner (minimum turn radius, no corners)
 ├── idealLine.ts          # Leg refs, visible-basis interpolation, smooth offset field, hover/closest helpers
 ├── gateInsertion.ts      # Ideal-line hover -> gate-insertion payload (position, rotation, sequence index)
 ├── gateOperations.ts     # Unused move/rotate helpers (imported only by its test)
@@ -39,7 +40,7 @@ utils/
 | Task | File | Key Functions |
 |------|------|---------------|
 | Change generation algorithm | `generator.ts` | `generateTrack(config)` |
-| Modify flight path | `flightPath.ts`, `idealLine.ts` | `calculateFlightPath()`, `calculateFlightPathWithControlPoints()`, `groupIdealLinePointsByLeg()`, `basisPointAtU()`, `createIdealLineOffsetField()`, `resolveIdealLineHover()`, `getClosestPathPoint()` |
+| Modify flight path | `flightPath.ts`, `idealLine.ts`, `routeCurves.ts` | `calculateFlightPath()`, `calculateFlightPathWithControlPoints()`, `planSmoothTransition()`, `groupIdealLinePointsByLeg()`, `basisPointAtU()`, `createIdealLineOffsetField()`, `resolveIdealLineHover()`, `getClosestPathPoint()` |
 | Change gate movement | `src/store/trackSlice.ts` (inline `moveGate`/`rotateGate`); `gateOperations.ts` is dead code | `moveGate()`, `rotateGate()` |
 | Modify gate openings | `gateOpenings.ts` | `createDefaultGateOpenings()`, `normalizeGates()` |
 | Modify gate sequence | `gateSequence.ts` | `buildDefaultGateSequenceEntries()`, `normalizeGateSequence()` |
@@ -59,6 +60,8 @@ utils/
 - Min gate distance: 3m (`MIN_DISTANCE`).
 - Max placement attempts: 100 per gate.
 - Flight-path curve sampling is dense and gate-specific; preserve same-gate, dive, H-gate, double-H, and octagonal tunnel cases.
+- Every gate-to-gate transition is a circle-straight-circle plan from `routeCurves.ts`: `planSmoothTransition()` returns the widest plan whose length stays inside the directness budget and whose samples clear the gate hardware (`pointsCrossForbiddenZone`, `pointsEnterOpening`), falling back to the shortest compliant plan, then to the shortest plan at all. Radius range 0.32 m to 2 m, directness budget 1.3x chord, plus a climb floor of 2.5x the height delta so steep transitions stay gentle. `ArcRouteCurve` evaluates the plan analytically, so the rendered samples sit exactly on the arcs; the old `createDirectionalCurve` / `createRoundedDetour` / `roundPolyline` corner-fillet chain for free transitions is gone (`roundPolyline` survives only inside `createPylonTurn`).
+- Same-gate stacked transitions resolve in this order: `createSplitS()` when the second visit is flown backwards (`reverse: true`, `createSplitS()` builds a straight stub plus a half circle on the chord and lands exactly on the reversed entry), otherwise `createUTurn()` (two 180 degree arcs with a `smoothRamp()` height profile, zero slope at both ends) and finally `createPylonTurn()`. The vertical loop over the backrest no longer exists. `SAME_GATE_FRAME_CLEARANCE` (0.25 m) drives the turnaround width, `GATE_STRUCTURE_CLEARANCE` (0.5 m) stays for the other avoidance curves. `buildDefaultGateSequenceEntries()` still returns `[lower, backrest-pass]` for an h-gate, so a fresh h-gate shows the side turnaround until the sequence marks the second opening as reverse.
 - Custom ideal-line points use stable IDs, a leg ref, an immutable base `u`, and a world position. Each edited leg gets a smooth Catmull-Rom-derived 3D displacement field with zero offsets at both anchors; other legs and all point-free routes keep exact base samples.
 - `calculateFlightPathWithControlPoints()` returns `{ path, sampledLegIndexes, sampledLegUs, idealLinePoints, legRefs }`; `FlightPath` itself keeps its original shape. `Scene` uses the wrapper for rendering/FPV/editing and `GateHandles` for insertion previews. `sampledLegUs` supports basis-preserving hover mapping on already shaped curves.
 - `idealLine.ts` owns leg grouping, the single visible-basis interpolation rule, smooth fields, hover resolution, and visible closest-point selection. Dormant points stay stored but have no matching leg; zero-length legs are inert.
@@ -69,7 +72,8 @@ utils/
 - The remembered venue (`fpv-track-designer-venue`, `venuePreference.ts`) seeds `createInitialConfig()`, is written only by an explicit `setVenue` pick, and is cleared by `resetToDefault`; `Config.venueId` still travels in exports and share links.
 
 ## TESTING
-- `flightPath.test.ts` preserves gate-specific cases and covers default identity, leg-local shaping, exact authored samples, smoothness, dormant/inert points, and metadata synchronization. `idealLine.test.ts` covers the field, basis, grouping, hover, and closest-point helpers. `gateInsertion.test.ts` covers the ideal-line hover to gate-insertion resolver (position, tangent rotation, sequence index incl. same-gate loops, unknown legs).
+- `.omo/qa/measure.ts` is the machine acceptance harness for the ideal line (criteria M1-M5 and the minimum curve radius from `docs/IDEALLINIE-HANDOFF.md`); run `bun .omo/qa/measure.ts [--verbose]` after touching routing geometry. It exits non-zero while any leg fails. Current state: 168 legs, `failingLegs=0`, `minRadius=0.32m`, `maxKink=5.6deg`, `intersections=0`. M4 and M5 compare against geometry-derived budgets (required heading change, chord angle, height delta) instead of fixed numbers, and M5 measures the transition without the two through-gate straights.
+- `flightPath.test.ts` preserves gate-specific cases and covers default identity, leg-local shaping, exact authored samples, smoothness, dormant/inert points, and metadata synchronization. `routeCurves.test.ts` covers the transition planner (pose reach per variant on a seeded sweep, minimum radius, length budget, rejection filter, in-place reversal loop). `idealLine.test.ts` covers the field, basis, grouping, hover, and closest-point helpers. `gateInsertion.test.ts` covers the ideal-line hover to gate-insertion resolver (position, tangent rotation, sequence index incl. same-gate loops, unknown legs).
 - `generator.test.ts`, `gateOpenings.test.ts`, `gateSequence.test.ts`, `gateOperations.test.ts`, and `storage.test.ts` cover core invariants.
 - `shareTrack.test.ts`, `generationConfig.test.ts`, `poleCount.test.ts`, `poleLimit.test.ts`, `venuePreference.test.ts`, `venuePresets.test.ts`, and `fieldWatermark.test.ts` cover the newer helpers.
 - `qrCode.test.ts` covers PNG/SVG download helpers; mock `URL.createObjectURL`/`revokeObjectURL` locally.

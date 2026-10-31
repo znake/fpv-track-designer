@@ -113,6 +113,8 @@ Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in d
 
 Aktiviere in der TopBar **„Flugbahn“**. Solange kein Gate ausgewählt ist, kannst du die Ideallinie bearbeiten.
 
+Die Linie zwischen zwei Gates besteht aus Geraden und weiten Kreisbögen mit mindestens 0,3 m Radius; wo Platz ist, wird der Bogen bewusst weit gewählt. Ecken und Haken gibt es keine mehr, in engen Passagen wird die Linie entsprechend enger und bleibt trotzdem fliegbar.
+
 1. Fahre mit der Maus über die Linie. Ein **Plus-Zeichen** erscheint direkt unter dem Mauszeiger; klicke auf die Linie, um zwei Symbole aufzuklappen (ein zweiter Klick schließt sie wieder).
 2. Das **Gate-Symbol** öffnet den bekannten Dialog „Gate einfügen“. Das neue Gate landet genau auf der Linie, ist entlang der Linie ausgerichtet und wird in der Durchflugreihenfolge zwischen den beiden Gate-Ankern dieses Abschnitts eingefügt.
 3. Das **gelbe Punkt-Symbol** setzt genau einen Leitpunkt an dieser Stelle.

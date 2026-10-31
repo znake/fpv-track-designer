@@ -1,4 +1,4 @@
-import { CubicBezierCurve3, Quaternion, Vector3 } from 'three'
+import { CubicBezierCurve3, Curve, Quaternion, Vector3 } from 'three'
 import type { Gate, GateOpening, GateSequenceItem, IdealLineLegRef, IdealLinePoint, Point3 } from '../types'
 import { getHGateBackrestSide, normalizeGates } from './gateOpenings'
 import { buildFallbackGateSequence, normalizeGateSequence } from './gateSequence'
@@ -8,26 +8,25 @@ import {
   groupIdealLinePointsByLeg,
 } from './idealLine'
 import type { IdealLineBasisSample } from './idealLine'
+import { MIN_TRANSITION_RADIUS, planSmoothTransition, TRANSITION_LENGTH_BUDGET } from './routeCurves'
+import type { RoutePlan } from './routeCurves'
 
-export { GATE_BASE_HEIGHT } from '../constants/gateDimensions'
+import { GATE_BASE_HEIGHT } from '../constants/gateDimensions'
+
+export { GATE_BASE_HEIGHT }
 
 /**
  * Ideal-line geometry in one module: the base routing curves are built exactly as before, and
  * optional custom points apply a smooth displacement to their individual legs.
  */
 
-const MIN_CURVE_SAMPLES_PER_SEGMENT = 80
-const MAX_CURVE_SAMPLES_PER_SEGMENT = 400
-const CURVE_SAMPLES_PER_METER = 14
-export const CONTROL_POINT_FACTOR = 0.25
-const MAX_CONTROL_HANDLE_LENGTH = 2.5
-const U_TURN_DOT_THRESHOLD = -0.3
+const MIN_CURVE_SAMPLES_PER_SEGMENT = 120
+const MAX_CURVE_SAMPLES_PER_SEGMENT = 700
+const CURVE_SAMPLES_PER_METER = 24
 const FORBIDDEN_ZONE_TOLERANCE = 0.2
 const MIN_CLEARANCE = 0.3
 export const DIVE_TOP_APPROACH_CLEARANCE = 0.5
 export const GATE_STRUCTURE_CLEARANCE = 0.5
-const GATE_AVOIDANCE_SIDE_MARGIN = GATE_STRUCTURE_CLEARANCE
-const GATE_AVOIDANCE_FRONT_MARGIN = 0.25
 const OCTAGONAL_TUNNEL_HALF_LENGTH_FACTOR = 1
 
 export interface PathSegment {
@@ -68,8 +67,19 @@ export interface FlightPathWithControlPoints {
   legRefs: IdealLineLegRef[]
 }
 
+interface RouteCurve {
+  getPoint: (t: number) => Vector3
+  getPointAt: (t: number) => Vector3
+  getTangentAt: (t: number) => Vector3
+  getLength: () => number
+  getLengths: (divisions?: number) => number[]
+  arcLengthDivisions: number
+  controlPoints: Vector3[]
+  denseVertices?: Vector3[]
+}
+
 interface BaseCurve {
-  curve: CubicBezierCurve3
+  curve: RouteCurve
   length: number
   startDistance: number
   legIndex: number
@@ -84,6 +94,8 @@ interface GateVisit {
   reverse: boolean
 }
 
+type Detour = { curves: { curve: RouteCurve; length: number }[]; totalLength: number }
+
 const ARROW_SPACING = 1.5
 const ARROW_TANGENT_DELTA = 0.01
 
@@ -94,42 +106,604 @@ function createStraightCurve(from: Vector3, to: Vector3): CubicBezierCurve3 {
   return new CubicBezierCurve3(from, cp1, cp2, to)
 }
 
-function createDirectionalCurve(from: Vector3, to: Vector3, fromDirection: Vector3, toDirection: Vector3): CubicBezierCurve3 {
-  const distance = from.distanceTo(to)
-  const handleLength = Math.min(distance * CONTROL_POINT_FACTOR, MAX_CONTROL_HANDLE_LENGTH)
-  const cp1 = from.clone().add(fromDirection.clone().multiplyScalar(handleLength))
-  const cp2 = to.clone().sub(toDirection.clone().multiplyScalar(handleLength))
-  return new CubicBezierCurve3(from, cp1, cp2, to)
+class BezierRouteCurve implements RouteCurve {
+  controlPoints: Vector3[]
+  readonly curve: CubicBezierCurve3
+
+  constructor(curve: CubicBezierCurve3) {
+    this.curve = curve
+    this.controlPoints = [curve.v0, curve.v1, curve.v2, curve.v3]
+  }
+
+  get arcLengthDivisions(): number {
+    return this.curve.arcLengthDivisions
+  }
+
+  getPoint(t: number): Vector3 {
+    return this.curve.getPoint(t)
+  }
+
+  getPointAt(t: number): Vector3 {
+    return this.curve.getPointAt(t)
+  }
+
+  getTangentAt(t: number): Vector3 {
+    return this.curve.getTangentAt(t)
+  }
+
+  getLength(): number {
+    return this.curve.getLength()
+  }
+
+  getLengths(divisions?: number): number[] {
+    return this.curve.getLengths(divisions)
+  }
 }
 
-function createAvoidanceCurve(
+/** Piecewise-linear arc-length curve: the rounded polyline the detours are built from. */
+class RoundedRouteCurve extends Curve<Vector3> implements RouteCurve {
+  controlPoints: Vector3[]
+  denseVertices: Vector3[]
+  private readonly vertices: Vector3[]
+  private readonly cumulative: number[]
+  private readonly totalLength: number
+
+  constructor(vertices: Vector3[], controlPoints: Vector3[]) {
+    super()
+    this.vertices = vertices
+    this.denseVertices = vertices
+    this.controlPoints = controlPoints
+    this.cumulative = [0]
+    let total = 0
+    for (let index = 1; index < vertices.length; index++) {
+      total += vertices[index].distanceTo(vertices[index - 1])
+      this.cumulative.push(total)
+    }
+    this.totalLength = total
+    this.arcLengthDivisions = Math.max(200, vertices.length * 4)
+  }
+
+  override getLength(): number {
+    return this.totalLength
+  }
+
+  override getLengths(divisions = this.arcLengthDivisions): number[] {
+    const lengths: number[] = []
+    for (let index = 0; index <= divisions; index++) lengths.push((index / divisions) * this.totalLength)
+    return lengths
+  }
+
+  override getPoint(t: number, target = new Vector3()): Vector3 {
+    if (this.vertices.length === 0) return target.set(0, 0, 0)
+    if (this.vertices.length === 1 || this.totalLength <= 1e-9) return target.copy(this.vertices[0])
+
+    const distance = Math.max(0, Math.min(1, t)) * this.totalLength
+    let index = 1
+    while (index < this.cumulative.length - 1 && this.cumulative[index] < distance) index++
+    const start = this.cumulative[index - 1]
+    const end = this.cumulative[index]
+    const fraction = end > start ? (distance - start) / (end - start) : 0
+    return target.copy(this.vertices[index - 1]).lerp(this.vertices[index], fraction)
+  }
+}
+
+/**
+ * Exact circle-straight-circle transition: points are evaluated on the analytic arcs, so the
+ * sampled line has no chord kinks and the measured radius is the planned radius.
+ */
+class ArcRouteCurve extends Curve<Vector3> implements RouteCurve {
+  controlPoints: Vector3[]
+  private readonly plan: RoutePlan
+  private readonly radius: number
+  private readonly start: Vector3
+  private readonly end: Vector3
+  private readonly startHeading: number
+  private readonly segmentLengths: number[]
+  private readonly planLength: number
+  private readonly lengthTable: number[]
+  private readonly totalLength: number
+
+  constructor(plan: RoutePlan, radius: number, start: Vector3, end: Vector3, startHeading: number) {
+    super()
+    this.plan = plan
+    this.radius = radius
+    this.start = start.clone()
+    this.end = end.clone()
+    this.startHeading = startHeading
+    this.controlPoints = [start.clone(), end.clone()]
+    this.segmentLengths = plan.turns.map((turn) => turn.angle * radius)
+    this.planLength = Math.max(this.segmentLengths.reduce((sum, length) => sum + length, 0), 1e-9)
+
+    this.arcLengthDivisions = 160
+    const lengthTable = [0]
+    let accumulated = 0
+    let previous = this.evaluate(0)
+    for (let index = 1; index <= this.arcLengthDivisions; index++) {
+      const current = this.evaluate(index / this.arcLengthDivisions)
+      accumulated += current.distanceTo(previous)
+      lengthTable.push(accumulated)
+      previous = current
+    }
+    this.lengthTable = lengthTable
+    this.totalLength = accumulated
+  }
+
+  override getLength(): number {
+    return this.totalLength
+  }
+
+  override getLengths(divisions = this.arcLengthDivisions): number[] {
+    if (divisions === this.arcLengthDivisions) return [...this.lengthTable]
+
+    const lengths: number[] = []
+    for (let index = 0; index <= divisions; index++) {
+      lengths.push(this.distanceAt(index / divisions))
+    }
+    return lengths
+  }
+
+  override getPoint(t: number, target = new Vector3()): Vector3 {
+    return target.copy(this.evaluate(t))
+  }
+
+  override getPointAt(t: number, target = new Vector3()): Vector3 {
+    return target.copy(this.evaluate(t))
+  }
+
+  override getTangentAt(t: number, target = new Vector3()): Vector3 {
+    const step = 0.5 / this.arcLengthDivisions
+    const before = this.evaluate(Math.max(0, t - step))
+    const after = this.evaluate(Math.min(1, t + step))
+    const direction = after.sub(before)
+    return direction.lengthSq() > 1e-18 ? target.copy(direction.normalize()) : target.set(0, 0, 1)
+  }
+
+  private distanceAt(t: number): number {
+    const position = Math.max(0, Math.min(1, t)) * this.arcLengthDivisions
+    const index = Math.min(Math.floor(position), this.arcLengthDivisions - 1)
+    const fraction = position - index
+    return this.lengthTable[index] + (this.lengthTable[index + 1] - this.lengthTable[index]) * fraction
+  }
+
+  private planarPointAt(distance: number): { x: number; z: number; heading: number } {
+    let remaining = Math.max(0, distance)
+    let x = this.start.x
+    let z = this.start.z
+    let heading = this.startHeading
+
+    for (let index = 0; index < this.plan.turns.length; index++) {
+      const turn = this.plan.turns[index]
+      const length = this.segmentLengths[index]
+      const used = Math.min(remaining, length)
+
+      if (turn.kind === 'straight') {
+        x += Math.cos(heading) * used
+        z += Math.sin(heading) * used
+      } else {
+        const direction = turn.kind === 'left' ? 1 : -1
+        const swept = (direction * used) / this.radius
+        const centerX = x - Math.sin(heading) * this.radius * direction
+        const centerZ = z + Math.cos(heading) * this.radius * direction
+        const offsetX = x - centerX
+        const offsetZ = z - centerZ
+        x = centerX + offsetX * Math.cos(swept) - offsetZ * Math.sin(swept)
+        z = centerZ + offsetX * Math.sin(swept) + offsetZ * Math.cos(swept)
+        heading += swept
+      }
+
+      remaining -= used
+      if (remaining <= 1e-12) break
+    }
+
+    return { x, z, heading }
+  }
+
+  private evaluate(t: number): Vector3 {
+    const clamped = Math.max(0, Math.min(1, t))
+    if (clamped <= 0) return this.start.clone()
+    if (clamped >= 1) return this.end.clone()
+
+    const distance = clamped * this.planLength
+    const planar = this.planarPointAt(distance)
+    const rise = this.end.y - this.start.y
+    return new Vector3(planar.x, this.start.y + rise * smoothRamp(distance / this.planLength), planar.z)
+  }
+}
+
+const MAX_FILLET_RADIUS = 0.55
+const SAME_GATE_PYLON_LEAD = 0.3
+export const SAME_GATE_FRAME_CLEARANCE = 0.25
+const FILLET_SAMPLES_PER_METER = 24
+
+function toRouteCurve(curve: CubicBezierCurve3): RouteCurve {
+  return new BezierRouteCurve(curve)
+}
+
+function roundPolyline(vertices: readonly Vector3[], maxRadius: number): Vector3[] {
+  if (vertices.length < 3) return vertices.map((vertex) => vertex.clone())
+
+  const rounded: Vector3[] = [vertices[0].clone()]
+
+  for (let index = 1; index < vertices.length - 1; index++) {
+    const previous = vertices[index - 1]
+    const corner = vertices[index]
+    const next = vertices[index + 1]
+    const incoming = normalize(corner.clone().sub(previous))
+    const outgoing = normalize(next.clone().sub(corner))
+    const turn = Math.acos(Math.max(-1, Math.min(1, incoming.dot(outgoing))))
+
+    if (turn < 1e-3 || Math.PI - turn < 1e-3) {
+      rounded.push(corner.clone())
+      continue
+    }
+
+    const reach = Math.min(previous.distanceTo(corner), corner.distanceTo(next)) * 0.45
+    const radius = Math.min(maxRadius, reach / Math.tan(turn / 2))
+    const tangent = radius * Math.tan(turn / 2)
+
+    if (tangent <= 1e-6) {
+      rounded.push(corner.clone())
+      continue
+    }
+
+    const arcStart = corner.clone().sub(incoming.clone().multiplyScalar(tangent))
+    const arcEnd = corner.clone().add(outgoing.clone().multiplyScalar(tangent))
+    const inward = outgoing.clone().sub(incoming.clone().multiplyScalar(outgoing.dot(incoming)))
+    if (inward.lengthSq() < 1e-12) {
+      rounded.push(corner.clone())
+      continue
+    }
+    const center = arcStart.clone().add(inward.normalize().multiplyScalar(radius))
+    const startOffset = arcStart.clone().sub(center)
+    const endOffset = arcEnd.clone().sub(center)
+    const sweep = startOffset.angleTo(endOffset)
+    const rotation = new Quaternion().setFromUnitVectors(startOffset.clone().normalize(), endOffset.clone().normalize())
+    const steps = Math.max(2, Math.ceil(sweep * radius * FILLET_SAMPLES_PER_METER))
+
+    for (let step = 0; step <= steps; step++) {
+      const partial = new Quaternion().slerpQuaternions(new Quaternion(), rotation, step / steps)
+      rounded.push(center.clone().add(startOffset.clone().applyQuaternion(partial)))
+    }
+  }
+
+  rounded.push(vertices[vertices.length - 1].clone())
+
+  const deduped: Vector3[] = []
+  for (const point of rounded) {
+    const previous = deduped[deduped.length - 1]
+    if (previous && point.distanceTo(previous) <= 1e-6) continue
+    deduped.push(point)
+  }
+
+  return deduped
+}
+
+function getGateSideDirections(travelDirection: Vector3, gate: Gate): Vector3[] {
+  const lateral = new Vector3(travelDirection.z, 0, -travelDirection.x)
+  const base = lateral.lengthSq() > 1e-9 ? lateral.normalize() : getGateLocalXDirection(gate)
+  return [base.clone(), base.clone().negate()]
+}
+
+function getStackedTransitionLateral(from: GateVisit, to: GateVisit): number {
+  return Math.max(from.opening.width, to.opening.width) / 2 + SAME_GATE_FRAME_CLEARANCE
+}
+
+const UP_AXIS = new Vector3(0, 1, 0)
+
+/** Vertical profile with zero slope at both ends so a turnaround leaves and arrives level. */
+function smoothRamp(t: number): number {
+  const clamped = Math.max(0, Math.min(1, t))
+  return clamped * clamped * clamped * (clamped * (clamped * 6 - 15) + 10)
+}
+
+function createUTurn(
   from: Vector3,
   fromDirection: Vector3,
   to: Vector3,
   toDirection: Vector3,
-  waypoint: Vector3,
-): { curves: { curve: CubicBezierCurve3; length: number }[]; totalLength: number } {
-  const dist1 = from.distanceTo(waypoint)
-  const handle1 = Math.min(dist1 * CONTROL_POINT_FACTOR, MAX_CONTROL_HANDLE_LENGTH)
-  const cp1a = from.clone().add(fromDirection.clone().multiplyScalar(handle1))
-  const cp1b = waypoint.clone().add(normalize(from.clone().sub(waypoint)).multiplyScalar(handle1))
-  const curve1 = new CubicBezierCurve3(from, cp1a, cp1b, waypoint)
-  const length1 = curve1.getLength()
+  sideDirection: Vector3,
+  lateral: number,
+): Detour | null {
+  const radius = lateral / 2
+  const side = sideDirection.clone().setY(0)
+  const forward = fromDirection.clone().setY(0)
+  const arrival = toDirection.clone().setY(0)
+  if (side.lengthSq() < 1e-9 || forward.lengthSq() < 1e-9 || arrival.lengthSq() < 1e-9) return null
+  side.normalize()
+  forward.normalize()
+  arrival.normalize()
 
-  const dist2 = waypoint.distanceTo(to)
-  const handle2 = Math.min(dist2 * CONTROL_POINT_FACTOR, MAX_CONTROL_HANDLE_LENGTH)
-  const cp2a = waypoint.clone().multiplyScalar(2).sub(cp1b)
-  const cp2b = to.clone().sub(toDirection.clone().multiplyScalar(handle2))
-  const curve2 = new CubicBezierCurve3(waypoint, cp2a, cp2b, to)
-  const length2 = curve2.getLength()
+  const displacement = to.clone().sub(from).setY(0)
+  const along = displacement.dot(forward)
+  const across = displacement.clone().sub(forward.clone().multiplyScalar(along)).length()
+  if (across > radius * 0.6 || arrival.dot(forward) < 0.7) return null
 
-  return {
-    curves: [
-      { curve: curve1, length: length1 },
-      { curve: curve2, length: length2 },
-    ],
-    totalLength: length1 + length2,
+  const steps = Math.max(24, Math.ceil(Math.PI * radius * FILLET_SAMPLES_PER_METER))
+  const horizontal: { x: number; z: number }[] = []
+  const sweepSign = side.dot(new Vector3(forward.z, 0, -forward.x)) >= 0 ? 1 : -1
+  const sweep = Math.PI * sweepSign
+
+  const firstCenter = from.clone().add(side.clone().multiplyScalar(radius))
+  for (let step = 0; step <= steps; step++) {
+    const rotated = from.clone().sub(firstCenter).applyAxisAngle(UP_AXIS, sweep * (step / steps))
+    horizontal.push({ x: firstCenter.x + rotated.x, z: firstCenter.z + rotated.z })
   }
+
+  const turnEnd = horizontal[horizontal.length - 1]
+  const straightSteps = Math.ceil(Math.abs(along) * FILLET_SAMPLES_PER_METER)
+  const straightEnd = { x: turnEnd.x + forward.x * along, z: turnEnd.z + forward.z * along }
+  for (let step = 1; step <= straightSteps; step++) {
+    const ratio = step / straightSteps
+    horizontal.push({ x: turnEnd.x + (straightEnd.x - turnEnd.x) * ratio, z: turnEnd.z + (straightEnd.z - turnEnd.z) * ratio })
+  }
+
+  const secondCenter = new Vector3(straightEnd.x - side.x * radius, from.y, straightEnd.z - side.z * radius)
+  const secondStart = new Vector3(straightEnd.x, from.y, straightEnd.z)
+  for (let step = 1; step <= steps; step++) {
+    const rotated = secondStart.clone().sub(secondCenter).applyAxisAngle(UP_AXIS, sweep * (step / steps))
+    horizontal.push({ x: secondCenter.x + rotated.x, z: secondCenter.z + rotated.z })
+  }
+
+  const distances = [0]
+  for (let index = 1; index < horizontal.length; index++) {
+    distances.push(distances[index - 1] + Math.hypot(horizontal[index].x - horizontal[index - 1].x, horizontal[index].z - horizontal[index - 1].z))
+  }
+  const totalHorizontal = distances[distances.length - 1]
+  const vertices = horizontal.map((point, index) => new Vector3(
+    point.x,
+    from.y + (to.y - from.y) * (totalHorizontal > 0 ? smoothRamp(distances[index] / totalHorizontal) : 0),
+    point.z,
+  ))
+  const landing = vertices[vertices.length - 1]
+  if (Math.hypot(landing.x - to.x, landing.z - to.z) > 0.05) return null
+  vertices[vertices.length - 1] = to.clone()
+
+  const curve = new RoundedRouteCurve(vertices, [from.clone(), to.clone()])
+  return { curves: [{ curve, length: curve.getLength() }], totalLength: curve.getLength() }
+}
+
+const SPLIT_S_REVERSAL_DOT = -0.85
+const SPLIT_S_MAX_LATERAL = 0.35
+const SPLIT_S_MAX_TILT_RADIANS = (8 * Math.PI) / 180
+
+/**
+ * Split-S: a straight stub out of the gate followed by a half loop in the plane of the exit
+ * direction and the opening stack. It lands exactly on the reversed entry with the opposite
+ * heading, so the second opening is flown backwards without any detour around the frame.
+ */
+function createSplitS(
+  from: Vector3,
+  fromDirection: Vector3,
+  to: Vector3,
+  toDirection: Vector3,
+): Detour | null {
+  const forward = fromDirection.clone().setY(0)
+  const arrival = toDirection.clone().setY(0)
+  if (forward.lengthSq() < 1e-9 || arrival.lengthSq() < 1e-9) return null
+  forward.normalize()
+  arrival.normalize()
+  if (forward.dot(arrival) > SPLIT_S_REVERSAL_DOT) return null
+
+  const displacement = to.clone().sub(from)
+  const stub = displacement.dot(forward)
+  const start = stub > 1e-3 ? from.clone().add(forward.clone().multiplyScalar(stub)) : from.clone()
+  const chord = to.clone().sub(start)
+  const radius = chord.length() / 2
+  if (radius < MIN_CLEARANCE) return null
+
+  const tilt = Math.asin(Math.min(1, Math.abs(chord.dot(forward)) / chord.length()))
+  if (tilt > SPLIT_S_MAX_TILT_RADIANS) return null
+  if (Math.hypot(chord.x, chord.z) > SPLIT_S_MAX_LATERAL) return null
+
+  const center = start.clone().add(chord.clone().multiplyScalar(0.5))
+  const inward = start.clone().sub(center).normalize()
+  const bulge = forward.clone().sub(inward.clone().multiplyScalar(forward.dot(inward))).normalize()
+  if (bulge.lengthSq() < 1e-9) return null
+
+  const vertices: Vector3[] = [from.clone()]
+  if (start.distanceTo(from) > 1e-6) vertices.push(start.clone())
+
+  const steps = Math.max(24, Math.ceil(Math.PI * radius * FILLET_SAMPLES_PER_METER))
+  for (let step = 1; step <= steps; step++) {
+    const angle = Math.PI * (step / steps)
+    vertices.push(center.clone()
+      .add(inward.clone().multiplyScalar(radius * Math.cos(angle)))
+      .add(bulge.clone().multiplyScalar(radius * Math.sin(angle))))
+  }
+
+  const curve = new RoundedRouteCurve(vertices, [from.clone(), center.clone(), to.clone()])
+  return { curves: [{ curve, length: curve.getLength() }], totalLength: curve.getLength() }
+}
+
+function measureCurveSwing(curve: RouteCurve): number {
+  let swing = 0
+  let previousHeading: number | null = null
+
+  for (let step = 1; step <= 80; step++) {
+    const point = curve.getPoint(step / 80)
+    const previous = curve.getPoint((step - 1) / 80)
+    const dx = point.x - previous.x
+    const dz = point.z - previous.z
+    if (Math.sqrt(dx * dx + dz * dz) < 1e-6) continue
+
+    const heading = Math.atan2(dx, dz)
+    if (previousHeading !== null) {
+      let delta = heading - previousHeading
+      while (delta > Math.PI) delta -= 2 * Math.PI
+      while (delta < -Math.PI) delta += 2 * Math.PI
+      swing += (Math.abs(delta) * 180) / Math.PI
+    }
+    previousHeading = heading
+  }
+
+  return swing
+}
+
+function selectSmoothestDetour(
+  candidates: { curves: { curve: RouteCurve; length: number }[]; totalLength: number }[],
+): { curves: { curve: RouteCurve; length: number }[]; totalLength: number } {
+  return candidates.reduce((best, current) => {
+    const currentSwing = measureCurveSwing(current.curves[0].curve)
+    const bestSwing = measureCurveSwing(best.curves[0].curve)
+    if (Math.abs(currentSwing - bestSwing) > 5) return currentSwing < bestSwing ? current : best
+    return current.totalLength < best.totalLength ? current : best
+  })
+}
+
+function createPylonTurn(
+  from: Vector3,
+  fromDirection: Vector3,
+  to: Vector3,
+  toDirection: Vector3,
+  sideDirection: Vector3,
+  lateral: number,
+  lead: number,
+): { curves: { curve: RouteCurve; length: number }[]; totalLength: number } {
+  const side = sideDirection.clone().setY(0)
+  if (side.lengthSq() < 1e-9) side.set(fromDirection.z, 0, -fromDirection.x)
+  side.normalize()
+
+  const launch = from.clone().add(fromDirection.clone().multiplyScalar(lead))
+  const arrival = to.clone().sub(toDirection.clone().multiplyScalar(lead))
+  const vertices = [
+    from.clone(),
+    launch,
+    launch.clone().add(side.clone().multiplyScalar(lateral)),
+    arrival.clone().add(side.clone().multiplyScalar(lateral)),
+    arrival,
+    to.clone(),
+  ]
+
+  const curve = new RoundedRouteCurve(roundPolyline(vertices, MAX_FILLET_RADIUS), vertices)
+  return { curves: [{ curve, length: curve.getLength() }], totalLength: curve.getLength() }
+}
+
+function liftTransition(points: readonly { x: number; z: number }[], from: Vector3, to: Vector3): Vector3[] {
+  if (points.length < 2) return [from.clone(), to.clone()]
+
+  const distances = [0]
+  for (let index = 1; index < points.length; index++) {
+    distances.push(distances[index - 1] + Math.hypot(points[index].x - points[index - 1].x, points[index].z - points[index - 1].z))
+  }
+
+  const total = distances[distances.length - 1]
+  const vertices = points.map((point, index) => new Vector3(
+    point.x,
+    from.y + (to.y - from.y) * (total > 0 ? smoothRamp(distances[index] / total) : index / (points.length - 1)),
+    point.z,
+  ))
+
+  const last = vertices[vertices.length - 1]
+  if (last.distanceTo(to) > 1e-9) vertices.push(to.clone())
+  else last.copy(to)
+  return vertices
+}
+
+function pointsEnterOpening(points: readonly Vector3[], visit: GateVisit): boolean {
+  const center = getGateVisitCenterPoint(visit)
+  const halfWidth = visit.opening.width / 2
+  const halfHeight = visit.opening.height / 2
+  const normal = getGateEntryDirection(visit.gate, visit.opening, visit.reverse)
+  const widthDirection = getGateOpeningWidthDirection(visit.gate, visit.opening)
+  const heightDirection = normalize(normal.clone().cross(widthDirection))
+
+  for (let index = Math.ceil(points.length * 0.2); index < points.length; index++) {
+    const offset = points[index].clone().sub(center)
+    const localX = offset.dot(widthDirection)
+    const localY = offset.dot(heightDirection)
+    const localZ = offset.dot(normal)
+
+    if (Math.abs(localX) < halfWidth && Math.abs(localY) < halfHeight && Math.abs(localZ) < MIN_CLEARANCE) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function pointsCrossForbiddenZone(points: readonly Vector3[], visit: GateVisit): boolean {
+  const center = getGateVisitCenterPoint(visit)
+
+  for (let index = 1; index < points.length - 1; index++) {
+    if (points[index].distanceTo(center) < 3 && isInForbiddenZone(points[index], visit)) return true
+  }
+
+  return false
+}
+
+/**
+ * Circle-straight-circle transition between two gate passes: straight out of the exit heading, an
+ * arc at a radius that never drops below the minimum, straight into the next entry heading. The
+ * widest compliant radius wins so the line sweeps instead of hooking; when no radius clears the
+ * gate hardware the shortest plan is used, because a smooth line is worth more than a tight one.
+ */
+function minimumPolylineRadius(points: readonly Vector3[], stencil = 2): number {
+  let tightest = Number.POSITIVE_INFINITY
+
+  for (let index = stencil; index < points.length - stencil; index++) {
+    const first = points[index].clone().sub(points[index - stencil])
+    const second = points[index + stencil].clone().sub(points[index])
+    const firstLength = first.length()
+    const secondLength = second.length()
+    if (firstLength < 1e-6 || secondLength < 1e-6) continue
+
+    const turn = Math.acos(Math.max(-1, Math.min(1, first.dot(second) / (firstLength * secondLength))))
+    if (turn < 1e-6) continue
+    tightest = Math.min(tightest, (firstLength + secondLength) / 2 / turn)
+  }
+
+  return tightest
+}
+
+function createSmoothTransition(
+  from: Vector3,
+  fromDirection: Vector3,
+  to: Vector3,
+  toDirection: Vector3,
+  fromVisit: GateVisit,
+  toVisit: GateVisit,
+): Detour | null {
+  const chord = Math.hypot(to.x - from.x, to.z - from.z)
+  const rise = Math.abs(to.y - from.y)
+  const climbBudget = chord > 1e-6 ? (2.5 * rise) / chord : TRANSITION_LENGTH_BUDGET
+
+  const build = (
+    filter: ((points: readonly Vector3[]) => boolean) | null,
+    preferShortest = false,
+  ): Detour | null => {
+    const result = planSmoothTransition(
+      { x: from.x, z: from.z, heading: Math.atan2(fromDirection.z, fromDirection.x) },
+      { x: to.x, z: to.z, heading: Math.atan2(toDirection.z, toDirection.x) },
+      {
+        lengthBudget: Math.max(TRANSITION_LENGTH_BUDGET, climbBudget),
+        preferShortest,
+        ...(filter ? { isAllowed: (points: readonly { x: number; z: number }[]) => filter(liftTransition(points, from, to)) } : {}),
+      },
+    )
+    if (!result) return null
+
+    const vertices = liftTransition(result.points, from, to)
+    const curve = new ArcRouteCurve(
+      result.plan,
+      result.radius,
+      vertices[0],
+      to,
+      Math.atan2(fromDirection.z, fromDirection.x),
+    )
+    return { curves: [{ curve, length: curve.getLength() }], totalLength: curve.getLength() }
+  }
+
+  const clearsHardware = (points: readonly Vector3[]) => (
+    !pointsCrossForbiddenZone(points, toVisit)
+    && !pointsEnterOpening(points, fromVisit)
+    && !pointsEnterOpening(points, toVisit)
+    && minimumPolylineRadius(points) >= MIN_TRANSITION_RADIUS * 0.95
+  )
+
+  return build(clearsHardware)
+    ?? build(clearsHardware, true)
+    ?? build(null)
+    ?? build(null, true)
 }
 
 function distance3d(a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }): number {
@@ -238,117 +812,9 @@ function isInForbiddenZone(point: Vector3, visit: GateVisit): boolean {
   return point.clone().sub(center).dot(getGateEntryDirection(visit.gate, visit.opening, visit.reverse)) < -FORBIDDEN_ZONE_TOLERANCE
 }
 
-function curvePassesForbiddenZone(curve: CubicBezierCurve3, visit: GateVisit): boolean {
-  const center = getGateVisitCenterPoint(visit)
-
-  for (let t = 0.05; t < 0.95; t += 0.05) {
-    const point = curve.getPoint(t)
-    if (point.distanceTo(center) < 3 && isInForbiddenZone(point, visit)) {
-      return true
-    }
-  }
-
-  return false
-}
-
-function curveReentersGateOpening(curve: CubicBezierCurve3, visit: GateVisit): boolean {
-  const center = getGateVisitCenterPoint(visit)
-  const halfWidth = visit.opening.width / 2
-  const halfHeight = visit.opening.height / 2
-  const normal = getGateEntryDirection(visit.gate, visit.opening, visit.reverse)
-  const widthDirection = getGateOpeningWidthDirection(visit.gate, visit.opening)
-  const heightDirection = normalize(normal.clone().cross(widthDirection))
-
-  for (let t = 0.2; t < 1; t += 0.03) {
-    const point = curve.getPoint(t)
-    const offset = point.clone().sub(center)
-    const localX = offset.dot(widthDirection)
-    const localY = offset.dot(heightDirection)
-    const localZ = offset.dot(normal)
-
-    if (Math.abs(localX) < halfWidth && Math.abs(localY) < halfHeight && Math.abs(localZ) < MIN_CLEARANCE) {
-      return true
-    }
-  }
-
-  return false
-}
-
-function calculateWaypointForSide(visit: GateVisit, side: 1 | -1): Vector3 {
-  const center = getGateVisitCenterPoint(visit)
-  const entryDir = getGateEntryDirection(visit.gate, visit.opening, visit.reverse)
-  const sideDir = new Vector3(entryDir.z, 0, -entryDir.x).normalize()
-  const sideOffset = visit.opening.width / 2 + GATE_AVOIDANCE_SIDE_MARGIN
-  const frontOffset = getGatePassThroughOffset(visit.opening) + GATE_AVOIDANCE_FRONT_MARGIN
-
-  return center
-    .clone()
-    .add(sideDir.multiplyScalar(side * sideOffset))
-    .add(entryDir.multiplyScalar(frontOffset))
-}
-
-function calculateOutsideLaneWaypoint(visit: GateVisit, side: 1 | -1, frontDirection: Vector3): Vector3 {
-  const center = getGateVisitCenterPoint(visit)
-  const entryDir = getGateEntryDirection(visit.gate, visit.opening, visit.reverse)
-  const sideDir = new Vector3(entryDir.z, 0, -entryDir.x).normalize()
-  const sideOffset = visit.opening.width / 2 + GATE_STRUCTURE_CLEARANCE
-  const frontOffset = getGatePassThroughOffset(visit.opening) + GATE_AVOIDANCE_FRONT_MARGIN
-
-  return center
-    .clone()
-    .add(sideDir.multiplyScalar(side * sideOffset))
-    .add(frontDirection.clone().normalize().multiplyScalar(frontOffset))
-}
-
 function getGateLocalXDirection(gate: Gate): Vector3 {
   const rotated = rotateLocalVector(1, 0, gate.rotation)
   return new Vector3(rotated.x, 0, rotated.z).normalize()
-}
-
-function calculatePhysicalSideOutsideLaneWaypoint(
-  visit: GateVisit,
-  physicalSideDirection: Vector3,
-  frontDirection: Vector3,
-): Vector3 {
-  const center = getGateVisitCenterPoint(visit)
-  const sideOffset = visit.opening.width / 2 + GATE_STRUCTURE_CLEARANCE
-  const frontOffset = getGatePassThroughOffset(visit.opening) + GATE_AVOIDANCE_FRONT_MARGIN
-
-  return center
-    .clone()
-    .add(physicalSideDirection.clone().normalize().multiplyScalar(sideOffset))
-    .add(frontDirection.clone().normalize().multiplyScalar(frontOffset))
-}
-
-function createSameGatePhysicalSideClearanceCurve(
-  from: Vector3,
-  fromDirection: Vector3,
-  to: Vector3,
-  toDirection: Vector3,
-  fromVisit: GateVisit,
-  toVisit: GateVisit,
-  physicalSideDirection: Vector3,
-): { curves: { curve: CubicBezierCurve3; length: number }[]; totalLength: number } {
-  const fromWaypoint = calculatePhysicalSideOutsideLaneWaypoint(fromVisit, physicalSideDirection, fromDirection)
-  const toWaypoint = calculatePhysicalSideOutsideLaneWaypoint(toVisit, physicalSideDirection, getGateEntryDirection(toVisit.gate, toVisit.opening, toVisit.reverse))
-  const laneDirection = normalize(toWaypoint.clone().sub(fromWaypoint))
-  const sideExitDirection = normalize(physicalSideDirection.clone().multiplyScalar(2).add(fromDirection))
-
-  const curve1 = createDirectionalCurve(from, fromWaypoint, sideExitDirection, laneDirection)
-  const curve2 = createStraightCurve(fromWaypoint, toWaypoint)
-  const curve3 = createDirectionalCurve(toWaypoint, to, laneDirection, toDirection)
-  const length1 = curve1.getLength()
-  const length2 = curve2.getLength()
-  const length3 = curve3.getLength()
-
-  return {
-    curves: [
-      { curve: curve1, length: length1 },
-      { curve: curve2, length: length2 },
-      { curve: curve3, length: length3 },
-    ],
-    totalLength: length1 + length2 + length3,
-  }
 }
 
 function isHGateBackrestTransition(fromVisit: GateVisit, toVisit: GateVisit): boolean {
@@ -372,38 +838,17 @@ function isDoubleHGateStackTransition(fromVisit: GateVisit, toVisit: GateVisit):
   return fromIndex >= 0 && toIndex >= 0 && Math.abs(fromIndex - toIndex) === 1
 }
 
-function isSideDefinedSameGateTransition(fromVisit: GateVisit, toVisit: GateVisit): boolean {
-  return isHGateBackrestTransition(fromVisit, toVisit) || isDoubleHGateStackTransition(fromVisit, toVisit)
+function isStackedSameGateTransition(fromVisit: GateVisit, toVisit: GateVisit): boolean {
+  if (fromVisit.gate.id !== toVisit.gate.id) return false
+  if (fromVisit.opening.id === toVisit.opening.id) return false
+  if ((fromVisit.opening.rotationX ?? 0) !== 0 || (toVisit.opening.rotationX ?? 0) !== 0) return false
+
+  const verticalGap = Math.abs(getGateVisitCenterPoint(fromVisit).y - getGateVisitCenterPoint(toVisit).y)
+  return verticalGap >= Math.min(fromVisit.opening.height, toVisit.opening.height) * 0.5
 }
 
-function createSameGateClearanceCurve(
-  from: Vector3,
-  fromDirection: Vector3,
-  to: Vector3,
-  toDirection: Vector3,
-  fromVisit: GateVisit,
-  toVisit: GateVisit,
-  side: 1 | -1,
-): { curves: { curve: CubicBezierCurve3; length: number }[]; totalLength: number } {
-  const fromWaypoint = calculateOutsideLaneWaypoint(fromVisit, side, fromDirection)
-  const toWaypoint = calculateOutsideLaneWaypoint(toVisit, side, getGateEntryDirection(toVisit.gate, toVisit.opening, toVisit.reverse))
-  const laneDirection = normalize(toWaypoint.clone().sub(fromWaypoint))
-
-  const curve1 = createDirectionalCurve(from, fromWaypoint, fromDirection, laneDirection)
-  const curve2 = createStraightCurve(fromWaypoint, toWaypoint)
-  const curve3 = createDirectionalCurve(toWaypoint, to, laneDirection, toDirection)
-  const length1 = curve1.getLength()
-  const length2 = curve2.getLength()
-  const length3 = curve3.getLength()
-
-  return {
-    curves: [
-      { curve: curve1, length: length1 },
-      { curve: curve2, length: length2 },
-      { curve: curve3, length: length3 },
-    ],
-    totalLength: length1 + length2 + length3,
-  }
+function isSideDefinedSameGateTransition(fromVisit: GateVisit, toVisit: GateVisit): boolean {
+  return isHGateBackrestTransition(fromVisit, toVisit) || isDoubleHGateStackTransition(fromVisit, toVisit)
 }
 
 function resolveVisits(gates: Gate[], gateSequence?: GateSequenceItem[]): GateVisit[] {
@@ -426,7 +871,11 @@ function resolveVisits(gates: Gate[], gateSequence?: GateSequenceItem[]): GateVi
   }).filter((visit): visit is GateVisit => visit !== null)
 }
 
-function sampleCurvePoints(curve: CubicBezierCurve3, length: number): Vector3[] {
+function sampleCurvePoints(curve: RouteCurve, length: number): Vector3[] {
+  if (curve.denseVertices && curve.denseVertices.length >= 2) {
+    return curve.denseVertices.map((vertex) => vertex.clone())
+  }
+
   const samples = getCurveSamples(length)
   const points: Vector3[] = []
 
@@ -636,7 +1085,7 @@ function buildFlightPath(
   const segments: PathSegment[] = []
   let baseTotalLength = 0
 
-  const registerCurve = (curve: CubicBezierCurve3, length: number, legIndex: number) => {
+  const registerCurve = (curve: RouteCurve, length: number, legIndex: number) => {
     baseCurves.push({
       curve,
       length,
@@ -653,73 +1102,54 @@ function buildFlightPath(
     const fromVisit = orderedVisits[i]
     const toVisit = orderedVisits[(i + 1) % orderedVisits.length]
 
-    const throughGateCurve = createStraightCurve(getGateEntryPoint(fromVisit), getGateExitPoint(fromVisit))
+    const throughGateCurve = toRouteCurve(createStraightCurve(getGateEntryPoint(fromVisit), getGateExitPoint(fromVisit)))
     const throughGateLength = throughGateCurve.getLength()
     registerCurve(throughGateCurve, throughGateLength, i)
-    allPoints.push(throughGateCurve.v0, throughGateCurve.v1, throughGateCurve.v2)
+    allPoints.push(...throughGateCurve.controlPoints)
 
     const from = getGateExitPoint(fromVisit)
     const to = getGateEntryPoint(toVisit)
     const fromDirection = getGateExitDirection(fromVisit.gate, fromVisit.opening, fromVisit.reverse)
     const toDirection = getGateExitDirection(toVisit.gate, toVisit.opening, toVisit.reverse)
-    const standardCurve = createDirectionalCurve(from, to, fromDirection, toDirection)
     const tangent = normalize(getGateVisitCenterPoint(toVisit).clone().sub(getGateVisitCenterPoint(fromVisit)))
-    const isSameGateTransition = fromVisit.gate.id === toVisit.gate.id
 
-    let transitionCurves = [{ curve: standardCurve, length: standardCurve.getLength() }]
-    let needsAvoidance = isSameGateTransition
-      && fromVisit.opening.id === toVisit.opening.id
-    let reentersFromOpening = false
-
-    if (!needsAvoidance && curvePassesForbiddenZone(standardCurve, toVisit)) {
-      needsAvoidance = true
-    }
-
-    if (curveReentersGateOpening(standardCurve, fromVisit)) {
-      reentersFromOpening = true
-      needsAvoidance = true
-    }
-
-    if (!needsAvoidance) {
-      const approachDirection = normalize(to.clone().sub(from))
-      if (approachDirection.dot(toDirection) < U_TURN_DOT_THRESHOLD) {
-        needsAvoidance = true
-      }
-    }
+    let transitionCurves: { curve: RouteCurve; length: number }[]
 
     if (isSideDefinedSameGateTransition(fromVisit, toVisit)) {
-      const backrestSideDirection = getGateLocalXDirection(fromVisit.gate).multiplyScalar(getHGateBackrestSide(fromVisit.gate.id))
-      const sideAwareCurve = createSameGatePhysicalSideClearanceCurve(
-        from,
-        fromDirection,
-        to,
-        toDirection,
-        fromVisit,
-        toVisit,
-        backrestSideDirection,
-      )
-      transitionCurves = sideAwareCurve.curves
-    } else if (needsAvoidance) {
-      const candidates = ([1, -1] as const).map((side) => {
-        if (isSameGateTransition) {
-          return createSameGateClearanceCurve(from, fromDirection, to, toDirection, fromVisit, toVisit, side)
-        }
-
-        const waypoint = reentersFromOpening
-          ? calculateOutsideLaneWaypoint(fromVisit, side, fromDirection)
-          : calculateWaypointForSide(toVisit, side)
-        return createAvoidanceCurve(from, fromDirection, to, toDirection, waypoint)
-      })
-
-      const validCandidates = candidates.filter((candidate) => candidate.curves.every(({ curve }) => !curveReentersGateOpening(curve, fromVisit)))
-      const pool = validCandidates.length > 0 ? validCandidates : candidates
-      const best = pool.reduce((shortest, current) => current.totalLength < shortest.totalLength ? current : shortest)
-      transitionCurves = best.curves
+      const physicalSide = getGateLocalXDirection(fromVisit.gate).multiplyScalar(getHGateBackrestSide(fromVisit.gate.id))
+      const lateral = getStackedTransitionLateral(fromVisit, toVisit)
+      const splitS = createSplitS(from, fromDirection, to, toDirection)
+      const uTurn = createUTurn(from, fromDirection, to, toDirection, physicalSide, lateral)
+      const pylon = createPylonTurn(from, fromDirection, to, toDirection, physicalSide, lateral, SAME_GATE_PYLON_LEAD)
+      transitionCurves = (splitS ?? uTurn ?? pylon).curves
+    } else if (isStackedSameGateTransition(fromVisit, toVisit)) {
+      const sides = getGateSideDirections(fromDirection, fromVisit.gate)
+      const lateral = getStackedTransitionLateral(fromVisit, toVisit)
+      const splitS = createSplitS(from, fromDirection, to, toDirection)
+      const uTurns = sides
+        .map((sideDirection) => createUTurn(from, fromDirection, to, toDirection, sideDirection, lateral))
+        .filter((candidate): candidate is Detour => candidate !== null)
+      const fallback = uTurns.length > 0
+        ? selectSmoothestDetour(uTurns)
+        : selectSmoothestDetour(sides.map((sideDirection) => createPylonTurn(
+          from,
+          fromDirection,
+          to,
+          toDirection,
+          sideDirection,
+          lateral,
+          SAME_GATE_PYLON_LEAD,
+        )))
+      transitionCurves = (splitS ?? fallback).curves
+    } else {
+      const smooth = createSmoothTransition(from, fromDirection, to, toDirection, fromVisit, toVisit)
+      transitionCurves = smooth?.curves
+        ?? [{ curve: toRouteCurve(createStraightCurve(from, to)), length: from.distanceTo(to) }]
     }
 
     for (const { curve, length } of transitionCurves) {
       registerCurve(curve, length, i)
-      allPoints.push(curve.v0, curve.v1, curve.v2)
+      allPoints.push(...curve.controlPoints)
     }
 
     segments.push({
