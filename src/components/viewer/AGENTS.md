@@ -34,6 +34,7 @@ Related files outside this folder:
 - Export uses `serializeTrack(track, config)` so downloaded JSON remains importable by the editor.
 
 ## NOTES
+- `viewer-main.tsx` forces `showGrid: false` on the decoded config: the payload carries the sender's editor toggles and most exports have the grid on. Everything downstream (scene, JSON download) sees the grid off.
 - A second click on the FPV button, Escape, or the scene's `onFpvComplete` stops the flight.
 - The drones fly in the viewer by default; a drone button at the top right of the control row toggles them via local state passed as `Scene`'s `showDrones` prop (it never touches the editor store). The viewer help lists the button.
 - The download file name comes from the track name: whitespace becomes `-`, the result is lowercased, and `.json` is appended.

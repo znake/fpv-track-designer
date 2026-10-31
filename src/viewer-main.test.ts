@@ -107,6 +107,7 @@ describe('viewer-main', () => {
       poleHeight: 2,
       gateLength: 4,
       showFlightPath: true,
+      showGrid: true,
       gateType: 'standard',
       gateOpacity: 1,
       trackName: '',
@@ -133,7 +134,50 @@ describe('viewer-main', () => {
       u: 0.4,
       position: { x: 1, y: 2, z: 3 },
     }])
-    expect(state.config).toEqual(config)
+    expect(state.config).toEqual({ ...config, showGrid: false })
     expect(state.error).toBeNull()
+  })
+
+  it('hides the ground grid even when the shared payload enables it', async () => {
+    window.location.hash = '#z.grid'
+    const track = {
+      id: 'track-id',
+      name: 'Grid track',
+      gates: [{
+        id: 'gate-1',
+        type: 'standard',
+        position: { x: 0, y: 0, z: 0 },
+        rotation: 0,
+        openings: {
+          main: { width: 1, height: 1, radius: 1, count: 2, spacing: 0, orientation: 'outwards' as const },
+        },
+      }],
+      gateSequence: [{ gateId: 'gate-1', openingId: 'main', reverse: false }],
+      fieldSize: { width: 30, height: 15 },
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-01-01T00:00:00.000Z',
+    }
+    const config = {
+      gateQuantities: {},
+      fieldSize: { width: 30, height: 15 },
+      venueId: null,
+      snapGatesToGrid: true,
+      snapGridSize: 0.5,
+      showGrid: true,
+      showFlightPath: true,
+      showOpeningLabels: true,
+      theme: 'minimal',
+    }
+
+    mockDecodeTrackSharePayload.mockReturnValue({ track, config })
+
+    await loadViewerMain()
+
+    const useViewerStore = await getViewerStore()
+    const state = useViewerStore.getState()
+
+    expect(state.config?.showGrid).toBe(false)
+    expect(state.config?.snapGridSize).toBe(0.5)
+    expect(state.config?.showFlightPath).toBe(true)
   })
 })

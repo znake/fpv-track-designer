@@ -95,7 +95,7 @@ Läuft beim Rendern etwas schief, zeigt die App statt der Szene einen Fehlerbild
 
 Änderungen an der Konfiguration erzeugen die Strecke nicht von selbst neu. Sobald die aktuelle Strecke aus einer Generierung stammt und die Konfiguration davon abweicht, erscheint im Einstellungs-Panel der Button „Neue Kurskonfiguration anwenden“, der einen neuen Track erzeugt. Nach Galerie-Laden oder JSON-Import gibt es keinen Generierungsstand: Dann bleibt der Button aus, und die geänderten Werte greifen erst beim nächsten Shuffle.
 
-Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in der TopBar: Grid anzeigen, Grid-Snap (samt Snap-Genauigkeit), Flugbahn, Durchflüge und Drohnen lassen sich dort einzeln ein- und ausblenden. Diese Schalter ändern nur die Darstellung und wandern nicht in Export oder Share-Link.
+Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in der TopBar: Grid anzeigen, Grid-Snap (samt Snap-Genauigkeit), Flugbahn, Durchflüge und Drohnen lassen sich dort einzeln ein- und ausblenden. Sie ändern nur die Darstellung: Grid, Flugbahn, Durchflüge, Grid-Snap und Theme wandern als Darstellungs-Vorgabe in Export und Share-Link mit (der Drohnen-Schalter nicht). Der Share-Viewer öffnet eine geteilte Strecke trotzdem immer ohne Boden-Grid (siehe [Share-Viewer](#share-viewer)).
 
 ### Gates bearbeiten
 
@@ -188,7 +188,7 @@ Die Daten für Lang- und Kurzlink kommen ausschließlich aus der Strecke im Edit
 
 Der Share-Viewer ist eine eigene, read-only Ansicht der geteilten Strecke. Er wird über eine eigene URL mit Hash-Payload aufgerufen und liest die Daten beim Laden direkt aus dem Fragment nach `#`. Fehlt die Payload oder ist sie beschädigt, erscheint statt der Szene eine Fehlermeldung mit dem Titel „Track kann nicht geladen werden“ und einer passenden Meldung.
 
-Im Viewer lässt sich die Strecke frei betrachten, aber nicht verändern. Eine mit Leitpunkten geformte Ideallinie wird angezeigt; die Leitpunkte selbst sind dort nicht sichtbar. Oben rechts gibt es Buttons für die Drohnen (standardmäßig fliegen sie mit, der Button blendet sie aus), den FPV-Flug (ab zwei Gates), den JSON-Download der Strecke und eine Hilfe mit den Steuerungsgesten; die Hilfe öffnet sich beim ersten Besuch einmalig von selbst und danach nur noch per Klick. Der Download benennt die Datei nach dem Streckennamen. Unten rechts führt ein Link zu fpvooe.com. Auch im Viewer beendet `Escape` den FPV-Flug.
+Im Viewer lässt sich die Strecke frei betrachten, aber nicht verändern. Das Boden-Grid ist dort immer ausgeblendet, auch wenn die Strecke im Editor mit Raster exportiert wurde – das Raster ist ein Bauhilfsmittel; der Feldrand bleibt sichtbar. Eine mit Leitpunkten geformte Ideallinie wird angezeigt; die Leitpunkte selbst sind dort nicht sichtbar. Oben rechts gibt es Buttons für die Drohnen (standardmäßig fliegen sie mit, der Button blendet sie aus), den FPV-Flug (ab zwei Gates), den JSON-Download der Strecke und eine Hilfe mit den Steuerungsgesten; die Hilfe öffnet sich beim ersten Besuch einmalig von selbst und danach nur noch per Klick. Der Download benennt die Datei nach dem Streckennamen. Unten rechts führt ein Link zu fpvooe.com. Auch im Viewer beendet `Escape` den FPV-Flug.
 
 Der Viewer wird als einzelne HTML-Datei gebaut und über einen eigenen Einstiegspunkt (`viewer.html`) geladen:
 

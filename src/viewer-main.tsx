@@ -7,6 +7,13 @@ import { useViewerStore } from '@/viewer-store'
 import { decodeTrackSharePayload } from '@/utils/shareTrack'
 import { translateOutsideReact } from '@/i18n'
 
+/**
+ * The shared payload carries the sender's view toggles. The viewer opens the
+ * ground grid off regardless: it is a layout aid, and most exported tracks have
+ * it on because the sender snapped gates with it.
+ */
+const VIEWER_CONFIG_OVERRIDES = { showGrid: false } as const
+
 function loadTrackFromHash() {
   const payload = window.location.hash.slice(1)
   const { setTrackData, setError } = useViewerStore.getState()
@@ -22,7 +29,7 @@ function loadTrackFromHash() {
     return
   }
 
-  setTrackData(result.track, result.config)
+  setTrackData(result.track, { ...result.config, ...VIEWER_CONFIG_OVERRIDES })
 }
 
 loadTrackFromHash()
