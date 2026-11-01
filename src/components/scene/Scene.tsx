@@ -191,7 +191,10 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
     <Canvas
       dpr={theme.dpr}
       gl={{
-        antialias: theme.antialias,
+        // MSAA is a WebGL context attribute: it is fixed when the renderer is created,
+        // so it cannot follow a runtime theme switch. Keep it on for every theme — the
+        // per-sample cost is small next to the shadows/bloom/environment that `minimal` omits.
+        antialias: true,
         toneMapping: ACESFilmicToneMapping,
         toneMappingExposure: theme.toneMappingExposure,
       }}

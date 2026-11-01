@@ -10,6 +10,8 @@ Der Changelog beginnt mit den Commits der letzten Woche (ab 2026-10-23). Früher
 
 **Geändert**
 
+- Die Gates und Linien sind jetzt in jedem Theme weichgezeichnet. Das Standard-Theme „Minimal Standard“ hatte die Kantenglättung (MSAA) abgeschaltet und auf normalen Retina-Bildschirmen zusätzlich nur in halber Auflösung gerendert; es zeichnet jetzt mit 1,5-facher Auflösung und geglätteten Kanten und bleibt trotzdem das günstigste Theme, weil weiterhin keine Schatten, kein Bloom und kein Environment berechnet werden.
+
 - Der Share-Viewer zeigt geteilte Strecken immer ohne Boden-Grid. Das Raster ist ein Bauhilfsmittel und war in den meisten Exporten eingeschaltet, weil es beim Setzen der Gates half; der Feldrand bleibt sichtbar.
 - Die Drag-Modifier am Gate sind getauscht: `Shift` + Ziehen dreht jetzt das Gate, `Strg`/`Control` + Ziehen hebt und senkt die Höhe – man dreht häufiger, als man die Höhe nachjustiert. Leitpunkte auf der Ideallinie folgen derselben Regel und heben bzw. senken sich ebenfalls mit `Strg`/`Control`. Hilfe-Dialog, README und Nutzerdokumentation sind angepasst.
 - Die Liste der offiziellen Tracks zeigt schlichte, einzeilige Einträge mit Trennlinien statt Karten. Name, Gate-Anzahl und Feldmaß stehen nebeneinander, damit deutlich mehr Strecken gleichzeitig sichtbar sind.

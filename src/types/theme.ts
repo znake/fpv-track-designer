@@ -81,8 +81,15 @@ export interface ThemeConfig {
   description: string
 
   // Renderer
+  /**
+   * Pixel-ratio range, clamped against `window.devicePixelRatio`.
+   *
+   * Antialiasing is deliberately not theme-specific: `antialias` is a WebGL
+   * context attribute and a renderer can only set it when the context is
+   * created. The editor keeps one Canvas while themes are switched at runtime,
+   * so `Scene` always requests MSAA and the themes only differ in resolution.
+   */
   dpr: [number, number]
-  antialias: boolean
   toneMappingExposure: number
 
   // Component flags — which 3D components to render
@@ -302,8 +309,7 @@ export const THEME_PRESETS: Record<ThemeId, ThemeConfig> = {
     id: 'minimal',
     name: 'Minimal Standard',
     description: 'Optimiert für schwächere Geräte — reduzierter Detailgrad, kein Schattenwurf.',
-    dpr: [1, 1],
-    antialias: false,
+    dpr: [1, 1.5],
     toneMappingExposure: 1.05,
     useSkyDome: true,
     useSky: false,
@@ -320,7 +326,6 @@ export const THEME_PRESETS: Record<ThemeId, ThemeConfig> = {
     name: 'Realistisch',
     description: 'Sonne mit Wolken, Schatten und atmosphärischer Beleuchtung — für leistungsstarke Rechner.',
     dpr: [1, 2],
-    antialias: true,
     toneMappingExposure: 1.1,
     useSkyDome: false,
     useSky: true,
@@ -339,7 +344,6 @@ export const THEME_PRESETS: Record<ThemeId, ThemeConfig> = {
     name: 'Nacht',
     description: 'Neonfarbene Gates mit Bloom-Effekt unter einem funkelnden Sternenhimmel.',
     dpr: [1, 1.5],
-    antialias: true,
     toneMappingExposure: 0.9,
     useSkyDome: false,
     useSky: false,

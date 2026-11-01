@@ -50,6 +50,7 @@ scene/
 - No Shift or Ctrl camera gesture exists: Shift+left-drag on a gate body rotates it (`useGateMoveDrag`), Ctrl+left-drag on a gate body raises/lowers it, and Ctrl+left-drag on an ideal-line point dot raises/lowers that point (`useFlightPathPointDrag`).
 - SmoothZoom: wheel and middle-drag with frame-rate independent lerp.
 - Realistic theme uses sunset environment/shadows; night theme uses stars, environment, and bloom.
+- Antialiasing is always on: `antialias` is a WebGL context attribute that cannot follow a runtime theme switch, so `Canvas` requests MSAA unconditionally (the night `EffectComposer` brings its own 8x multisampling render target). Themes differ only in `dpr`: minimal 1-1.5, realistic 1-2, night 1-1.5, each clamped against `window.devicePixelRatio`.
 - Grid details: the field boundary is always drawn, 1 m cells and 5 m sections appear only while `showGrid` is on, the `#FPVOOE` watermark sits at the field center, and a click on the ground deselects the current gate.
 - Touch: a two-finger drag pans the view (`CameraPan`) and a pinch zooms (`SmoothZoom`); both paths are skipped while a native touch gesture is active.
 - FPV fly-through runs at 4 m/s with a 1.25 m look-ahead and restores the previous editor camera on exit; the FPV button is disabled below 2 gates, and Escape stops the flight.
