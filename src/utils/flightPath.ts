@@ -26,6 +26,8 @@ const CURVE_SAMPLES_PER_METER = 24
 const FORBIDDEN_ZONE_TOLERANCE = 0.2
 const MIN_CLEARANCE = 0.3
 export const DIVE_TOP_APPROACH_CLEARANCE = 0.5
+/** Radius of the descent arc that turns the approach into the vertical dive into the top opening. */
+export const DIVE_APPROACH_RADIUS = 0.8
 export const GATE_STRUCTURE_CLEARANCE = 0.5
 const OCTAGONAL_TUNNEL_HALF_LENGTH_FACTOR = 1
 
@@ -515,6 +517,120 @@ function createSplitS(
   return { curves: [{ curve, length: curve.getLength() }], totalLength: curve.getLength() }
 }
 
+/** Circular arc between two points that share one centre, sampled in its own plane. */
+function createArcVertices(from: Vector3, to: Vector3, center: Vector3): Vector3[] {
+  const startOffset = from.clone().sub(center)
+  const endOffset = to.clone().sub(center)
+  const axis = startOffset.clone().cross(endOffset)
+  if (startOffset.lengthSq() < 1e-12 || endOffset.lengthSq() < 1e-12 || axis.lengthSq() < 1e-12) {
+    return [from.clone(), to.clone()]
+  }
+
+  axis.normalize()
+  const sweep = startOffset.angleTo(endOffset)
+  const steps = Math.max(8, Math.ceil(sweep * startOffset.length() * FILLET_SAMPLES_PER_METER))
+  const vertices: Vector3[] = []
+
+  for (let step = 0; step <= steps; step++) {
+    vertices.push(center.clone().add(startOffset.clone().applyAxisAngle(axis, sweep * (step / steps))))
+  }
+
+  vertices[vertices.length - 1] = to.clone()
+  return vertices
+}
+
+function isDivePassTransition(fromVisit: GateVisit, toVisit: GateVisit): boolean {
+  return fromVisit.gate.id === toVisit.gate.id
+    && !fromVisit.reverse
+    && !toVisit.reverse
+    && isDiveTopOpening(fromVisit.gate, fromVisit.opening)
+    && isDiveSideOpening(toVisit.gate, toVisit.opening)
+}
+
+/**
+ * The dive itself: the descent out of the top opening turns into the side exit as one quarter arc
+ * around the gate's inner corner, so the line never loops inside the frame or kinks at the exit.
+ */
+function createDivePassTransition(fromVisit: GateVisit, toVisit: GateVisit): Detour | null {
+  const from = getGateExitPoint(fromVisit)
+  const to = getGateEntryPoint(toVisit)
+  const topCenter = getGateVisitCenterPoint(fromVisit)
+  const sideCenter = getGateVisitCenterPoint(toVisit)
+  const corner = new Vector3(sideCenter.x, topCenter.y, sideCenter.z)
+  const radius = from.distanceTo(corner)
+
+  if (radius < MIN_CLEARANCE) return null
+  if (Math.abs(to.distanceTo(corner) - radius) > 1e-3) return null
+
+  const curve = new RoundedRouteCurve(createArcVertices(from, to, corner), [from.clone(), corner.clone(), to.clone()])
+  return { curves: [{ curve, length: curve.getLength() }], totalLength: curve.getLength() }
+}
+
+/**
+ * Approach to a dive gate: the horizontal route ends one radius short of the entry point and one
+ * radius above it, then a quarter arc drops the line into the vertical descent, so the join at the
+ * top opening is tangent instead of a corner.
+ */
+function createDiveApproachTransition(
+  from: Vector3,
+  fromDirection: Vector3,
+  to: Vector3,
+  fromVisit: GateVisit,
+  toVisit: GateVisit,
+): Detour | null {
+  if (toVisit.reverse || !isDiveTopOpening(toVisit.gate, toVisit.opening)) return null
+  if (fromVisit.gate.id === toVisit.gate.id) return null
+
+  const horizontal = to.clone().sub(from).setY(0)
+  const arrival = horizontal.lengthSq() > 1e-9
+    ? horizontal.normalize()
+    : fromDirection.clone().setY(0).normalize()
+  if (arrival.lengthSq() < 1e-9) return null
+
+  const arcStart = to.clone()
+    .sub(arrival.clone().multiplyScalar(DIVE_APPROACH_RADIUS))
+    .add(new Vector3(0, DIVE_APPROACH_RADIUS, 0))
+  const arcCenter = to.clone().sub(arrival.clone().multiplyScalar(DIVE_APPROACH_RADIUS))
+  const chord = Math.hypot(arcStart.x - from.x, arcStart.z - from.z)
+  const climbBudget = chord > 1e-6 ? (2.5 * Math.abs(arcStart.y - from.y)) / chord : TRANSITION_LENGTH_BUDGET
+  const startHeading = Math.atan2(fromDirection.z, fromDirection.x)
+
+  const build = (filter: ((points: readonly Vector3[]) => boolean) | null): Detour | null => {
+    const result = planSmoothTransition(
+      { x: from.x, z: from.z, heading: startHeading },
+      { x: arcStart.x, z: arcStart.z, heading: Math.atan2(arrival.z, arrival.x) },
+      {
+        lengthBudget: Math.max(TRANSITION_LENGTH_BUDGET, climbBudget),
+        ...(filter ? { isAllowed: (points: readonly { x: number; z: number }[]) => filter(liftTransition(points, from, arcStart)) } : {}),
+      },
+    )
+    if (!result) return null
+
+    const approach = new ArcRouteCurve(result.plan, result.radius, from.clone(), arcStart, startHeading)
+    const diveArc = new RoundedRouteCurve(
+      createArcVertices(arcStart, to, arcCenter),
+      [arcStart.clone(), arcCenter.clone(), to.clone()],
+    )
+
+    return {
+      curves: [
+        { curve: approach, length: approach.getLength() },
+        { curve: diveArc, length: diveArc.getLength() },
+      ],
+      totalLength: approach.getLength() + diveArc.getLength(),
+    }
+  }
+
+  const clearsHardware = (points: readonly Vector3[]) => (
+    !pointsCrossForbiddenZone(points, toVisit)
+    && !pointsEnterOpening(points, fromVisit)
+    && !pointsEnterOpening(points, toVisit)
+    && minimumPolylineRadius(points) >= MIN_TRANSITION_RADIUS * 0.95
+  )
+
+  return build(clearsHardware) ?? build(null)
+}
+
 function measureCurveSwing(curve: RouteCurve): number {
   let swing = 0
   let previousHeading: number | null = null
@@ -768,6 +884,27 @@ function getGatePassThroughOffset(opening: GateOpening): number {
   return opening.id === 'entry-top' ? Math.max(defaultOffset, DIVE_TOP_APPROACH_CLEARANCE) : defaultOffset
 }
 
+function isDiveTopOpening(gate: Gate, opening: GateOpening): boolean {
+  return gate.type === 'dive' && opening.id === 'entry-top'
+}
+
+function isDiveSideOpening(gate: Gate, opening: GateOpening): boolean {
+  return gate.type === 'dive' && opening.id.startsWith('exit-')
+}
+
+/**
+ * A dive gate is flown through twice: over the top and out of one side face. The pass-through
+ * straights stop short of the interior so the two passes meet in one arc at the gate's inner corner
+ * instead of overlapping inside the frame.
+ */
+function getGateEntryOffset(visit: GateVisit): number {
+  return isDiveSideOpening(visit.gate, visit.opening) && !visit.reverse ? 0 : getGatePassThroughOffset(visit.opening)
+}
+
+function getGateExitOffset(visit: GateVisit): number {
+  return isDiveTopOpening(visit.gate, visit.opening) && !visit.reverse ? 0 : getGatePassThroughOffset(visit.opening)
+}
+
 function isOctagonalTunnelVisit(visit: GateVisit): boolean {
   return visit.gate.type === 'octagonal-tunnel' && visit.opening.id === 'main'
 }
@@ -791,7 +928,7 @@ function getGateEntryPoint(visit: GateVisit): Vector3 {
   }
 
   const center = getGateVisitCenterPoint(visit)
-  const offset = getGateEntryDirection(visit.gate, visit.opening, visit.reverse).multiplyScalar(getGatePassThroughOffset(visit.opening))
+  const offset = getGateEntryDirection(visit.gate, visit.opening, visit.reverse).multiplyScalar(getGateEntryOffset(visit))
   return center.add(offset)
 }
 
@@ -803,7 +940,7 @@ function getGateExitPoint(visit: GateVisit): Vector3 {
   }
 
   const center = getGateVisitCenterPoint(visit)
-  const offset = getGateExitDirection(visit.gate, visit.opening, visit.reverse).multiplyScalar(getGatePassThroughOffset(visit.opening))
+  const offset = getGateExitDirection(visit.gate, visit.opening, visit.reverse).multiplyScalar(getGateExitOffset(visit))
   return center.add(offset)
 }
 
@@ -1115,7 +1252,14 @@ function buildFlightPath(
 
     let transitionCurves: { curve: RouteCurve; length: number }[]
 
-    if (isSideDefinedSameGateTransition(fromVisit, toVisit)) {
+    const divePass = isDivePassTransition(fromVisit, toVisit) ? createDivePassTransition(fromVisit, toVisit) : null
+    const diveApproach = divePass ? null : createDiveApproachTransition(from, fromDirection, to, fromVisit, toVisit)
+
+    if (divePass) {
+      transitionCurves = divePass.curves
+    } else if (diveApproach) {
+      transitionCurves = diveApproach.curves
+    } else if (isSideDefinedSameGateTransition(fromVisit, toVisit)) {
       const physicalSide = getGateLocalXDirection(fromVisit.gate).multiplyScalar(getHGateBackrestSide(fromVisit.gate.id))
       const lateral = getStackedTransitionLateral(fromVisit, toVisit)
       const splitS = createSplitS(from, fromDirection, to, toDirection)

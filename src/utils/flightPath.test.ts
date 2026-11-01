@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { Vector3 } from 'three'
-import { calculateFlightPath, calculateFlightPathWithControlPoints, DIVE_TOP_APPROACH_CLEARANCE, GATE_BASE_HEIGHT, GATE_STRUCTURE_CLEARANCE, SAME_GATE_FRAME_CLEARANCE } from './flightPath'
+import { calculateFlightPath, calculateFlightPathWithControlPoints, DIVE_APPROACH_RADIUS, DIVE_TOP_APPROACH_CLEARANCE, GATE_BASE_HEIGHT, GATE_STRUCTURE_CLEARANCE, SAME_GATE_FRAME_CLEARANCE } from './flightPath'
 import type { Gate, GateSequenceItem, IdealLinePoint } from '../types'
 import { createDefaultGateOpenings, getHGateBackrestSide } from './gateOpenings'
 
@@ -701,7 +701,7 @@ describe('calculateFlightPath', () => {
     expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(10)
   })
 
-  it('approaches dive gates from at least 0.5m above the top before diving through the center', () => {
+  it('turns a dive approach into the vertical descent without a corner', () => {
     const startGate = createGate('start', 0, 0, 0)
     const diveGate: Gate = {
       id: 'dive-gate',
@@ -716,26 +716,58 @@ describe('calculateFlightPath', () => {
       { gateId: diveGate.id, openingId: diveGate.openings[1].id, reverse: false },
     ]
 
-    const path = calculateFlightPath([startGate, diveGate], sequence)
-    const transitionToDive = path.sampledSegments[1]
-    const diveThroughTop = path.sampledSegments[2]
+    const data = calculateFlightPathWithControlPoints([startGate, diveGate], sequence)
+    const approach = data.path.sampledLegs[0]
+    const landing = approach[approach.length - 1]
+    const beforeLanding = approach[approach.length - 2]
     const topY = diveGate.position.y + GATE_BASE_HEIGHT
     const approachY = topY + DIVE_TOP_APPROACH_CLEARANCE
-    const insideY = topY - DIVE_TOP_APPROACH_CLEARANCE
-    const transitionEnd = transitionToDive[transitionToDive.length - 1]
-    const diveStart = diveThroughTop[0]
-    const diveEnd = diveThroughTop[diveThroughTop.length - 1]
+    const metrics = measureLeg(approach)
 
-    expect(transitionEnd.x).toBeCloseTo(diveGate.position.x, 5)
-    expect(transitionEnd.z).toBeCloseTo(diveGate.position.z, 5)
-    expect(transitionEnd.y).toBeGreaterThanOrEqual(approachY - 0.01)
-    expect(diveStart).toEqual(transitionEnd)
-    expect(diveEnd.x).toBeCloseTo(diveGate.position.x, 5)
-    expect(diveEnd.z).toBeCloseTo(diveGate.position.z, 5)
-    expect(diveEnd.y).toBeCloseTo(insideY, 5)
+    expect(landing.x).toBeCloseTo(diveGate.position.x, 5)
+    expect(landing.z).toBeCloseTo(diveGate.position.z, 5)
+    expect(landing.y).toBeCloseTo(approachY, 5)
+    expect(beforeLanding.x - landing.x).toBeLessThan(0.02)
+    expect(beforeLanding.z - landing.z).toBeLessThan(0.02)
+    expect(beforeLanding.y).toBeGreaterThan(landing.y)
+    expect(Math.max(...approach.map((point) => point.y))).toBeGreaterThan(approachY + DIVE_APPROACH_RADIUS - 0.05)
+    expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(10)
+    expect(metrics.minRadius).toBeGreaterThanOrEqual(MIN_LEG_RADIUS_METERS)
   })
 
-  it('routes directly from a dive gate top entry to the nearest side exit opening', () => {
+  it('dives through the top opening and out of the side opening in one arc without looping', () => {
+    for (const diveId of ['dive-d', 'dive-e', 'dive-f', 'dive-g']) {
+      const startGate = createGate('start', 0, 0, 0)
+      const diveGate: Gate = {
+        id: diveId,
+        type: 'dive',
+        position: { x: 0, y: 0, z: 10 },
+        rotation: 0,
+        openings: createDefaultGateOpenings('dive', diveId),
+      }
+      const sideOpening = diveGate.openings[1]
+      const sequence: GateSequenceItem[] = [
+        { gateId: startGate.id, openingId: 'main', reverse: false },
+        { gateId: diveGate.id, openingId: 'entry-top', reverse: false },
+        { gateId: diveGate.id, openingId: sideOpening.id, reverse: false },
+      ]
+
+      const data = calculateFlightPathWithControlPoints([startGate, diveGate], sequence)
+      const divePass = data.path.sampledLegs[1]
+      const landing = divePass[divePass.length - 1]
+      const metrics = measureLeg(divePass)
+
+      expect(landing.x).toBeCloseTo(sideOpening.position.x, 5)
+      expect(landing.y).toBeCloseTo(sideOpening.position.y, 5)
+      expect(landing.z).toBeCloseTo(diveGate.position.z + sideOpening.position.z, 5)
+      expect(metrics.swingDegrees).toBeLessThanOrEqual(180)
+      expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(10)
+      expect(metrics.minRadius).toBeGreaterThanOrEqual(MIN_LEG_RADIUS_METERS)
+      expect(Math.min(...divePass.map((point) => point.y))).toBeGreaterThanOrEqual(GATE_BASE_HEIGHT / 2 - 0.01)
+    }
+  })
+
+  it('still crosses the top opening end to end when a dive gate is flown backwards', () => {
     const startGate = createGate('start', 0, 0, 0)
     const diveGate: Gate = {
       id: 'dive-gate',
@@ -746,19 +778,19 @@ describe('calculateFlightPath', () => {
     }
     const sequence: GateSequenceItem[] = [
       { gateId: startGate.id, openingId: 'main', reverse: false },
-      { gateId: diveGate.id, openingId: 'entry-top', reverse: false },
-      { gateId: diveGate.id, openingId: diveGate.openings[1].id, reverse: false },
+      { gateId: diveGate.id, openingId: 'entry-top', reverse: true },
+      { gateId: diveGate.id, openingId: diveGate.openings[1].id, reverse: true },
     ]
 
-    const path = calculateFlightPath([startGate, diveGate], sequence)
-    const transitionFromTopToExit = path.sampledSegments[3]
-    const transitionEnd = transitionFromTopToExit[transitionFromTopToExit.length - 1]
-    const lowestPoint = Math.min(...transitionFromTopToExit.map((point) => point.y))
+    const data = calculateFlightPathWithControlPoints([startGate, diveGate], sequence)
+    const topY = diveGate.position.y + GATE_BASE_HEIGHT
+    const vertical = data.path.sampledLegs[1].filter((point) => (
+      Math.abs(point.x - diveGate.position.x) < 1e-6 && Math.abs(point.z - diveGate.position.z) < 1e-6
+    ))
 
-    expect(transitionEnd.x).toBeCloseTo(-0.15, 5)
-    expect(transitionEnd.y).toBeCloseTo(GATE_BASE_HEIGHT / 2, 5)
-    expect(transitionEnd.z).toBeCloseTo(diveGate.position.z, 5)
-    expect(lowestPoint).toBeGreaterThanOrEqual(GATE_BASE_HEIGHT / 2 - 0.01)
+    expect(Math.min(...vertical.map((point) => point.y))).toBeCloseTo(topY - DIVE_TOP_APPROACH_CLEARANCE, 5)
+    expect(Math.max(...vertical.map((point) => point.y))).toBeCloseTo(topY + DIVE_TOP_APPROACH_CLEARANCE, 5)
+    expect(data.path.sampledPoints.every((point) => Number.isFinite(point.x + point.y + point.z))).toBe(true)
   })
 })
 
