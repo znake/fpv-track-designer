@@ -25,20 +25,31 @@ function matchesVisit(entry: GateSequenceItem, visit: IdealLineVisitRef): boolea
   return entry.gateId === visit.gateId && entry.openingId === visit.openingId
 }
 
-/** A same-gate leg must land after the last visit of that gate, not before its first one. */
+/**
+ * A same-gate leg must land after the last visit of that gate, not before its first one.
+ * A wrapping leg (the source gate is visited after the target gate, e.g. the last gate of the
+ * lap flying back into the start gate) appends behind the source gate so the newer gate becomes
+ * the final pass and the start gate keeps number 1.
+ */
 function findInsertionSequenceIndex(
   gateSequence: readonly GateSequenceItem[],
   fromVisit: IdealLineVisitRef,
   toVisit: IdealLineVisitRef,
 ): number {
-  const indexes: number[] = []
+  const targetIndexes: number[] = []
+  let firstSourceIndex = -1
+
   gateSequence.forEach((entry, index) => {
-    if (matchesVisit(entry, toVisit)) indexes.push(index)
+    if (matchesVisit(entry, toVisit)) targetIndexes.push(index)
+    if (firstSourceIndex < 0 && matchesVisit(entry, fromVisit)) firstSourceIndex = index
   })
-  if (indexes.length === 0) return gateSequence.length
+
+  if (targetIndexes.length === 0) return gateSequence.length
 
   const isSameGateLeg = fromVisit.gateId === toVisit.gateId
-  return isSameGateLeg ? indexes[indexes.length - 1] : indexes[0]
+  if (isSameGateLeg) return targetIndexes[targetIndexes.length - 1]
+
+  return targetIndexes.find((index) => index > firstSourceIndex) ?? gateSequence.length
 }
 
 /**

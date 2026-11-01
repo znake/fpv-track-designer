@@ -26,6 +26,10 @@ const legLoop: IdealLineLegRef = {
   from: { gateId: 'b', openingId: 'main' },
   to: { gateId: 'b', openingId: 'main' },
 }
+const legCA: IdealLineLegRef = {
+  from: { gateId: 'c', openingId: 'main' },
+  to: { gateId: 'a', openingId: 'main' },
+}
 
 const lineToZ = (from: number, to: number, count = 9): { samples: Point3[]; us: number[] } => {
   const samples: Point3[] = []
@@ -127,5 +131,59 @@ describe('resolveIdealLineGateInsertion', () => {
 
     // Then the new gate goes to the end of the sequence
     expect(insertion?.sequenceIndex).toBe(1)
+  })
+
+  it('keeps inserting right after the source gate when that gate is visited again later', () => {
+    // Given a lap that flies a -> b first and returns to a further down the sequence
+    const revisitSequence: GateSequenceItem[] = [
+      { gateId: 'a', openingId: 'main' },
+      { gateId: 'b', openingId: 'main' },
+      { gateId: 'a', openingId: 'main' },
+      { gateId: 'c', openingId: 'main' },
+    ]
+
+    // When the a -> b leg is resolved
+    const insertion = resolveIdealLineGateInsertion(query({ gateSequence: revisitSequence }))
+
+    // Then the gate stays between a's first visit and b, not at the end of the lap
+    expect(insertion?.sequenceIndex).toBe(1)
+  })
+
+  it('appends the gate when the leg closes the lap back into the start gate', () => {
+    // Given a hover on the closing leg from the last gate back into the first one
+    const { samples, us } = lineToZ(10, 0)
+
+    // When the insertion is resolved
+    const insertion = resolveIdealLineGateInsertion(query({
+      hover: { leg: legCA, u: 0.5, position: { x: 5, y: 1, z: 5 } },
+      legRefs: [legCA],
+      sampledLegs: [samples],
+      sampledLegUs: [us],
+    }))
+
+    // Then the new gate is the final pass of the lap, so the start gate keeps number 1
+    expect(insertion?.sequenceIndex).toBe(3)
+    expect(insertion?.gateIndex).toBe(3)
+  })
+
+  it('appends the closing-leg gate after every visit of a repeated gate', () => {
+    // Given a lap that visits b twice and then closes back into a
+    const repeatedSequence: GateSequenceItem[] = [
+      ...gateSequence,
+      { gateId: 'b', openingId: 'main' },
+    ]
+    const { samples, us } = lineToZ(10, 0)
+
+    // When the closing leg is resolved
+    const insertion = resolveIdealLineGateInsertion(query({
+      hover: { leg: legCA, u: 0.5, position: { x: 5, y: 1, z: 5 } },
+      legRefs: [legCA],
+      sampledLegs: [samples],
+      sampledLegUs: [us],
+      gateSequence: repeatedSequence,
+    }))
+
+    // Then the new gate lands after the last stored visit
+    expect(insertion?.sequenceIndex).toBe(4)
   })
 })
