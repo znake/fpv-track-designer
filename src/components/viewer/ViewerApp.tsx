@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { CircleHelp, Download, Drone, Play, Square } from 'lucide-react'
+import { CircleHelp, Download, Drone, PencilLine, Play, Square } from 'lucide-react'
 import { Scene } from '@/components/scene/Scene'
 import { Button } from '@/components/ui/button'
 import { serializeTrack } from '@/schemas/track.schema'
+import { createTrackEditorUrl } from '@/utils/shareTrack'
 import { useViewerStore } from '@/viewer-store'
 import { useTranslation } from '@/i18n'
 import { ViewerHelpDialog } from './ViewerHelpDialog'
@@ -103,6 +104,11 @@ export function ViewerApp() {
         showDrones={dronesVisible}
       />
       <div className="absolute top-3 right-3 flex gap-2">
+        <Button asChild variant="outline" size="icon" className="rounded-full border-white/15 bg-black/25 text-white/70 backdrop-blur hover:bg-white/10 hover:text-white">
+          <a href={createTrackEditorUrl(track, config)} aria-label={t('editInDesigner')}>
+            <PencilLine className="size-4" />
+          </a>
+        </Button>
         <Button
           type="button"
           variant="outline"

@@ -3,6 +3,7 @@ import type { Config, Track } from '@/types'
 import { serializeTrack, deserializeTrack } from '@/schemas/track.schema'
 
 const DEFAULT_VIEWER_DOMAIN = 'https://sharedtrack.fpvooe.com'
+const DEFAULT_EDITOR_DOMAIN = 'https://trackdesigner.fpvooe.com'
 const COMPRESSED_PAYLOAD_PREFIX = 'z.'
 const DEFAULT_SHORTENER_ENDPOINT = 'https://n8n.fanaticagentic.com/webhook/shorten-track'
 const DEV_SHORTENER_ENDPOINT = '/api/shorten-track'
@@ -69,6 +70,14 @@ export function decodeTrackSharePayload(payload: string): ReturnType<typeof dese
 export function createTrackShareUrl(track: Track, config: Config, viewerDomain?: string): string {
   const domain = (viewerDomain || DEFAULT_VIEWER_DOMAIN).replace(/\/$/, '')
   return `${domain}/#${encodeTrackSharePayload(track, config)}`
+}
+
+export function getEditorDomain(configured: string | undefined = import.meta.env.VITE_EDITOR_DOMAIN): string {
+  return (configured || DEFAULT_EDITOR_DOMAIN).replace(/\/$/, '')
+}
+
+export function createTrackEditorUrl(track: Track, config: Config, editorDomain?: string): string {
+  return `${getEditorDomain(editorDomain)}/#track=${encodeTrackSharePayload(track, config)}`
 }
 
 export function getTrackShortenerEndpoint(

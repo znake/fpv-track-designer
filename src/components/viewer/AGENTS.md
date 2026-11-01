@@ -32,6 +32,7 @@ Related files outside this folder:
 - `noTrackLoaded` renders only when neither error nor track/config is set: `viewer-main.tsx` always sets an error for an empty (`viewerMissingPayload`) or undecodable (`viewerInvalidPayload`) hash, and that error branch renders an eyebrow, the title, and the error text — no reload control.
 - Help opens once per browser on the first valid load; the cookie helpers live in `ViewerApp.tsx`.
 - Export uses `serializeTrack(track, config)` so downloaded JSON remains importable by the editor.
+- The viewer's edit button is an anchor to `<editor origin>/#track=<compressed payload>`, built with `createTrackEditorUrl()` / `getEditorDomain()` in `src/utils/shareTrack.ts`; the origin comes from `VITE_EDITOR_DOMAIN` and falls back to `DEFAULT_EDITOR_DOMAIN`. It hands off, it does not mutate.
 
 ## NOTES
 - `viewer-main.tsx` forces `showGrid: false` on the decoded config: the payload carries the sender's editor toggles and most exports have the grid on. Everything downstream (scene, JSON download) sees the grid off.
@@ -39,10 +40,11 @@ Related files outside this folder:
 - The drones fly in the viewer by default; a drone button at the top right of the control row toggles them via local state passed as `Scene`'s `showDrones` prop (it never touches the editor store). The viewer help lists the button.
 - The download file name comes from the track name: whitespace becomes `-`, the result is lowercased, and `.json` is appended.
 - A `fpvooe.com` pill sits bottom-right and opens https://fpvooe.com in a new tab with `rel="noreferrer"`.
+- `#track=` handshake: the viewer links to the editor with the same `z.` payload share links use, but behind `#track=` instead of a bare hash. The editor side lives in `src/utils/editorHandoff.ts`: `readEditorHandoff()` returns `{ track, config }` or `{ error }` for a `#track=` hash, and `clearEditorHandoffHash()` drops the hash with `history.replaceState` after the load so a reload does not re-import. Nothing is posted to a server.
 
 ## ANTI-PATTERNS
 - Do not import `useAppStore` into viewer components.
-- Do not add save/load/gallery/editor actions to the viewer.
+- Do not add save/load/gallery actions or any viewer-side mutation to the viewer. The one allowed editor-facing control is the handoff link (anchor with `#track=`), because it only navigates and leaves the mutation to the editor.
 - Do not parse hash payloads in `ViewerApp`; keep decoding in `viewer-main.tsx` / `shareTrack.ts`.
 - Do not bypass `deserializeTrack()` when accepting shared payload data.
 

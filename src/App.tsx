@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from './store'
 import { generateTrack } from './utils/generator'
+import { readEditorHandoff, clearEditorHandoffHash } from './utils/editorHandoff'
 import { extractGenerationConfig } from './utils/generationConfig'
 import { createDefaultGateOpenings } from './utils/gateOpenings'
 import { gateTypeOptions } from './utils/gateTypeOptions'
@@ -62,7 +63,9 @@ function App() {
   const { t, gateTypeLabel } = useTranslation()
   const currentTrack = useAppStore((state) => state.currentTrack)
   const setTrack = useAppStore((state) => state.setTrack)
+  const replaceTrack = useAppStore((state) => state.replaceTrack)
   const config = useAppStore((state) => state.config)
+  const setConfig = useAppStore((state) => state.setConfig)
   const isDeleteDialogOpen = useAppStore((state) => state.isDeleteDialogOpen)
   const closeDeleteDialog = useAppStore((state) => state.closeDeleteDialog)
   const deleteSelectedGates = useAppStore((state) => state.deleteSelectedGates)
@@ -83,6 +86,8 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [designOpen, setDesignOpen] = useState(false)
   const [fpvModeActive, setFpvModeActive] = useState(false)
+  const [handoff] = useState(() => readEditorHandoff())
+  const handoffAppliedRef = useRef(false)
   const [sequenceDraft, setSequenceDraft] = useState<{ editorKey: string | null; value: string }>({
     editorKey: null,
     value: '',
@@ -107,14 +112,38 @@ function App() {
     onEscape: () => setFpvModeActive(false),
   })
 
+  useEffect(() => {
+    if (!handoff || handoffAppliedRef.current) return
+
+    handoffAppliedRef.current = true
+    clearEditorHandoffHash()
+
+    if ('error' in handoff) {
+      console.error('Track handoff failed:', handoff.error)
+      return
+    }
+
+    // The handoff only exists on a fresh boot, so this guard normally runs the
+    // load straight away. It stays wired so any future working-copy restore
+    // keeps the unsaved-changes contract instead of silently replacing work.
+    requestDestructiveAction(
+      () => {
+        setConfig(handoff.config)
+        replaceTrack(handoff.track)
+      },
+      t('discardCurrentTrackTitle'),
+      t('dirtyViewerEditDescription'),
+    )
+  }, [handoff, replaceTrack, requestDestructiveAction, setConfig, t])
+
   // Auto-generate track on first load, using the active config so a remembered
   // venue (and its field size) is already applied to the starter track.
   useEffect(() => {
-    if (!currentTrack) {
-      const track = generateTrack(config)
-      setTrack(track, extractGenerationConfig(config))
-    }
-  }, [config, currentTrack, setTrack])
+    if (currentTrack || (handoff && !('error' in handoff))) return
+
+    const track = generateTrack(config)
+    setTrack(track, extractGenerationConfig(config))
+  }, [config, currentTrack, handoff, setTrack])
 
   // Show help once for first-time visitors.
   useEffect(() => {

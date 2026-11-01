@@ -13,8 +13,11 @@ The Track Teilen feature uses two static deployments from the same GitHub reposi
   - If unset or empty, share URLs fall back to the built-in default viewer domain `https://sharedtrack.fpvooe.com`. Only set the variable to force a different viewer domain.
 - Optional environment variable:
   - `VITE_TRACK_SHORTENER_ENDPOINT=/api/shorten-track`
+- Optional environment variable:
+  - `VITE_EDITOR_DOMAIN=https://trackdesigner.fpvooe.com`
+  - Build-time origin that the viewer's **Im Track-Designer bearbeiten** button links to. If unset or empty, the button falls back to the built-in default `https://trackdesigner.fpvooe.com`. Set it only to send shared tracks to a different editor deployment.
 
-Both `VITE_*` variables are build-time only. Vite bakes them into the JavaScript bundle per mode (development/production) when the build runs, so changing a value requires a rebuild of the image or publish directory; runtime environment variables have no effect.
+All `VITE_*` variables are build-time only. Vite bakes them into the JavaScript bundle per mode (development/production) when the build runs, so changing a value requires a rebuild of the image or publish directory; runtime environment variables have no effect. This includes `VITE_EDITOR_DOMAIN`: the viewer picks it up at build time.
 
 This is the full FPV Track Designer editor. The **Track Teilen** button serializes the current track and creates a share URL that points to the viewer domain.
 In local development, the editor calls `/api/shorten-track`; Vite proxies that same-origin request to the n8n webhook so localhost is not blocked by browser CORS preflight checks. In the Docker-based production editor, nginx proxies the same `/api/shorten-track` path to n8n so the browser never performs a cross-origin request. If you bypass the nginx proxy and call n8n directly, the webhook must return CORS headers for the deployed editor origin, for example `https://trackdesigner.fpvooe.com`.
@@ -52,7 +55,9 @@ Current share links carry an lz-string compressed payload with the `z.` prefix. 
 
 The fragment is decoded in the browser, so track data is not sent to the server as part of the HTTP request.
 
-The viewer itself offers a few controls of its own: an FPV fly-through camera flight (available from 2 gates on, the button is disabled below that), a JSON download of the shared track, and a help dialog describing the camera controls. The help dialog opens automatically on a viewer's first visit and is suppressed afterwards by a `fpv-track-viewer-help-seen` cookie. A link to `https://fpvooe.com` sits in the bottom right corner.
+The viewer itself offers a few controls of its own: an FPV fly-through camera flight (available from 2 gates on, the button is disabled below that), a JSON download of the shared track, an **Im Track-Designer bearbeiten** button (EN: **Edit in track designer**) that hands the currently shown track back to the editor, and a help dialog describing the camera controls. The help dialog opens automatically on a viewer's first visit and is suppressed afterwards by a `fpv-track-viewer-help-seen` cookie. A link to `https://fpvooe.com` sits in the bottom right corner.
+
+The edit button is a plain anchor to `<VITE_EDITOR_DOMAIN>/#track=<compressed payload>`, the same `z.` payload format share links use. On boot the editor reads that hash, loads the track and its display settings (field size, theme, ideal-line points), and then clears the hash from the address. The link is a normal navigation: the editor boots fresh and adopts the handed-off track, so no confirmation step is involved. No data is posted to a server in either direction.
 
 ## Repository setup
 
@@ -76,5 +81,6 @@ After deployment:
 3. Click **Track Teilen**.
 4. Copy the generated URL.
 5. Open the URL and verify it uses `https://sharedtrack.fpvooe.com/#z....` without a `/viewer.html` path.
-6. Confirm the viewer renders the track and offers its own controls: the FPV fly-through button (active from 2 gates on), the JSON download button, and the help dialog (auto-opened on first visit).
-7. Confirm the viewer shows no editor controls such as **Speichern**, **Galerie**, **Einstellungen**, gate handles, or delete actions.
+6. Confirm the viewer renders the track and offers its own controls: the FPV fly-through button (active from 2 gates on), the JSON download button, the **Im Track-Designer bearbeiten** button, and the help dialog (auto-opened on first visit).
+7. Click **Im Track-Designer bearbeiten** and confirm the editor opens at `https://trackdesigner.fpvooe.com/#track=...`, loads the same track (field size, theme and ideal-line points included), and clears the hash from the address bar afterwards.
+8. Confirm the viewer shows no editor controls such as **Speichern**, **Galerie**, **Einstellungen**, gate handles, or delete actions.

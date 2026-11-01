@@ -291,6 +291,7 @@ Im Viewer kann der Empfänger:
 - eine mit Leitpunkten geformte Ideallinie sehen (die Leitpunkte selbst bleiben unsichtbar),
 - den **FPV-Flug** starten/stoppen (wie im Editor erst ab zwei Gates),
 - den Track als **JSON herunterladen** (der Dateiname wird aus dem Streckennamen abgeleitet und wieder importierbar in den Editor),
+- über den Button **„Im Track-Designer bearbeiten“** dieselbe Strecke direkt im Editor öffnen, ohne JSON-Download und Import dazwischen. Der Editor übernimmt Feldmaß, Theme und Leitpunkte und entfernt die Daten danach aus der Adresse,
 - die **Viewer-Hilfe** öffnen (erscheint beim ersten Besuch automatisch),
 - unten rechts über **fpvooe.com** auf `https://fpvooe.com` wechseln (öffnet in einem neuen Tab).
 

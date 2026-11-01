@@ -4,6 +4,7 @@ import type { Track } from '@/types'
 import { createDefaultGateOpenings } from '@/utils/gateOpenings'
 import { serializeTrack } from '@/schemas/track.schema'
 import {
+  createTrackEditorUrl,
   createTrackShareUrl,
   decodeTrackSharePayload,
   encodeTrackSharePayload,
@@ -60,6 +61,25 @@ describe('shareTrack helpers', () => {
     if ('error' in decoded) return
     expect(decoded.track.id).toBe('share-track')
     expect(decoded.config.fieldSize).toEqual(defaultConfig.fieldSize)
+  })
+
+  it('creates a default editor URL whose compressed hash payload round-trips', () => {
+    const track = createTestTrack()
+    const editorUrl = createTrackEditorUrl(track, defaultConfig, undefined)
+    const payload = editorUrl.split('#track=')[1]
+
+    expect(editorUrl.startsWith('https://trackdesigner.fpvooe.com/#track=z.')).toBe(true)
+
+    const decoded = decodeTrackSharePayload(payload)
+    expect('error' in decoded).toBe(false)
+    if ('error' in decoded) return
+    expect(decoded.track.id).toBe('share-track')
+  })
+
+  it('honors an explicit editor domain and strips its trailing slash', () => {
+    const editorUrl = createTrackEditorUrl(createTestTrack(), defaultConfig, 'https://editor.example.test/')
+
+    expect(editorUrl.startsWith('https://editor.example.test/#track=z.')).toBe(true)
   })
 
   it('keeps legacy base64 share payloads readable', () => {

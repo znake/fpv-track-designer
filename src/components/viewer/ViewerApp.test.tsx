@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultConfig } from '@/store/configSlice'
 import type { Track } from '@/types'
 import { createDefaultGateOpenings } from '@/utils/gateOpenings'
+import { decodeTrackSharePayload } from '@/utils/shareTrack'
 import { useViewerStore } from '@/viewer-store'
 import { ViewerApp } from './ViewerApp'
 
@@ -56,6 +57,7 @@ const createTestTrack = (gateCount = 1): Track => ({
 describe('ViewerApp', () => {
   beforeEach(() => {
     useViewerStore.getState().reset()
+    vi.unstubAllEnvs()
     document.cookie = 'fpv-track-viewer-help-seen=; max-age=0; path=/'
     createObjectURL.mockClear()
     revokeObjectURL.mockClear()
@@ -85,6 +87,23 @@ describe('ViewerApp', () => {
     expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull()
     expect(screen.getByRole('button', { name: 'FPV-Flug starten' })).not.toBeNull()
     expect(screen.getByRole('button', { name: 'Track als JSON herunterladen' })).not.toBeNull()
+  })
+
+  it('links to the editor with the displayed track payload', () => {
+    vi.stubEnv('VITE_EDITOR_DOMAIN', '')
+    useViewerStore.getState().setTrackData(createTestTrack(), defaultConfig)
+
+    render(<ViewerApp />)
+
+    const editorLink = screen.getByRole('link', { name: 'Im Track-Designer bearbeiten' })
+    const href = editorLink.getAttribute('href')
+    expect(href?.startsWith('https://trackdesigner.fpvooe.com/#track=z.')).toBe(true)
+    if (!href) throw new Error('Expected the editor control to have an href')
+
+    const decoded = decodeTrackSharePayload(href.slice(href.indexOf('#track=') + '#track='.length))
+    expect('error' in decoded).toBe(false)
+    if ('error' in decoded) throw new Error('Expected the editor payload to decode')
+    expect(decoded.track.id).toBe('viewer-track')
   })
 
   it('shows the drones by default and lets the viewer hide them', () => {
