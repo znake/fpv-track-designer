@@ -270,3 +270,11 @@ export function recreateGateOpenings(gate: Pick<Gate, 'type'> & { id?: string })
 export function getPrimaryOpeningId(gate: Pick<Gate, 'openings'>): string {
   return gate.openings[0]?.id ?? 'main'
 }
+
+export function isOpeningDisabled(opening: Pick<GateOpening, 'disabled'>): boolean {
+  return opening.disabled === true
+}
+
+export function getEnabledOpenings(gate: Pick<Gate, 'openings'>): GateOpening[] {
+  return gate.openings.filter((opening) => !isOpeningDisabled(opening))
+}

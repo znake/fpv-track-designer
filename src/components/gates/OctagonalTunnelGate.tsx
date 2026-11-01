@@ -16,6 +16,7 @@ interface GateComponentProps {
   onClick?: (e: ThreeEvent<MouseEvent>) => void
   onOpeningClick?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
   onOpeningLabelClick?: (openingId: string, sequenceNumber: number, e: ThreeEvent<MouseEvent>) => void
+  onOpeningToggleDisabled?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
 }
 
 const BASE_DIAMETER = GATE_BASE_WIDTH
@@ -23,7 +24,7 @@ const POST_THICKNESS = GATE_POST_THICKNESS
 const OCTAGON_SEGMENTS = 8
 const ANGLE_OFFSET = Math.PI / OCTAGON_SEGMENTS
 
-export function OctagonalTunnelGate({ position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
+export function OctagonalTunnelGate({ position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick, onOpeningToggleDisabled }: GateComponentProps) {
   const groupRef = useRef<Group>(null)
   const diameter = BASE_DIAMETER
   const radius = diameter / 2
@@ -60,11 +61,11 @@ export function OctagonalTunnelGate({ position, rotation, openings, openingLabel
         )
       })}
 
-      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} />
+      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} onOpeningToggleDisabled={onOpeningToggleDisabled} />
 
       {/* Mirrored exit-side indicator at the back of the tunnel — same opening.id so direction toggle and label edits stay in sync */}
       <group position={[0, 0, tunnelLength]}>
-        <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} />
+        <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} onOpeningToggleDisabled={onOpeningToggleDisabled} />
       </group>
     </group>
   )

@@ -1123,4 +1123,29 @@ describe('ideal line directness', () => {
     expect(metrics.minRadius).toBeGreaterThanOrEqual(MIN_LEG_RADIUS_METERS)
     expect(metrics.maxKinkDegrees).toBeLessThanOrEqual(MAX_LEG_KINK_DEGREES)
   })
+
+  it('skips visits of deactivated openings when resolving the route', () => {
+    const createDoubleGate = (disabledOpeningId?: string): Gate => ({
+      id: 'g1',
+      type: 'double',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 0,
+      openings: createDefaultGateOpenings('double').map((opening) => (
+        opening.id === disabledOpeningId ? { ...opening, disabled: true } : opening
+      )),
+    })
+    const secondGate = createGate('g2', 10, 0, 0)
+    const sequence: GateSequenceItem[] = [
+      { gateId: 'g1', openingId: 'lower', reverse: false },
+      { gateId: 'g1', openingId: 'upper', reverse: false },
+      { gateId: 'g2', openingId: 'main', reverse: false },
+    ]
+
+    expect(calculateFlightPath([createDoubleGate(), secondGate], sequence).sampledLegs).toHaveLength(3)
+
+    const deactivated = calculateFlightPath([createDoubleGate('upper'), secondGate], sequence)
+
+    expect(deactivated.sampledLegs).toHaveLength(2)
+    expect(deactivated.sampledPoints.length).toBeGreaterThan(0)
+  })
 })

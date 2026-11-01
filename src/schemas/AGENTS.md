@@ -18,7 +18,7 @@ schemas/
 | Import external/local JSON | `deserializeTrack()` |
 | Boolean guard | `isValidTrack()` |
 | Detailed validation | `validateTrack()` |
-| Version behavior | `SCHEMA_VERSION` (currently `'1.5.0'`) |
+| Version behavior | `SCHEMA_VERSION` (currently `'1.6.0'`) |
 | Ideal-line control points | `track.idealLinePoints` (optional; stable ID, leg ref, base `u`, world position) |
 | Venue preset id | `config.venueId` (optional; absent/`null` means no preset, anything else must be a `VENUE_IDS` member) |
 | Legacy gate aliases | `LEGACY_GATE_TYPE_MAP` (maps `asymmetric` → `double-h`) |
@@ -31,7 +31,8 @@ schemas/
 - Normalize legacy gate types before final gate/opening/sequence validation.
 - Validate track, gates, openings, gate sequence, config flags, field size, gate quantities, and the venue id together.
 - `config.venueId` is optional: `undefined` and `null` both pass, any other value must satisfy `isVenueId()` (`src/utils/venuePresets.ts`) or validation reports `{ field: 'config.venueId', message: 'Venue must be one of: last-og3' }`. An unknown id therefore fails validation; only a missing/`null` value is normalized to `null` in `deserializeTrack`. Serialization always writes the field, so 1.2.0 payloads load unchanged.
-- `SCHEMA_VERSION` went `1.4.0` to `1.5.0` when free ideal-line points replaced the unversioned height-station model; older payloads load unchanged and keep the field absent. Older venue and height-profile payloads deserialize through the same shape-driven legacy path.
+- `SCHEMA_VERSION` went `1.4.0` to `1.5.0` when free ideal-line points replaced the unversioned height-station model; older payloads load unchanged and keep the field absent. Older venue and height-profile payloads deserialize through the same shape-driven legacy path. `1.5.0` to `1.6.0` added the optional `openings[].disabled` boolean of a deactivated gate opening; payloads without it keep every opening active.
+- `openings[].disabled` is optional and validated as a boolean when present, like `openings[].reverse`. Deserialization keeps the field through `normalizeGates()`/`normalizeGateSequence()`, which drop the sequence entries of deactivated openings, so an imported track never flies a switched-off opening.
 - `idealLinePoints` is optional and omitted when absent or empty. Each entry needs a unique non-empty `id`, `leg.from`/`leg.to` with string `gateId` and `openingId`, finite `0 < u < 1`, and finite world `position.x/y/z`. Validation reports indexed paths and checks shape only. Deserialization rebuilds only those fields and drops extras; the replaced `flightPathHeightOffsets` field is discarded rather than migrated.
 - Schema version changes require matching migration/rejection behavior and `track.schema.test.ts` coverage.
 - There is no supported-version gate: `version` is only checked to be a string, so any value validates and is re-serialized as the current `SCHEMA_VERSION`.

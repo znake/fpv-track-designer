@@ -1,10 +1,10 @@
 import type { StateCreator } from 'zustand'
 import type { Config } from '../types/config'
-import type { Track, Gate, IdealLineLegRef, Point3 } from '../types'
+import type { Track, Gate, GateOpening, GateSequenceItem, IdealLineLegRef, Point3 } from '../types'
 import { clampIdealLineU } from '../utils/idealLine'
 import { GATE_BASE_WIDTH } from '../constants/gateDimensions'
-import { normalizeGates, recreateGateOpenings } from '../utils/gateOpenings'
-import { buildDefaultGateSequenceEntries, normalizeGateSequence } from '../utils/gateSequence'
+import { isOpeningDisabled, normalizeGates, recreateGateOpenings } from '../utils/gateOpenings'
+import { buildDefaultGateSequenceEntries, buildGateSequenceEntry, normalizeGateSequence } from '../utils/gateSequence'
 import type { GenerationConfig } from '../utils/generationConfig'
 
 const MAX_HISTORY = 50
@@ -29,6 +29,37 @@ function enforceSingletonGates(gates: Gate[]): Gate[] {
     seenSingletonTypes.add(gate.type)
     return true
   })
+}
+
+function getGateNaturalOpeningIndex(gate: Gate, openingId: string): number {
+  return gate.openings.findIndex((opening) => opening.id === openingId)
+}
+
+/** Re-inserts a re-activated opening at its natural place inside the gate's own visits. */
+function insertGateOpeningSequenceEntry(sequence: GateSequenceItem[], gate: Gate, openingId: string): GateSequenceItem[] {
+  const entry = buildGateSequenceEntry(gate, openingId)
+  if (!entry) return sequence
+  if (sequence.some((candidate) => candidate.gateId === entry.gateId && candidate.openingId === entry.openingId)) return sequence
+
+  const targetIndex = getGateNaturalOpeningIndex(gate, openingId)
+  const firstLaterIndex = targetIndex < 0
+    ? -1
+    : sequence.findIndex((candidate) => (
+      candidate.gateId === gate.id && getGateNaturalOpeningIndex(gate, candidate.openingId) > targetIndex
+    ))
+
+  let insertionIndex = firstLaterIndex
+  if (insertionIndex < 0) {
+    let lastGateIndex = -1
+    sequence.forEach((candidate, index) => {
+      if (candidate.gateId === gate.id) lastGateIndex = index
+    })
+    insertionIndex = lastGateIndex >= 0 ? lastGateIndex + 1 : sequence.length
+  }
+
+  const nextSequence = [...sequence]
+  nextSequence.splice(insertionIndex, 0, entry)
+  return nextSequence
 }
 
 interface TrackHistoryEntry {
@@ -135,6 +166,7 @@ export interface TrackSlice {
   closeGateInsertionDialog: () => void
   deleteSelectedGates: () => void
   toggleGateDirection: (gateId: string, openingId: string) => void
+  toggleGateOpeningDisabled: (gateId: string, openingId: string) => void
   openSequenceEditor: (editor: SequenceEditorState) => void
   closeSequenceEditor: () => void
   openDeleteDialog: () => void
@@ -697,9 +729,48 @@ export const createTrackSlice: StateCreator<TrackSlice & SnapGridState, [], [], 
       isTrackModified: true,
     }
   }),
+  toggleGateOpeningDisabled: (gateId, openingId) => set((state) => {
+    if (!state.currentTrack) return state
+    const gate = state.currentTrack.gates.find((candidate) => candidate.id === gateId)
+    const opening = gate?.openings.find((candidate) => candidate.id === openingId)
+    if (!gate || !opening) return state
+
+    const nextDisabled = !isOpeningDisabled(opening)
+    const history = pushHistory(state)
+    const nextGates = state.currentTrack.gates.map((candidate) => {
+      if (candidate.id !== gateId) return candidate
+
+      return {
+        ...candidate,
+        openings: candidate.openings.map((candidateOpening) => {
+          if (candidateOpening.id !== openingId) return candidateOpening
+
+          if (nextDisabled) return { ...candidateOpening, disabled: true }
+
+          const enabledOpening: GateOpening = { ...candidateOpening }
+          delete enabledOpening.disabled
+          return enabledOpening
+        }),
+      }
+    })
+    const nextGate = nextGates.find((candidate) => candidate.id === gateId) ?? gate
+    const nextSequence = nextDisabled
+      ? state.currentTrack.gateSequence.filter((entry) => entry.gateId !== gateId || entry.openingId !== openingId)
+      : insertGateOpeningSequenceEntry(state.currentTrack.gateSequence, nextGate, openingId)
+
+    return {
+      currentTrack: normalizeTrack({
+        ...state.currentTrack,
+        gates: nextGates,
+        gateSequence: nextSequence,
+        updatedAt: new Date().toISOString(),
+      }),
+      ...history,
+      isTrackModified: true,
+    }
+  }),
   moveGateSequenceEntry: (gateId, openingId, fromSequenceNumber, toSequenceNumber) => set((state) => {
     if (!state.currentTrack) return state
-
     const sourceIndex = fromSequenceNumber - 1
     const targetIndex = toSequenceNumber - 1
     const sequence = state.currentTrack.gateSequence

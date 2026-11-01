@@ -101,7 +101,7 @@ Die Anzeigeoptionen sitzen nicht in den Einstellungen, sondern als Schalter in d
 
 1. Gate in der 3D-Szene anklicken. Shift-, Cmd- oder Ctrl-Klick erweitert die Auswahl.
 2. Verschieben-, Anheben- oder Drehen-Werkzeug direkt am Gate verwenden. Ohne Werkzeug geht es genauso direkt am Gate: **Gate gedrückt halten und ziehen** verschiebt es in der Feldebene, **`Shift` + seitliches Ziehen** dreht, **`Strg`/`Control` + Ziehen** hebt und senkt die Höhe. Das Drehen läuft kontinuierlich mit 1° pro Pixel und rastet nur bei aktivem Grid-Snap auf 15°-Schritte ein.
-3. **Einflug- und Ausflugseite:** Bei aktivem Schalter „Durchflüge“ zeigt jede Öffnung eine grüne Einflug- und eine rote Ausflugsfläche; das ⇄-Symbol an der Öffnung dreht die Durchflugrichtung um. Je nach Kameraposition ist nur die zugewandte Seite beschriftet.
+3. **Einflug- und Ausflugseite:** Bei aktivem Schalter „Durchflüge“ zeigt jede Öffnung eine grüne Einflug- und eine rote Ausflugsfläche; das ⇄-Symbol an der Öffnung dreht die Durchflugrichtung um. Je nach Kameraposition ist nur die zugewandte Seite beschriftet. Das ✕ rechts oben schaltet die Öffnung ab: Sie wird grau und fast durchsichtig, verliert ihre Durchflugnummer und fällt aus der Flugbahn, das Gate bleibt aber stehen. Über das ↺ an derselben Stelle ist sie wieder aktiv.
 4. **Durchflugreihenfolge:** Ein Klick auf die Durchflugnummer einer Öffnung öffnet den Dialog „Durchflugnummer ändern“. Die Nummer muss zwischen 1 und der Gesamtzahl der Durchflüge liegen.
 5. Neue Gates können relativ zu einem ausgewählten Gate davor oder danach eingefügt werden. Beim Einfügen wird der Gate-Typ gewählt; ein bereits vorhandenes Start/Ziel-Gate ist ausgegraut.
 6. Ausgewählte Gates lassen sich per Dialog oder Shortcut löschen.

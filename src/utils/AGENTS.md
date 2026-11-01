@@ -43,7 +43,7 @@ utils/
 | Change generation algorithm | `generator.ts` | `generateTrack(config)` |
 | Modify flight path | `flightPath.ts`, `idealLine.ts`, `routeCurves.ts` | `calculateFlightPath()`, `calculateFlightPathWithControlPoints()`, `planSmoothTransition()`, `groupIdealLinePointsByLeg()`, `basisPointAtU()`, `createIdealLineOffsetField()`, `resolveIdealLineHover()`, `getClosestPathPoint()` |
 | Change gate movement | `src/store/trackSlice.ts` (inline `moveGate`/`rotateGate`); `gateOperations.ts` is dead code | `moveGate()`, `rotateGate()` |
-| Modify gate openings | `gateOpenings.ts` | `createDefaultGateOpenings()`, `normalizeGates()` |
+| Modify gate openings | `gateOpenings.ts` | `createDefaultGateOpenings()`, `normalizeGates()`, `isOpeningDisabled()`, `getEnabledOpenings()` |
 | Modify gate sequence | `gateSequence.ts` | `buildDefaultGateSequenceEntries()`, `normalizeGateSequence()` |
 | Insert a gate at an ideal-line hover | `gateInsertion.ts` | `resolveIdealLineGateInsertion()` |
 | Modify persistence | `storage.ts` | `saveTrack()`, `loadTrack()`, `listTracks()`, `deleteTrack()` |
@@ -67,6 +67,7 @@ utils/
 - Custom ideal-line points use stable IDs, a leg ref, an immutable base `u`, and a world position. Each edited leg gets a smooth Catmull-Rom-derived 3D displacement field with zero offsets at both anchors; other legs and all point-free routes keep exact base samples.
 - `calculateFlightPathWithControlPoints()` returns `{ path, sampledLegIndexes, sampledLegUs, idealLinePoints, legRefs }`; `FlightPath` itself keeps its original shape. `Scene` uses the wrapper for rendering/FPV/editing and `GateHandles` for insertion previews. `sampledLegUs` supports basis-preserving hover mapping on already shaped curves.
 - `idealLine.ts` owns leg grouping, the single visible-basis interpolation rule, smooth fields, hover resolution, and visible closest-point selection. Dormant points stay stored but have no matching leg; zero-length legs are inert.
+- Deactivated openings (`GateOpening.disabled`) stay on the gate for rendering but are dropped from `track.gateSequence`, so `resolveVisits()`, the label numbering, FPV and the drone race skip them without extra filtering. `buildDefaultGateSequenceEntries()` filters them, `normalizeGateSequence()` drops their stored entries, and the empty-sequence fallback therefore never resurrects a switched-off opening. `toggleGateOpeningDisabled()` in `src/store/trackSlice.ts` is the only writer; re-activating re-inserts the entry at the opening's natural place inside the gate's visits.
 - Share payload prefix: `z.` for compressed payloads; keep legacy base64-url decode fallback. Shortener defaults: n8n endpoint (`DEFAULT_SHORTENER_ENDPOINT`), dev proxy `/api/shorten-track`, 8 s timeout (`SHORTENER_TIMEOUT_MS`).
 - `calculateFieldWatermarkMetrics()` runs the text along the longer field axis (`height > width` -> `height`), caps it at 0.85 of that axis and 0.3 of the shorter one, and assumes 0.72 em advance per character for troika's Roboto. `Grid` renders the text via drei's `<Text>`.
 - `VENUE_PRESETS` currently holds one entry (`last-og3`: 10.5 x 22.7 m, four 0.3 x 0.5 x 3 m pillars on x = 0 at z = -7.05, -1.95, 3.15, 8.25). `getVenuePreset()` returns `null` for an unknown/absent id, `isVenueId()` is the schema-side guard.

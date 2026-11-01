@@ -1,5 +1,6 @@
 import type { ThreeEvent } from '@react-three/fiber'
 import type { GateOpening } from '../../types'
+import { isOpeningDisabled } from '../../utils/gateOpenings'
 import { GateEntryIndicator } from './GateEntryIndicator'
 
 interface GateOpeningIndicatorsProps {
@@ -10,12 +11,14 @@ interface GateOpeningIndicatorsProps {
   onClick?: (e: ThreeEvent<MouseEvent>) => void
   onOpeningClick?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
   onOpeningLabelClick?: (openingId: string, sequenceNumber: number, e: ThreeEvent<MouseEvent>) => void
+  onOpeningToggleDisabled?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
 }
 
-export function GateOpeningIndicators({ openings, openingLabels, label, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateOpeningIndicatorsProps) {
+export function GateOpeningIndicators({ openings, openingLabels, label, isSelected, onClick, onOpeningClick, onOpeningLabelClick, onOpeningToggleDisabled }: GateOpeningIndicatorsProps) {
   return openings.map((opening) => {
     const openingLabel = openingLabels?.[opening.id] ?? label
     const sequenceNumber = openingLabel ? Number.parseInt(openingLabel, 10) : Number.NaN
+    const disabled = isOpeningDisabled(opening)
     const handleSurfaceClick = (e: ThreeEvent<MouseEvent>) => {
       onClick?.(e)
     }
@@ -29,8 +32,17 @@ export function GateOpeningIndicators({ openings, openingLabels, label, isSelect
       onClick?.(e)
     }
 
+    const handleToggleDisabledClick = (e: ThreeEvent<MouseEvent>) => {
+      if (onOpeningToggleDisabled) {
+        onOpeningToggleDisabled(opening.id, e)
+        return
+      }
+
+      onClick?.(e)
+    }
+
     const handleLabelClick = (e: ThreeEvent<MouseEvent>) => {
-      if (onOpeningLabelClick && Number.isInteger(sequenceNumber)) {
+      if (onOpeningLabelClick && !disabled && Number.isInteger(sequenceNumber)) {
         onOpeningLabelClick(opening.id, sequenceNumber, e)
         return
       }
@@ -49,10 +61,12 @@ export function GateOpeningIndicators({ openings, openingLabels, label, isSelect
         reverse={opening.reverse}
         label={openingLabel}
         isSelected={isSelected}
+        isDisabled={disabled}
         canToggleDirection={!!onOpeningClick}
         onClick={handleSurfaceClick}
         onSwapClick={handleSwapClick}
-        onLabelClick={handleLabelClick}
+        onToggleDisabledClick={onOpeningToggleDisabled ? handleToggleDisabledClick : undefined}
+        onLabelClick={disabled ? undefined : handleLabelClick}
       />
     )
   })

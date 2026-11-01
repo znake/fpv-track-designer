@@ -1,5 +1,5 @@
 import type { Gate, GateSequenceItem } from '../types'
-import { getPrimaryOpeningId, normalizeGates } from './gateOpenings'
+import { getEnabledOpenings, getPrimaryOpeningId, isOpeningDisabled, normalizeGates } from './gateOpenings'
 
 type RawGateSequenceItem = string | GateSequenceItem
 
@@ -21,6 +21,11 @@ function buildOpeningsSequence(gate: Gate, openingIds: readonly string[]): GateS
 
 function getOpeningReverse(gate: Gate, openingId: string): boolean {
   return Boolean(gate.openings.find((opening) => opening.id === openingId)?.reverse)
+}
+
+function isGateOpeningDisabled(gate: Gate, openingId: string): boolean {
+  const opening = gate.openings.find((candidate) => candidate.id === openingId)
+  return opening ? isOpeningDisabled(opening) : false
 }
 
 function isSameSequenceItem(a: GateSequenceItem, b: GateSequenceItem): boolean {
@@ -50,7 +55,7 @@ function insertMissingDoubleHMiddlePasses(sequence: GateSequenceItem[], gateMap:
 
     if (shouldInsertDoubleHMiddlePass(previous, item, gate) && !gatesWithExistingMiddlePass.has(item.gateId)) {
       const middleOpening = gate?.openings.find((opening) => opening.id === 'middle')
-      if (middleOpening) {
+      if (middleOpening && !isOpeningDisabled(middleOpening)) {
         expanded.push({ gateId: item.gateId, openingId: middleOpening.id, reverse: Boolean(middleOpening.reverse) })
       }
     }
@@ -72,9 +77,11 @@ function normalizeSequenceItem(item: RawGateSequenceItem, gateMap: Map<string, G
   const gate = gateMap.get(item.gateId)
   if (!gate) return []
 
-  const openingId = gate.openings.some((opening) => opening.id === item.openingId)
-    ? item.openingId
-    : getPrimaryOpeningId(gate)
+  const requestedOpening = gate.openings.find((opening) => opening.id === item.openingId)
+  if (requestedOpening && isOpeningDisabled(requestedOpening)) return []
+
+  const openingId = requestedOpening ? requestedOpening.id : getEnabledOpenings(gate)[0]?.id
+  if (!openingId) return []
 
   return [{
     gateId: item.gateId,
@@ -88,6 +95,18 @@ export function buildFallbackGateSequence(gates: Gate[]): GateSequenceItem[] {
 }
 
 export function buildDefaultGateSequenceEntries(gate: Gate): GateSequenceItem[] {
+  return buildAllGateSequenceEntries(gate).filter((entry) => !isGateOpeningDisabled(gate, entry.openingId))
+}
+
+/** Sequence entry that re-activates one opening; `null` when the opening is missing or still disabled. */
+export function buildGateSequenceEntry(gate: Gate, openingId: string): GateSequenceItem | null {
+  const opening = gate.openings.find((candidate) => candidate.id === openingId)
+  if (!opening || isOpeningDisabled(opening)) return null
+
+  return { gateId: gate.id, openingId: opening.id, reverse: Boolean(opening.reverse) }
+}
+
+function buildAllGateSequenceEntries(gate: Gate): GateSequenceItem[] {
   if (gate.type === 'h-gate') {
     const lowerOpening = gate.openings.find((opening) => opening.id === 'lower')
     const backrestPassOpening = gate.openings.find((opening) => opening.id === 'backrest-pass')

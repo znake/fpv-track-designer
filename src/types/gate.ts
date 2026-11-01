@@ -19,6 +19,8 @@ export interface GateOpening {
   rotation: number;
   rotationX?: number;
   reverse?: boolean;
+  /** Deactivated openings stay on the gate but are not flown or counted. */
+  disabled?: boolean;
 }
 
 export interface Gate {

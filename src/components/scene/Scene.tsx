@@ -6,6 +6,7 @@ import { ACESFilmicToneMapping, AdditiveBlending, CanvasTexture, MOUSE } from 't
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useAppStore } from '../../store'
 import { buildDefaultGateSequenceEntries } from '../../utils/gateSequence'
+import { getEnabledOpenings } from '../../utils/gateOpenings'
 import { getThemeConfig } from '../../utils/themeColors'
 import { Gate } from '../gates/Gate'
 import { FlightPath } from '../scene/FlightPath'
@@ -120,7 +121,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
     currentTrack.gates.forEach((gate, index) => {
       if (labelsByGate.has(gate.id)) return
 
-      const openingId = gate.openings[0]?.id
+      const openingId = getEnabledOpenings(gate)[0]?.id
       if (!openingId) return
 
       labelsByGate.set(gate.id, { [openingId]: String(index + 1) })

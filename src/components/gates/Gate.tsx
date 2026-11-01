@@ -32,6 +32,7 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly =
   const isDraggingGate = useAppStore((state) => state.isDraggingGate)
   const currentTrack = useAppStore((state) => state.currentTrack)
   const toggleGateDirection = useAppStore((state) => state.toggleGateDirection)
+  const toggleGateOpeningDisabled = useAppStore((state) => state.toggleGateOpeningDisabled)
   const selectGate = useAppStore((state) => state.selectGate)
   const openSequenceEditor = useAppStore((state) => state.openSequenceEditor)
 
@@ -64,6 +65,17 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly =
     })
   }
 
+  const handleOpeningToggleDisabled = (openingId: string, e: ThreeEvent<globalThis.MouseEvent>) => {
+    e.stopPropagation()
+    if (isDraggingGate) return
+
+    if (!isSelected) {
+      selectGate(gate.id)
+    }
+
+    toggleGateOpeningDisabled(gate.id, openingId)
+  }
+
   const gateIsSelected = readOnly ? false : isSelected
 
   const handlePress = (e: ThreeEvent<PointerEvent>) => {
@@ -82,6 +94,7 @@ export function Gate({ gate, openingLabels, showOpeningLabels = true, readOnly =
     onClick: readOnly ? undefined : handleClick,
     onOpeningClick: showOpeningLabels && !readOnly ? handleOpeningClick : undefined,
     onOpeningLabelClick: showOpeningLabels && !readOnly ? handleOpeningLabelClick : undefined,
+    onOpeningToggleDisabled: showOpeningLabels && !readOnly ? handleOpeningToggleDisabled : undefined,
   }
 
   useEffect(() => {

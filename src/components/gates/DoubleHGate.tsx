@@ -18,6 +18,7 @@ interface GateComponentProps {
   onClick?: (e: ThreeEvent<MouseEvent>) => void
   onOpeningClick?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
   onOpeningLabelClick?: (openingId: string, sequenceNumber: number, e: ThreeEvent<MouseEvent>) => void
+  onOpeningToggleDisabled?: (openingId: string, e: ThreeEvent<MouseEvent>) => void
 }
 
 const POST_THICKNESS = GATE_POST_THICKNESS
@@ -26,7 +27,7 @@ const BASE_HEIGHT = GATE_BASE_HEIGHT
 const STACK_DISTANCE = BASE_HEIGHT
 const BACKREST_HEIGHT_MULTIPLIER = 1.85
 
-export function DoubleHGate({ gateId, position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick }: GateComponentProps) {
+export function DoubleHGate({ gateId, position, rotation, openings, openingLabels, isSelected, onClick, onOpeningClick, onOpeningLabelClick, onOpeningToggleDisabled }: GateComponentProps) {
   const groupRef = useRef<Mesh>(null)
   const width = BASE_WIDTH
   const height = BASE_HEIGHT
@@ -83,7 +84,7 @@ export function DoubleHGate({ gateId, position, rotation, openings, openingLabel
       </group>
 
       {/* Entry/exit indicator — green entry side, red exit side */}
-      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} />
+      <GateOpeningIndicators openings={openings} openingLabels={openingLabels} isSelected={isSelected} onClick={onClick} onOpeningClick={onOpeningClick} onOpeningLabelClick={onOpeningLabelClick} onOpeningToggleDisabled={onOpeningToggleDisabled} />
     </group>
   )
 }

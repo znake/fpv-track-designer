@@ -7,7 +7,7 @@ import { normalizeGates } from '../utils/gateOpenings'
 import { normalizeGateSequence } from '../utils/gateSequence'
 import { isVenueId } from '../utils/venuePresets'
 
-export const SCHEMA_VERSION = '1.5.0'
+export const SCHEMA_VERSION = '1.6.0'
 
 const VALID_THEME_IDS = [
   'minimal',
@@ -131,6 +131,10 @@ function validateOpening(opening: unknown, gateIndex: number, openingIndex: numb
 
   if (candidate.reverse !== undefined && typeof candidate.reverse !== 'boolean') {
     errors.push({ field: `track.gates[${gateIndex}].openings[${openingIndex}].reverse`, message: 'Opening reverse must be a boolean when provided' })
+  }
+
+  if (candidate.disabled !== undefined && typeof candidate.disabled !== 'boolean') {
+    errors.push({ field: `track.gates[${gateIndex}].openings[${openingIndex}].disabled`, message: 'Opening disabled must be a boolean when provided' })
   }
 
   return errors

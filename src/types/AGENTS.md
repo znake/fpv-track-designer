@@ -6,7 +6,7 @@
 ## STRUCTURE
 ```
 types/
-├── gate.ts      # GateType union, Gate, GateOpening
+├── gate.ts      # GateType union, Gate, GateOpening (`disabled` marks a switched-off opening)
 ├── track.ts     # Track, GateSequenceItem, IdealLinePoint, Point3
 ├── config.ts    # Config, SnapGridSize + SNAP_GRID_SIZES
 ├── venue.ts     # VenueId, VenuePreset, VenueObstacle + VENUE_IDS

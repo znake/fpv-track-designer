@@ -143,7 +143,7 @@ So bearbeitest du einzelne Gates direkt in der 3D-Szene:
 2. **Mehrere Gates wählen:** Halte beim Klicken **`Shift`**, **`Cmd`** oder **`Ctrl`** gedrückt, um weitere Gates zur Auswahl hinzuzufügen oder bereits gewählte wieder abzuwählen. Ein Klick auf die **Bodenfläche** hebt die gesamte Auswahl auf.
 3. **Verschieben:** Halte das Verschieben-Symbol am Gate und ziehe es frei über das Feld. Alternativ hältst du das Gate direkt gedrückt und ziehst es. Mit aktivem Grid-Snap rastet es in der gewählten Snap-Genauigkeit ein.
 4. **Höhe verstellen:** Nutze das Höhen-Werkzeug am Gate, um es anzuheben oder abzusenken. Schneller geht es direkt am Gate: **`Strg`/`Control` gedrückt halten und das Gate ziehen** – die Höhe ändert sich dabei um 0,03 m pro Pixel, genau wie beim Höhen-Werkzeug.
-5. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Direkt am Gate funktioniert das ebenso mit **`Shift` gedrückt halten und dem Gate seitlich ziehen**. Die Drehung läuft stufenlos mit. Nur bei aktivem Grid-Snap rastet sie auf **15°-Schritte** ein. Drehungen landen nicht im Rückgängig-Verlauf und markieren die Strecke nicht als geändert (siehe [6.3](#63-rückgängig--wiederholen)).
+5. **Drehen:** Halte das Dreh-Symbol und ziehe seitlich. Direkt am Gate funktioniert das ebenso mit **`Shift` gedrückt halten und dem Gate seitlich ziehen**. Die Drehung läuft stufenlos mit. Nur bei aktivem Grid-Snap rastet sie auf **15°-Schritte** ein. Drehungen landen nicht im Rückgängig-Verlauf und markieren die Strecke nicht als geändert (siehe [6.4](#64-rückgängig--wiederholen)).
 6. **Einfügen:** Klicke ein Gate an und nutze am Gate das **„vorher“**- oder **„nachher“**-Symbol. Der Dialog **„Gate einfügen“** fragt dann nur noch den **Gate-Typ** ab. Das neue Gate wird passend in die Durchflugreihenfolge eingefügt.
 7. **Löschen:** Wähle das Gate und drücke **`Backspace`** (öffnet den Bestätigungsdialog) oder nutze das Löschen-Symbol. Bestätigen mit **`Enter`** oder **„Gate löschen"**.
 
@@ -155,7 +155,19 @@ Jedes Gate zeigt **grüne Einflug-** und **rote Ausflug-Markierungen** (sichtbar
 
 Mit aktivem **„Durchflüge"** zeigt jede Öffnung ihre **Durchflugnummer**. Klicke eine Nummer an und trage im Dialog **„Durchflugnummer ändern"** eine neue Position zwischen 1 und der Gesamtzahl der Durchflüge ein.
 
-### 6.3 Rückgängig / Wiederholen
+### 6.3 Öffnung deaktivieren
+
+Manche Gates haben Öffnungen, die du gar nicht fliegen willst – etwa die obere Hälfte eines Doppel-Gates in einer flachen Halle. Fahre mit der Maus über die Öffnung: Oben rechts erscheint ein **✕**. Ein Klick darauf schaltet die Öffnung ab.
+
+- Die Öffnung wird **grau und fast durchsichtig** und verliert ihre **Durchflugnummer**; alle übrigen Durchflüge werden lückenlos neu nummeriert.
+- Die **Ideallinie** fliegt sie nicht mehr an, FPV-Flug und Drohnen folgen der gekürzten Strecke.
+- Das Gate selbst bleibt als Bauwerk stehen und zählt weiterhin seine Stangen.
+- Am selben Platz zeigt jetzt ein **↺**-Symbol, damit du die Öffnung wieder aktivieren kannst. Sie landet dabei wieder an ihrer gewohnten Stelle innerhalb der Durchflüge des Gates.
+- Deaktivieren und Aktivieren sind **rückgängig-fähig** und markieren die Strecke als geändert.
+
+Der Zustand bleibt in der gespeicherten Strecke, im JSON-Export und im Share-Link erhalten. Der **Share-Viewer** zeigt abgeschaltete Öffnungen ebenfalls grau, aber ohne ✕ oder ↺ – dort lässt sich nichts verändern.
+
+### 6.4 Rückgängig / Wiederholen
 
 Bearbeitungsschritte lassen sich mit **`Cmd/Ctrl + Z`** rückgängig machen und mit **`Cmd/Ctrl + Y`** (oder `Cmd/Ctrl + Shift + Z`) wiederherstellen. Fährst du mit der Maus über den Rückgängig- oder Wiederholen-Knopf in der TopBar, zeigt der Tooltip in Klammern an, wie viele Schritte gerade verfügbar sind. Ohne Verlauf sind die Knöpfe deaktiviert.
 

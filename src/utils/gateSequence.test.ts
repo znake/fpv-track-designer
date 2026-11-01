@@ -151,4 +151,46 @@ describe('gateSequence', () => {
       { gateId: gate.id, openingId: 'main', reverse: true },
     ])
   })
+
+  it('skips deactivated openings when building default entries', () => {
+    const gate = createGate('ladder-deactivated', 'ladder')
+    gate.openings = gate.openings.map((opening) => (opening.id === 'middle' ? { ...opening, disabled: true } : opening))
+
+    expect(buildDefaultGateSequenceEntries(gate)).toEqual([
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+    ])
+  })
+
+  it('drops stored sequence entries of deactivated openings', () => {
+    const gate = createGate('double-deactivated', 'double')
+    gate.openings = gate.openings.map((opening) => (opening.id === 'upper' ? { ...opening, disabled: true } : opening))
+
+    expect(normalizeGateSequence([
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+    ], [gate])).toEqual([
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+    ])
+  })
+
+  it('does not resurrect fully deactivated gates through the empty-sequence fallback', () => {
+    const gate = createGate('ladder-all-off', 'ladder')
+    gate.openings = gate.openings.map((opening) => ({ ...opening, disabled: true }))
+
+    expect(normalizeGateSequence([], [gate])).toEqual([])
+  })
+
+  it('leaves the implied double-h middle pass out when the middle opening is deactivated', () => {
+    const gate = createGate('double-h-middle-off', 'double-h')
+    gate.openings = gate.openings.map((opening) => (opening.id === 'middle' ? { ...opening, disabled: true } : opening))
+
+    expect(normalizeGateSequence([
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+    ], [gate])).toEqual([
+      { gateId: gate.id, openingId: 'lower', reverse: false },
+      { gateId: gate.id, openingId: 'upper', reverse: false },
+    ])
+  })
 })

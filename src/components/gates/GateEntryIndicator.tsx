@@ -14,24 +14,34 @@ interface GateEntryIndicatorProps {
   reverse?: boolean
   label?: string
   isSelected?: boolean
+  isDisabled?: boolean
   canToggleDirection?: boolean
   onClick?: (e: ThreeEvent<MouseEvent>) => void
   onSwapClick?: (e: ThreeEvent<MouseEvent>) => void
+  onToggleDisabledClick?: (e: ThreeEvent<MouseEvent>) => void
   onLabelClick?: (e: ThreeEvent<MouseEvent>) => void
 }
+
+const DISABLED_PLANE_OPACITY = 0.1
+const DISABLED_PLANE_HOVER_OPACITY = 0.24
+const DISABLED_LABEL_FILL_OPACITY = 0.22
 
 /**
  * Transparent entry/exit indicator planes filling the gate opening.
  * Green on the entry side (front, -Z), red on the back side (+Z).
  * Makes it immediately clear which side to approach the gate from.
+ * Deactivated openings render grey and nearly invisible.
  */
-export function GateEntryIndicator({ width, height, position = [0, height / 2, 0], rotationX = 0, rotationY = 0, reverse = false, label, isSelected, canToggleDirection, onClick, onSwapClick, onLabelClick }: GateEntryIndicatorProps) {
+export function GateEntryIndicator({ width, height, position = [0, height / 2, 0], rotationX = 0, rotationY = 0, reverse = false, label, isSelected, isDisabled = false, canToggleDirection, onClick, onSwapClick, onToggleDisabledClick, onLabelClick }: GateEntryIndicatorProps) {
   const groupRef = useRef<THREE.Group>(null)
   const entryLabelRef = useRef<THREE.Group>(null)
   const exitLabelRef = useRef<THREE.Group>(null)
   const entrySwapRef = useRef<THREE.Group>(null)
   const exitSwapRef = useRef<THREE.Group>(null)
+  const entryToggleRef = useRef<THREE.Group>(null)
+  const exitToggleRef = useRef<THREE.Group>(null)
   const [isSwapIconHovered, setIsSwapIconHovered] = useState(false)
+  const [isToggleIconHovered, setIsToggleIconHovered] = useState(false)
   const [isLabelHovered, setIsLabelHovered] = useState(false)
   const [isOpeningHovered, setIsOpeningHovered] = useState(false)
   const lines = label?.split('\n') ?? []
@@ -43,18 +53,22 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
   const exitLabelColor = theme.colors.indicatorExitLabel
   const entryOutlineColor = theme.colors.indicatorEntryOutline
   const exitOutlineColor = theme.colors.indicatorExitOutline
+  const disabledColor = theme.colors.indicatorDisabledLabel
   const canEditLabel = !!onLabelClick
   const showOpeningHighlight = isSelected || isOpeningHovered
   const canShowSwapIcon = isSelected || isOpeningHovered || isLabelHovered || isSwapIconHovered
+  const canShowToggleIcon = isSelected || isOpeningHovered || isLabelHovered || isToggleIconHovered
   const swapIconHoverColor = theme.colors.selectionEmissive
   const isLabelBright = isLabelHovered
   const labelHoverColor = theme.colors.selectionEmissive
-  const labelFillOpacity = isLabelBright ? 0.9 : 0.12
+  const labelFillOpacity = isDisabled ? DISABLED_LABEL_FILL_OPACITY : isLabelBright ? 0.9 : 0.12
   const labelOutlineWidth = isLabelBright ? fontSize * 0.03 : fontSize * 0.006
-  const labelEntryColor = isLabelBright ? labelHoverColor : entryLabelColor
-  const labelExitColor = isLabelBright ? labelHoverColor : exitLabelColor
-  const labelEntryOutlineColor = isLabelBright ? theme.colors.selectionEmissive : entryOutlineColor
-  const labelExitOutlineColor = isLabelBright ? theme.colors.selectionEmissive : exitOutlineColor
+  const labelEntryColor = isDisabled ? disabledColor : isLabelBright ? labelHoverColor : entryLabelColor
+  const labelExitColor = isDisabled ? disabledColor : isLabelBright ? labelHoverColor : exitLabelColor
+  const labelEntryOutlineColor = isDisabled ? disabledColor : isLabelBright ? theme.colors.selectionEmissive : entryOutlineColor
+  const labelExitOutlineColor = isDisabled ? disabledColor : isLabelBright ? theme.colors.selectionEmissive : exitOutlineColor
+  const entryPlaneColor = isDisabled ? theme.colors.indicatorDisabledPlane : theme.colors.indicatorEntryPlane
+  const exitPlaneColor = isDisabled ? theme.colors.indicatorDisabledPlane : theme.colors.indicatorExitPlane
   const entryZ = reverse ? 0.02 : -0.02
   const exitZ = reverse ? -0.02 : 0.02
   const entryLabelZ = reverse ? 0.03 : -0.03
@@ -63,7 +77,10 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
   const exitLabelRotationY = reverse ? Math.PI : 0
 
   const openingHoverOpacity = isOpeningHovered ? 0.68 : 0.48
-  const showSwapIcon = !!canToggleDirection && canShowSwapIcon
+  const planeOpacity = isDisabled
+    ? isOpeningHovered ? DISABLED_PLANE_HOVER_OPACITY : DISABLED_PLANE_OPACITY
+    : showOpeningHighlight ? openingHoverOpacity : 0.48
+  const showSwapIcon = !!canToggleDirection && !isDisabled && canShowSwapIcon
   const swapIconFontSize = Math.min(width, height) * 0.18
   const swapIconColor = isSwapIconHovered ? swapIconHoverColor : theme.colors.indicatorEntryLabel
   const swapIconFillOpacity = isSwapIconHovered ? 0.9 : 0.78
@@ -72,6 +89,18 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
   const swapIconExitZ = reverse ? -0.045 : 0.045
   const swapIconEntryRotationY = reverse ? 0 : Math.PI
   const swapIconExitRotationY = reverse ? Math.PI : 0
+
+  const showToggleIcon = !!onToggleDisabledClick && canShowToggleIcon
+  const toggleIconFontSize = Math.min(width, height) * 0.18
+  const toggleIconColor = isToggleIconHovered
+    ? swapIconHoverColor
+    : isDisabled ? disabledColor : theme.colors.indicatorExitLabel
+  const toggleIconFillOpacity = isToggleIconHovered ? 0.95 : 0.85
+  const toggleIconOutlineWidth = isToggleIconHovered ? toggleIconFontSize * 0.1 : toggleIconFontSize * 0.07
+  const toggleIconEntryZ = reverse ? 0.045 : -0.045
+  const toggleIconExitZ = reverse ? -0.045 : 0.045
+  const toggleIconEntryRotationY = reverse ? 0 : Math.PI
+  const toggleIconExitRotationY = reverse ? Math.PI : 0
 
   const updateHoverCursor = (shouldShowPointer: boolean) => {
     document.body.style.cursor = shouldShowPointer ? 'pointer' : 'auto'
@@ -84,7 +113,7 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
 
   const handleOpeningPointerOut = () => {
     setIsOpeningHovered(false)
-    updateHoverCursor(isLabelHovered || isSwapIconHovered)
+    updateHoverCursor(isLabelHovered || isSwapIconHovered || isToggleIconHovered)
   }
 
   const handleSwapIconPointerOver = () => {
@@ -93,6 +122,15 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
   }
   const handleSwapIconPointerOut = () => {
     setIsSwapIconHovered(false)
+    updateHoverCursor(isLabelHovered || isOpeningHovered)
+  }
+
+  const handleToggleIconPointerOver = () => {
+    setIsToggleIconHovered(true)
+    updateHoverCursor(true)
+  }
+  const handleToggleIconPointerOut = () => {
+    setIsToggleIconHovered(false)
     updateHoverCursor(isLabelHovered || isOpeningHovered)
   }
 
@@ -107,7 +145,7 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
     if (!canEditLabel) return
 
     setIsLabelHovered(false)
-    updateHoverCursor(isOpeningHovered || isSwapIconHovered)
+    updateHoverCursor(isOpeningHovered || isSwapIconHovered || isToggleIconHovered)
   }
 
   const renderSwapBadge = () => (
@@ -131,6 +169,27 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
     </Text>
   )
 
+  const renderToggleBadge = () => (
+    <Text
+      color={toggleIconColor}
+      fontSize={toggleIconFontSize}
+      anchorX="center"
+      anchorY="middle"
+      outlineWidth={toggleIconOutlineWidth}
+      outlineColor={isToggleIconHovered ? swapIconHoverColor : toggleIconColor}
+      fillOpacity={toggleIconFillOpacity}
+      material-depthTest={false}
+      material-depthWrite={false}
+      material-side={THREE.FrontSide}
+      renderOrder={3}
+      onClick={onToggleDisabledClick}
+      onPointerOver={handleToggleIconPointerOver}
+      onPointerOut={handleToggleIconPointerOut}
+    >
+      {isDisabled ? '↺' : '✕'}
+    </Text>
+  )
+
   useFrame(({ camera }) => {
     if (!groupRef.current) return
 
@@ -145,12 +204,20 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
       entrySwapRef.current.visible = isEntrySideVisible
     }
 
+    if (entryToggleRef.current) {
+      entryToggleRef.current.visible = isEntrySideVisible
+    }
+
     if (exitLabelRef.current) {
       exitLabelRef.current.visible = !isEntrySideVisible
     }
 
     if (exitSwapRef.current) {
       exitSwapRef.current.visible = !isEntrySideVisible
+    }
+
+    if (exitToggleRef.current) {
+      exitToggleRef.current.visible = !isEntrySideVisible
     }
   })
 
@@ -169,9 +236,9 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
       >
         <planeGeometry args={[width, height]} />
         <meshBasicMaterial
-          color={theme.colors.indicatorEntryPlane}
+          color={entryPlaneColor}
           transparent
-          opacity={showOpeningHighlight ? openingHoverOpacity : 0.48}
+          opacity={planeOpacity}
           side={THREE.DoubleSide}
           depthWrite={false}
           toneMapped={false}
@@ -187,9 +254,9 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
       >
         <planeGeometry args={[width, height]} />
         <meshBasicMaterial
-          color={theme.colors.indicatorExitPlane}
+          color={exitPlaneColor}
           transparent
-          opacity={showOpeningHighlight ? openingHoverOpacity : 0.48}
+          opacity={planeOpacity}
           side={THREE.DoubleSide}
           depthWrite={false}
           toneMapped={false}
@@ -250,6 +317,18 @@ export function GateEntryIndicator({ width, height, position = [0, height / 2, 0
 
           <group ref={exitSwapRef} position={[width * 0.32, height * 0.32, swapIconExitZ]} rotation={[0, swapIconExitRotationY, 0]}>
             {renderSwapBadge()}
+          </group>
+        </>
+      )}
+
+      {showToggleIcon && (
+        <>
+          <group ref={entryToggleRef} position={[-width * 0.32, height * 0.32, toggleIconEntryZ]} rotation={[0, toggleIconEntryRotationY, 0]}>
+            {renderToggleBadge()}
+          </group>
+
+          <group ref={exitToggleRef} position={[-width * 0.32, height * 0.32, toggleIconExitZ]} rotation={[0, toggleIconExitRotationY, 0]}>
+            {renderToggleBadge()}
           </group>
         </>
       )}

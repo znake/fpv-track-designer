@@ -56,6 +56,39 @@ describe('track schema', () => {
     expect(result.track.gates[0].rotation).toBe(91.5999755859375)
   })
 
+  it('round-trips deactivated openings without resurrecting their visits', () => {
+    const deactivatedTrack: Track = {
+      ...track,
+      gates: [{
+        ...track.gates[0],
+        openings: track.gates[0].openings.map((opening) => ({ ...opening, disabled: true })),
+      }],
+      gateSequence: [],
+    }
+
+    const payload = JSON.parse(serializeTrack(deactivatedTrack, config)) as unknown
+    const result = deserializeTrack(JSON.stringify(payload))
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+
+    expect(result.track.gates[0].openings[0].disabled).toBe(true)
+    expect(result.track.gateSequence).toEqual([])
+  })
+
+  it('rejects a non-boolean disabled flag on an opening', () => {
+    const payload = JSON.parse(serializeTrack(track, config)) as {
+      track: { gates: { openings: Record<string, unknown>[] }[] }
+    }
+    payload.track.gates[0].openings[0].disabled = 'ja'
+
+    const result = deserializeTrack(JSON.stringify(payload))
+
+    expect('error' in result).toBe(true)
+    if (!('error' in result)) return
+    expect(result.errors.map((entry) => entry.field)).toContain('track.gates[0].openings[0].disabled')
+  })
+
   it('imports small flag gates and fills missing flag-small quantities with 0', () => {
     const smallFlagPayload = JSON.stringify({
       version: '1.2.0',
@@ -373,7 +406,7 @@ describe('track schema', () => {
       version: string
       track: { idealLinePoints: unknown[] }
     }
-    expect(payload.version).toBe('1.5.0')
+    expect(payload.version).toBe('1.6.0')
     payload.track.idealLinePoints[0] = { ...idealLinePoints[0], ignored: 'x' }
     const result = deserializeTrack(JSON.stringify(payload))
     // Then only the exact contract survives

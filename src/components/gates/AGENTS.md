@@ -20,7 +20,7 @@ gates/
 ├── Gate.tsx                  # Dispatcher: GateType → component
 ├── GateHandles.tsx           # Html overlay: move/rotate/elevate/insert/delete
 ├── GateOpeningIndicators.tsx # Maps openings to entry/exit indicators
-├── GateEntryIndicator.tsx    # Per-opening planes, labels, swap icon
+├── GateEntryIndicator.tsx    # Per-opening planes, labels, swap icon (top-left) and deactivate/restore icon (top-right)
 └── index.ts                  # Stale barrel: zero importers and incomplete (see root)
 ```
 
@@ -30,7 +30,8 @@ gates/
 - Selection highlight is emissive color/intensity on visible frame meshes.
 - `Gate.tsx` maps `GateType` to components and owns read-only handling plus opening label/direction callbacks.
 - `GateHandles.tsx` uses drei `<Html>` for DOM overlays in 3D space.
-- Opening indicators are green entry / red exit planes; label/swap interactions route through store actions.
+- Opening indicators are green entry / red exit planes; label/swap interactions route through store actions. A deactivated opening renders grey and nearly transparent, loses its label, and swaps the ⇄ badge for a ↺ badge.
+- Deactivation wiring: `Gate.tsx` passes `onOpeningToggleDisabled` to the gate components, which forward it to `GateOpeningIndicators` → `GateEntryIndicator` (mirrored across twelve components; `OctagonalTunnelGate` renders the indicators twice). The callback is `undefined` in read-only mode, so the viewer never shows the ✕. The ✕ sits at local `-width * 0.32` (the ⇄ at `+width * 0.32`), which puts it top-right in the usual approach view, and `GateOpeningIndicators` hides the swap badge and the label click for a switched-off opening.
 - Drag math: move is clamped to the field bounds, elevate moves at 0.03 m per pixel with y floored at 0, rotate runs at 1 degree per pixel and rounds to 15 only while `config.snapGatesToGrid` is on. The rotate/elevate math exists twice (`GateHandles.tsx` and `src/hooks/useGateMoveDrag.ts`) — change both copies together.
 
 ## WHERE TO LOOK

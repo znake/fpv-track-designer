@@ -50,7 +50,7 @@ const action = (payload) => set((state) => {
 ## DIRTY-STATE / UNSAVED-CHANGES FLOW
 `isTrackModified` is the single source of truth for unsaved editor changes.
 
-- Set `true` by undoable mutations such as `updateGate`, `moveGate`, `moveSelectedGates`, `rotateGate`, `insertGateAtIndex`, `deleteSelectedGates`, `toggleGateDirection`, `moveGateSequenceEntry`, `snapAllGatesToGrid`, and move/elevate drag commits. Rotation drags (Shift press-drag, rotate handle) add no past entry and leave it `false`.
+- Set `true` by undoable mutations such as `updateGate`, `moveGate`, `moveSelectedGates`, `rotateGate`, `insertGateAtIndex`, `deleteSelectedGates`, `toggleGateDirection`, `toggleGateOpeningDisabled`, `moveGateSequenceEntry`, `snapAllGatesToGrid`, and move/elevate drag commits. Rotation drags (Shift press-drag, rotate handle) add no past entry and leave it `false`.
 - Reset to `false` by `setTrack`, `replaceTrack`, and `markTrackSaved` after successful localStorage save.
 - Stored in `TrackHistoryEntry` so undo/redo restores the dirty flag of each snapshot.
 
@@ -63,6 +63,7 @@ Destructive actions (Shuffle, Import JSON, Gallery Load/Duplicate, Apply Config)
 The global save dialog is store-driven via `isSaveDialogOpen`, `openSaveDialog()`, and `dismissSaveDialog()`.
 
 ## NOTES
+- `toggleGateOpeningDisabled(gateId, openingId)` flips `GateOpening.disabled` and keeps `track.gateSequence` in sync: switching an opening off removes its entries, switching it back on re-inserts them at the opening's natural place inside that gate's visits. Displayed pass-through numbers therefore always match the stored sequence indexes used by `moveGateSequenceEntry()`.
 - `trackSlice.ts` reimplements the `moveGate`/`rotateGate` helpers from `utils/gateOperations.ts` inline; keep the two in sync only if that test-only helper is ever wired up.
 - The `moveGate`/`rotateGate` actions and `DirectionalPad` (`src/components/ui/directional-pad.tsx`) currently have no callers in the editor UI; rotation runs through the `GateHandles` rotate handle or a Shift press-drag on the gate body. Keep them in sync if you wire them up.
 - `MAX_HISTORY = 50`; `pushHistory` snapshots `{ track, selectedGateId, selectedGateIds, isTrackModified }`, caps `past` at 50 entries and always clears `future` — with `currentTrack` null only `past` survives.

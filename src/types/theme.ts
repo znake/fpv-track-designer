@@ -70,6 +70,9 @@ export interface ThemeColors {
   indicatorExitLabel: string
   indicatorEntryOutline: string
   indicatorExitOutline: string
+  /** Deactivated openings: neutral grey planes/labels, flown and counted nowhere. */
+  indicatorDisabledPlane: string
+  indicatorDisabledLabel: string
 }
 
 export interface ThemeConfig {
@@ -153,6 +156,8 @@ const minimalColors: ThemeColors = {
   indicatorExitLabel: '#fca5a5',
   indicatorEntryOutline: '#4ade80',
   indicatorExitOutline: '#f87171',
+  indicatorDisabledPlane: '#9ca3af',
+  indicatorDisabledLabel: '#d1d5db',
 }
 
 // ── Realistic ─────────────────────────────────────────────────────
@@ -211,6 +216,8 @@ const realisticColors: ThemeColors = {
   indicatorExitLabel: '#fca5a5',
   indicatorEntryOutline: '#4ade80',
   indicatorExitOutline: '#f87171',
+  indicatorDisabledPlane: '#9ca3af',
+  indicatorDisabledLabel: '#d1d5db',
 }
 
 // ── Night / Neon ──────────────────────────────────────────────────
@@ -284,6 +291,8 @@ const nightColors: ThemeColors = {
   indicatorExitLabel: '#FF616F',
   indicatorEntryOutline: '#00E676',
   indicatorExitOutline: '#FF1744',
+  indicatorDisabledPlane: '#6B7280',
+  indicatorDisabledLabel: '#9CA3AF',
 }
 
 // ── Theme Presets ─────────────────────────────────────────────────

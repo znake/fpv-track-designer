@@ -1350,3 +1350,93 @@ describe('TrackSlice - generationConfig and isTrackModified', () => {
     expect(store.getState().pendingDestructiveAction).toBeNull()
   })
 })
+
+describe('TrackSlice - deactivated gate openings', () => {
+  let store: ReturnType<typeof createTestStore>
+
+  const openingOf = (gateId: string, openingId: string) => store.getState().currentTrack?.gates
+    .find((gate) => gate.id === gateId)?.openings.find((opening) => opening.id === openingId)
+
+  beforeEach(() => {
+    store = createTestStore()
+    const track = createTestTrack([
+      createTestGate('gate-1', { type: 'double', openings: createDefaultGateOpenings('double') }),
+      createTestGate('gate-2'),
+    ])
+    track.gateSequence = [
+      { gateId: 'gate-1', openingId: 'lower', reverse: false },
+      { gateId: 'gate-1', openingId: 'upper', reverse: false },
+      { gateId: 'gate-2', openingId: 'main', reverse: false },
+    ]
+    store.getState().setTrack(track)
+  })
+
+  it('removes the deactivated opening from the flown sequence', () => {
+    store.getState().toggleGateOpeningDisabled('gate-1', 'upper')
+
+    expect(openingOf('gate-1', 'upper')?.disabled).toBe(true)
+    expect(store.getState().currentTrack?.gateSequence).toEqual([
+      { gateId: 'gate-1', openingId: 'lower', reverse: false },
+      { gateId: 'gate-2', openingId: 'main', reverse: false },
+    ])
+    expect(store.getState().past.length).toBe(1)
+    expect(store.getState().isTrackModified).toBe(true)
+  })
+
+  it('re-activates an opening into its natural place inside the gate', () => {
+    const ladderGate = createTestGate('gate-1', { type: 'ladder', openings: createDefaultGateOpenings('ladder') })
+    const track = createTestTrack([ladderGate, createTestGate('gate-2')])
+    track.gateSequence = [
+      { gateId: 'gate-1', openingId: 'lower', reverse: false },
+      { gateId: 'gate-1', openingId: 'middle', reverse: false },
+      { gateId: 'gate-1', openingId: 'upper', reverse: false },
+      { gateId: 'gate-2', openingId: 'main', reverse: false },
+    ]
+    store.getState().setTrack(track)
+
+    store.getState().toggleGateOpeningDisabled('gate-1', 'middle')
+    expect(openingOf('gate-1', 'middle')?.disabled).toBe(true)
+    store.getState().toggleGateOpeningDisabled('gate-1', 'middle')
+
+    expect(openingOf('gate-1', 'middle')?.disabled).toBeUndefined()
+    expect(store.getState().currentTrack?.gateSequence).toEqual([
+      { gateId: 'gate-1', openingId: 'lower', reverse: false },
+      { gateId: 'gate-1', openingId: 'middle', reverse: false },
+      { gateId: 'gate-1', openingId: 'upper', reverse: false },
+      { gateId: 'gate-2', openingId: 'main', reverse: false },
+    ])
+  })
+
+  it('undoes and redoes the deactivation together with its sequence entries', () => {
+    store.getState().toggleGateOpeningDisabled('gate-1', 'upper')
+    expect(store.getState().currentTrack?.gateSequence).toHaveLength(2)
+
+    store.getState().undo()
+
+    expect(openingOf('gate-1', 'upper')?.disabled).toBeUndefined()
+    expect(store.getState().currentTrack?.gateSequence).toHaveLength(3)
+
+    store.getState().redo()
+
+    expect(openingOf('gate-1', 'upper')?.disabled).toBe(true)
+    expect(store.getState().currentTrack?.gateSequence).toHaveLength(2)
+  })
+
+  it('ignores unknown gates and openings', () => {
+    store.getState().toggleGateOpeningDisabled('gate-9', 'main')
+    store.getState().toggleGateOpeningDisabled('gate-1', 'missing')
+
+    expect(store.getState().past).toEqual([])
+    expect(store.getState().currentTrack?.gateSequence).toHaveLength(3)
+  })
+
+  it('keeps the displayed sequence numbers addressable after a deactivation', () => {
+    store.getState().toggleGateOpeningDisabled('gate-1', 'upper')
+    store.getState().moveGateSequenceEntry('gate-2', 'main', 2, 1)
+
+    expect(store.getState().currentTrack?.gateSequence).toEqual([
+      { gateId: 'gate-2', openingId: 'main', reverse: false },
+      { gateId: 'gate-1', openingId: 'lower', reverse: false },
+    ])
+  })
+})

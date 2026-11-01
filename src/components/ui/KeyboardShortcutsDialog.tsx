@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { ArrowRightLeft, CircleHelp, Drone, Move, Plus, RotateCw } from 'lucide-react'
+import { ArrowRightLeft, CircleHelp, Drone, EyeOff, Move, Plus, RotateCw } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useTranslation } from '@/i18n'
@@ -64,6 +64,7 @@ export function KeyboardShortcutsDialog({
     { title: t('helpMoveGateTitle'), description: t('helpMoveGateDescription'), Icon: Move },
     { title: t('helpRotateGateTitle'), description: t('helpRotateGateDescription'), Icon: RotateCw },
     { title: t('helpToggleOpeningTitle'), description: t('helpToggleOpeningDescription'), Icon: ArrowRightLeft },
+    { title: t('helpDisableOpeningTitle'), description: t('helpDisableOpeningDescription'), Icon: EyeOff },
     { title: t('helpSequenceTitle'), description: t('helpSequenceDescription'), marker: '#' },
     { title: t('helpAddGateTitle'), description: t('helpAddGateDescription'), Icon: Plus },
     { title: t('helpDronesTitle'), description: t('helpDronesDescription'), Icon: Drone },
