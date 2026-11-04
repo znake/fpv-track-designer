@@ -5,6 +5,7 @@ import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { ACESFilmicToneMapping, AdditiveBlending, CanvasTexture, MOUSE } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useAppStore } from '../../store'
+import { ThemeContext } from '../../hooks/useTheme'
 import { buildDefaultGateSequenceEntries } from '../../utils/gateSequence'
 import { getEnabledOpenings } from '../../utils/gateOpenings'
 import { getThemeConfig } from '../../utils/themeColors'
@@ -139,7 +140,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
   const showDroneRace = (showDrones ?? storeShowDrones) && !fpvModeActive
 
   const trackContent = currentTrack ? (
-    <>
+    <ThemeContext.Provider value={theme}>
       {currentTrack.gates.map((gate) => (
         <Gate
           key={gate.id}
@@ -157,7 +158,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
       {showDroneRace && flightPath && (
         <DroneRace path={flightPath} paused={isDraggingGate} />
       )}
-    </>
+    </ThemeContext.Provider>
   ) : null
 
   const cameraControls = (

@@ -13,7 +13,7 @@ hooks/
 ├── useFlightPathPointDrag.ts     # Same drag mechanics for ideal-line points (marker press, Ctrl vertical, move/elevate handles)
 ├── useFlightPathPointDrag.test.tsx # Point press-vs-click threshold, field clamp, ctrl elevation, commit coverage
 ├── useGateSelection.ts           # R3F click -> selectGate, additive selection guard
-└── useTheme.ts                   # config.theme -> getThemeConfig()
+└── useTheme.ts                   # ThemeContext override -> config.theme -> getThemeConfig()
 ```
 
 ## WHERE TO LOOK
@@ -23,13 +23,13 @@ hooks/
 | Change gate click/selection | `useGateSelection.ts`, `src/store/trackSlice.ts` | Shift/Meta/Ctrl make a click additive; ignored while dragging or camera-gesturing. Shift+press-drag on a body rotates and selects non-additively |
 | Change gate-body / move-handle dragging | `useGateMoveDrag.ts`, `src/components/gates/Gate.tsx`, `GateHandles.tsx` | Ground-raycast X/Z through `setGatePosition`, one `commitGateDrag` undo entry, controls disabled, `isDraggingGate` set so the follow-up click is not a selection; `getGatePressDragOptions()` maps the press modifiers (Shift = rotate, Ctrl = height), Ctrl + press runs the same 0.03 m/px vertical drag as the elevation handle, Shift + press rotates at 1 deg/px (15 deg snap while grid snap is on) and records no undo entry |
 | Change ideal-line point dragging | `useFlightPathPointDrag.ts`, `src/components/scene/FlightPathPointControls.tsx` | Same press threshold, Ctrl-at-press vertical mode, ground raycast, selection on the threshold, and one undo entry per drag as `useGateMoveDrag`, but through `setFlightPathPointPosition` / `cancelFlightPathPointDrag`; the move and height handles keep starting immediately |
-| Change active theme hook | `useTheme.ts`, `src/utils/themeColors.ts`, `src/types/theme.ts` | Thin selector over `config.theme` |
+| Change active theme hook | `useTheme.ts`, `src/utils/themeColors.ts`, `src/types/theme.ts` | An explicitly provided `ThemeContext` wins over the editor's `config.theme` selector; `Scene` supplies that override for the read-only viewer |
 
 ## CONVENTIONS
 - Hooks may read editor state via `useAppStore` (including `@/store`); they are editor shell, not shadcn primitives.
 - Shortcuts must early-return when the event target is `INPUT`, `TEXTAREA`, or `isContentEditable`.
 - `useKeyboardShortcuts` takes callbacks (`onSave`, `onShuffle`, `onOpenGallery`, `onEscape`) and owns undo/redo/select/delete itself.
-- `useTheme` returns a resolved `ThemeConfig`; do not read `config.theme` directly in components that need colors.
+- `useTheme` returns a resolved `ThemeConfig`; do not read `config.theme` directly in components that need colors. It reads `ThemeContext` first and falls back to the store's `config.theme` only when no context value (or `null`) is provided.
 - R3F hooks (`useGateSelection`, `useGateMoveDrag`, `useFlightPathPointDrag`) return handler props and own their listeners; camera pan/zoom controllers are components in `src/components/scene/`, not hooks.
 - Escape is not a pure callback: it runs `onEscape` (App maps it to leaving FPV), clears the gate selection, and closes the delete dialog.
 
@@ -47,4 +47,5 @@ hooks/
 - `useKeyboardShortcuts.test.tsx` is the shortcut regression suite; extend it (and `KeyboardShortcutsDialog`) when adding or changing keys.
 - `useGateMoveDrag.test.tsx` covers press-without-travel as a click, field clamping, the dragging flag, Ctrl-driven vertical drag, Shift-driven rotation with 15 deg snapping, the `getGatePressDragOptions()` modifier mapping, and one commit per drag.
 - `useFlightPathPointDrag.test.tsx` mirrors that coverage for ideal-line points, including both handles and the ground clamp.
-- `useGateSelection` and `useTheme` have no co-located tests; add one if behavior grows beyond a store selector.
+- `useTheme.test.tsx` pins the hook contract: store fallback without a provider, context precedence over a different store theme, and re-rendering on a changed context value.
+- `useGateSelection` has no co-located test; add one if behavior grows beyond a store action call.

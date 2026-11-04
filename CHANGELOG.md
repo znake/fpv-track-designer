@@ -31,6 +31,7 @@ Der Changelog beginnt mit den Commits der letzten Woche (ab 2026-10-23). Früher
 
 **Behoben**
 
+- Der Share-Viewer färbt die Gates jetzt mit dem Theme der geteilten Strecke: Bei „Nacht“ leuchten Rahmen, Flaggen und Öffnungen neonfarben wie im Editor, statt in der blassen Standard-Palette fast schwarz zu bleiben. Bisher folgten nur Boden, Himmel und Bloom dem Theme aus der Adresse.
 - Ein über die Ideallinie eingefügtes Gate am Rundenende – also auf dem Rückweg ins Startgate – landet jetzt am Ende der Reihenfolge und wird das letzte Gate der Runde. Bisher rutschte es an die erste Stelle: das neue Gate hieß 1, das Startgate wurde zu 2.
 - Die Ideallinie am Dive-Gate ist jetzt eine durchgehende Kurve: Sie kommt oben in einem Bogen herab und geht senkrecht durch die Top-Öffnung, statt mit einem 90°-Knick einzufallen. Im Gate selbst macht sie keinen flachen Kreis mehr, sondern schwingt in einer 0,6-m-Rundung aus der Seiten-Öffnung wieder hinaus. Dafür steigt die Linie vor dem Dive-Gate rund einen Meter höher an als bisher.
 - Die Ideallinie zwischen zwei Gates besteht nur noch aus Geraden und Kreisbögen mit mindestens 0,3 m Radius. Ecken und Haken sind damit nicht mehr darstellbar: Wo Platz ist, wird der Bogen bewusst weit gewählt (bis 2 m) und die Linie schwingt weich aus; in engen Passagen bleibt sie bei rund 0,3 m. Gemessen über alle sieben offiziellen Strecken (168 Gate-Abschnitte): engster Radius 0,32 m statt bisher 0,08 m, größter Knick 5,6° statt 22,8°, keine Selbstüberschneidung.
