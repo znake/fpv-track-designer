@@ -309,7 +309,7 @@ export function Scene({ track, configOverride, readOnly = false, fpvModeActive =
           <VenueObstacles obstacles={venueObstacles} color={theme.colors.obstacle} />
           {currentTrack && (
             <EffectComposer>
-              <Bloom mipmapBlur intensity={1.6} luminanceThreshold={1} luminanceSmoothing={0.2} />
+              <Bloom mipmapBlur intensity={0.55} luminanceThreshold={1} luminanceSmoothing={0.2} radius={0.25} levels={5} />
             </EffectComposer>
           )}
           {trackContent}

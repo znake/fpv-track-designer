@@ -131,7 +131,7 @@ Der Play-Button in der TopBar startet einen automatischen Kameraflug entlang der
 
 ### Design und Themes
 
-Das Design-Panel bietet drei Themes: Minimal Standard, Realistisch und Nacht. Ein Klick schaltet die Szene sofort um. Realistisch rendert Sonne, Umgebungslicht und Schatten, Nacht einen Sternenhimmel mit Bloom- und Neon-Effekt auf den Gates.
+Das Design-Panel bietet drei Themes: Minimal Standard, Realistisch und Nacht. Ein Klick schaltet die Szene sofort um. Realistisch rendert Sonne, Umgebungslicht und Schatten, Nacht leuchtende Neon-Gates unter einem Sternenhimmel auf einem fast schwarzen, leicht kühlen Hallenboden. Die Neonfarben der Gate-Typen bleiben unverändert; bisher schwache Typen leuchten jetzt stärker.
 
 ### Sprache
 

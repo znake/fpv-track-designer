@@ -226,7 +226,7 @@ Das Highlight: die Strecke einmal aus der **Ich-Perspektive** durchfliegen.
 | --- | --- |
 | **Minimal Standard** | Für schwächere Geräte – reduzierter Detailgrad, keine Schatten. |
 | **Realistisch** | Sonne, Schatten und atmosphärische Beleuchtung (Umgebungslicht) für leistungsstarke Rechner. |
-| **Nacht** | Neonfarbene Gates mit Bloom-Effekt unter einem Sternenhimmel. |
+| **Nacht** | Leuchtende Neon-Gates unter einem Sternenhimmel auf einem fast schwarzen, leicht kühlen Hallenboden. Die Neonfarben bleiben unverändert, bisher schwache Gate-Typen leuchten stärker. |
 
 Das gewählte Theme wird mit der Strecke gespeichert und **beim Teilen mitgegeben** – Empfänger sehen deine Strecke also im gleichen Look.
 
